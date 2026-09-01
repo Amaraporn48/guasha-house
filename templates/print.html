@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>พิมพ์เอกสาร - {{ doc.document_number }}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#fbfaf7',
+                        beige: '#f5f2eb',
+                        charcoal: '#1a1a1a',
+                        gold: '#c5a880',
+                        'gold-dark': '#b39268',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* Extra styles to ensure precise print sizing */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        body {
+            background-color: white !important;
+            color: black !important;
+            font-size: 11pt;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body class="bg-white">
+    
+    <div class="print-container flex flex-col justify-between h-[280mm] max-w-[210mm] mx-auto p-[15mm]">
+        
+        <!-- TOP SECTION: COMPANY & CLIENT DETAILS -->
+        <div>
+            <!-- Header Block -->
+            <div class="flex justify-between items-start gap-4 border-b-2 border-gray-300 pb-4 mb-6">
+                <div class="flex gap-4 items-start">
+                    <img src="/static/logo.png" alt="Guasha House Logo" class="h-16 w-16 object-contain">
+                    <div>
+                        <h2 class="text-base font-bold text-gray-800 leading-tight uppercase font-serif">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">GUASHA HOUSE CO., LTD.</h3>
+                        <p class="text-[9.5px] text-gray-600 leading-normal">
+                            199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพมหานคร 10240<br>
+                            โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษีอากร: 0105565028948
+                        </p>
+                    </div>
+                </div>
+                <div class="text-right border-l-2 border-gold pl-4 min-w-[150px]">
+                    <h4 class="text-sm font-bold text-gray-800 leading-tight">ใบกำกับภาษี / ใบเสร็จรับเงิน</h4>
+                    <h5 class="text-[9.5px] font-bold text-gray-400 uppercase tracking-wider mb-2">TAX INVOICE / RECEIPT</h5>
+                    
+                    <div class="text-[9.5px] space-y-0.5 text-gray-600">
+                        <div><span class="font-bold">เลขที่ / No. :</span> <span class="font-medium text-gray-900">{{ doc.document_number }}</span></div>
+                        <div><span class="font-bold">วันที่ / Date :</span> <span class="font-medium text-gray-900" id="doc-date"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Details Block -->
+            <div class="border border-gray-300 rounded-lg p-4 bg-gray-50/50 mb-6 grid grid-cols-3 gap-4">
+                <div class="col-span-2">
+                    <h5 class="text-[9.5px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">ข้อมูลลูกค้า / CUSTOMER INFORMATION</h5>
+                    <div class="text-xs font-bold text-gray-900 mb-1">{{ doc.customer_name }}</div>
+                    <p class="text-[9.5px] text-gray-600 leading-normal">{{ doc.customer_address }}</p>
+                </div>
+                <div class="text-right flex flex-col justify-end text-[9.5px] text-gray-600">
+                    <div><span class="font-bold">เลขประจำตัวผู้เสียภาษี :</span> <span class="font-medium">{{ doc.customer_tax_id }}</span></div>
+                    <div><span class="font-bold">เบอร์โทรศัพท์ :</span> <span class="font-medium">{{ doc.customer_phone or '-' }}</span></div>
+                </div>
+            </div>
+
+            <!-- Line Items Table -->
+            <table class="w-full text-[10.5px] border border-gray-300">
+                <thead>
+                    <tr class="bg-gray-100 text-charcoal border-b border-gray-300">
+                        <th class="px-3 py-2 text-center border-r border-gray-300 w-12">ลำดับ<br><span class="text-[8.5px] font-normal block mt-0.5">Item</span></th>
+                        <th class="px-3 py-2 text-left border-r border-gray-300">รายการสินค้า / บริการ<br><span class="text-[8.5px] font-normal block mt-0.5">Description</span></th>
+                        <th class="px-3 py-2 text-center border-r border-gray-300 w-16">จำนวน<br><span class="text-[8.5px] font-normal block mt-0.5">Quantity</span></th>
+                        <th class="px-3 py-2 text-right border-r border-gray-300 w-24">ราคาต่อหน่วย<br><span class="text-[8.5px] font-normal block mt-0.5">Unit/Price</span></th>
+                        <th class="px-3 py-2 text-right w-24">จำนวนเงิน<br><span class="text-[8.5px] font-normal block mt-0.5">Amount</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr class="border-b border-gray-300">
+                        <td class="px-3 py-2 text-center border-r border-gray-300">{{ loop.index }}</td>
+                        <td class="px-3 py-2 border-r border-gray-300 font-medium">{{ item.description }}</td>
+                        <td class="px-3 py-2 text-center border-r border-gray-300">{{ item.quantity|int if item.quantity == item.quantity|int else item.quantity }}</td>
+                        <td class="px-3 py-2 text-right border-r border-gray-300">฿{{ "{:,.2f}".format(item.unit_price) }}</td>
+                        <td class="px-3 py-2 text-right font-semibold">฿{{ "{:,.2f}".format(item.amount) }}</td>
+                    </tr>
+                    {% endfor %}
+                    
+                    <!-- Padding Rows for Standard Invoice Look -->
+                    {% for i in padding_rows %}
+                    <tr class="border-b border-gray-100">
+                        <td class="px-3 py-2 text-center border-r border-gray-100 text-transparent">-</td>
+                        <td class="px-3 py-2 border-r border-gray-100 text-transparent">-</td>
+                        <td class="px-3 py-2 border-r border-gray-100 text-transparent">-</td>
+                        <td class="px-3 py-2 border-r border-gray-100 text-transparent">-</td>
+                        <td class="px-3 py-2 text-transparent">-</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- BOTTOM SECTION: GRAND TOTALS, PAYMENT RECEIVED & SIGNATURES -->
+        <div class="space-y-6">
+            
+            <!-- Summary Calculations -->
+            <div class="grid grid-cols-12 border border-gray-300">
+                <div class="col-span-8 p-3 bg-gray-50 flex items-center justify-center border-r border-gray-300 text-center">
+                    <div>
+                        <span class="text-[8.5px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">จำนวนเงินตัวอักษร / Total In Words</span>
+                        <span class="text-xs font-bold text-gray-800">{{ doc.total_amount_text }}</span>
+                    </div>
+                </div>
+                <div class="col-span-4 text-[10.5px] divide-y divide-gray-300">
+                    <div class="flex justify-between p-2">
+                        <span class="text-gray-500 font-medium">ราคาสินค้า / Subtotal</span>
+                        <span class="font-bold">฿{{ "{:,.2f}".format(doc.total_amount_before_vat) }}</span>
+                    </div>
+                    <div class="flex justify-between p-2">
+                        <span class="text-gray-500 font-medium">ภาษีมูลค่าเพิ่ม VAT 7%</span>
+                        <span class="font-bold">฿{{ "{:,.2f}".format(doc.vat_amount) }}</span>
+                    </div>
+                    <div class="flex justify-between p-2 bg-gray-100 font-bold">
+                        <span class="text-gray-800 font-semibold">รวมทั้งสิ้น / Grand Total</span>
+                        <span class="font-bold text-gray-900">฿{{ "{:,.2f}".format(doc.total_amount_after_vat) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Received Section -->
+            <div class="border border-gray-300 p-3 rounded-lg text-[9.5px]">
+                <span class="font-bold text-gray-500 block uppercase tracking-wider mb-2">ได้รับเงินแล้ว / PAYMENT RECEIVED</span>
+                
+                <div class="flex gap-6 mb-2">
+                    <label class="flex items-center gap-1.5">
+                        <input type="checkbox" {% if doc.payment_method == 'CASH' %}checked{% endif %} disabled class="rounded border-gray-300 text-gray-700 w-3.5 h-3.5">
+                        <span class="font-semibold text-gray-700">CASH / เงินสด</span>
+                    </label>
+                    
+                    <label class="flex items-center gap-1.5">
+                        <input type="checkbox" {% if doc.payment_method == 'CHEQUE' %}checked{% endif %} disabled class="rounded border-gray-300 text-gray-700 w-3.5 h-3.5">
+                        <span class="font-semibold text-gray-700">CHEQUE / เช็คธนาคาร</span>
+                    </label>
+                </div>
+
+                {% if doc.payment_method == 'CHEQUE' %}
+                <div class="grid grid-cols-4 gap-2 pt-2 border-t border-gray-300 border-dashed text-gray-600">
+                    <div><span class="font-bold">Bank:</span> <span class="font-semibold text-gray-900">{{ doc.cheque_bank or '-' }}</span></div>
+                    <div><span class="font-bold">No.:</span> <span class="font-semibold text-gray-900">{{ doc.cheque_number or '-' }}</span></div>
+                    <div><span class="font-bold">Date:</span> <span class="font-semibold text-gray-900" id="cheque-date"></span></div>
+                    <div><span class="font-bold">Branch:</span> <span class="font-semibold text-gray-900">{{ doc.cheque_branch or '-' }}</span></div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Signature Lines -->
+            <div class="grid grid-cols-2 gap-8 text-center text-xs mt-12 pt-6">
+                <div></div>
+                <div class="border-t border-gray-400 pt-3 space-y-1 max-w-[220px] mx-auto">
+                    <div class="h-5 flex items-center justify-center text-gray-500 font-serif italic text-[11px]">
+                        {% if doc.received_by %}
+                        / {{ doc.received_by }} /
+                        {% endif %}
+                    </div>
+                    <span class="font-bold text-gray-800 block">ผู้รับเงิน / Received By</span>
+                    <span class="text-[8.5px] text-gray-400 block mb-1">Authorized Signature</span>
+                    <div class="text-[9.5px] text-gray-600">
+                        วันที่ / Date: 
+                        <span class="font-semibold text-gray-900" id="signature-date">
+                            {% if not doc.received_date %}
+                            ____________________
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PAYMENT SLIP ATTACHMENT PAGE -->
+    {% if doc.payment_slip %}
+    <div style="page-break-before: always;"></div>
+    <div class="print-container flex flex-col justify-between h-[280mm] max-w-[210mm] mx-auto p-[15mm] bg-white">
+        <div>
+            <div class="text-center border-b-2 border-gray-300 pb-4 mb-8">
+                <h3 class="text-sm font-bold text-gray-800 uppercase">หลักฐานการชำระเงิน / Attached Payment Slip</h3>
+                <p class="text-[10px] text-gray-500">เลขที่เอกสารอ้างอิง / Ref Document No: {{ doc.document_number }}</p>
+            </div>
+            <div class="flex items-center justify-center p-6 border border-dashed border-gray-300 rounded-2xl bg-gray-50">
+                <img src="/static/uploads/slips/{{ doc.payment_slip }}" class="max-h-[200mm] max-w-full object-contain rounded shadow">
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- SCRIPT FOR FORMATTING AND PRINTING -->
+    <script>
+        // Formatting Dates in Print layout
+        function formatThaiDate(dateStr) {
+            if (!dateStr) return '-';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const yearStr = parseInt(parts[0]) + 543;
+            const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            const monthIndex = parseInt(parts[1]) - 1;
+            return `${parseInt(parts[2])} ${months[monthIndex]} ${yearStr}`;
+        }
+
+        document.getElementById('doc-date').innerText = formatThaiDate("{{ doc.date }}");
+        
+        const chqDateEl = document.getElementById('cheque-date');
+        if (chqDateEl) {
+            chqDateEl.innerText = formatThaiDate("{{ doc.cheque_date or '' }}");
+        }
+
+        const sigDateEl = document.getElementById('signature-date');
+        if (sigDateEl && "{{ doc.received_date or '' }}") {
+            sigDateEl.innerText = formatThaiDate("{{ doc.received_date }}");
+        }
+
+        // Trigger native print dialog if not in share mode
+        {% if not share_mode %}
+        window.onload = function() {
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        };
+        {% endif %}
+    </script>
+</body>
+</html>

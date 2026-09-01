@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --color-cream: #fbfaf7;
+  --color-beige: #f5f2eb;
+  --color-charcoal: #1a1a1a;
+  --color-gold: #c5a880;
+  --color-gold-dark: #b39268;
+  --color-gold-light: #dfcfb8;
+  --color-gray: #71717a;
+  --color-border: #e4e4e7;
+}
+
+body {
+  font-family: 'Sarabun', 'Montserrat', sans-serif;
+  background-color: var(--color-cream);
+  color: var(--color-charcoal);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Montserrat', 'Sarabun', sans-serif;
+  font-weight: 600;
+}
+
+/* Custom Gold Accent Styles */
+.gold-border {
+  border-color: var(--color-gold);
+}
+
+.gold-bg {
+  background-color: var(--color-gold);
+}
+
+.gold-text {
+  color: var(--color-gold-dark);
+}
+
+.gold-hover:hover {
+  background-color: var(--color-gold-dark);
+  color: white;
+}
+
+.focus-gold:focus {
+  outline: none;
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 2px rgba(197, 168, 128, 0.2);
+}
+
+/* Scrollbar Customization for Luxury Feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gold-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold);
+}
+
+/* --- PRINT-SPECIFIC CSS --- */
+@media print {
+  /* Hide interactive application UI components */
+  .no-print, nav, sidebar, button, .btn, .alert, header, aside, main {
+    display: none !important;
+  }
+  
+  #draft-print-area {
+    display: block !important;
+  }
+  
+  /* Reset page backgrounds and margins */
+  html, body {
+    background-color: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm;
+    height: 297mm;
+    font-size: 12pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Target printing wrapper specifically */
+  .print-container {
+    display: block !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    padding: 15mm 15mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Table styling for printers */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    border: 1px solid #1a1a1a !important;
+    padding: 6px 8px !important;
+  }
+
+  /* Ensure lines and colors show clearly in PDF export */
+  .bg-beige-print {
+    background-color: #fcfbfa !important;
+  }
+
+  .border-gold-print {
+    border-color: #c5a880 !important;
+  }
+}
+
+/* Custom print container on-screen preview (A4 proportions) */
+.a4-preview-container {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 16mm;
+  margin: 0 auto;
+  background: white;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-beige);
+}
+
+/* Custom utility classes */
+.beige-card {
+  background-color: #fbfaf7;
+  border: 1px solid #f5f2eb;
+}
+
+.table-header {
+  background-color: var(--color-beige);
+  color: var(--color-charcoal);
+  font-weight: 600;
+}

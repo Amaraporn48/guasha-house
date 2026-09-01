@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - Guasha House Billing System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#fbfaf7',
+                        beige: '#f5f2eb',
+                        charcoal: '#1a1a1a',
+                        gold: '#c5a880',
+                        'gold-dark': '#b39268',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-cream min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white border border-beige rounded-2xl shadow-xl p-8 relative overflow-hidden" 
+         x-data="loginForm()">
+        
+        <!-- Luxury Top Gold Border Line -->
+        <div class="absolute top-0 left-0 right-0 h-1.5 bg-gold"></div>
+
+        <div class="text-center mb-8">
+            <div class="flex justify-center mb-4">
+                <img src="/static/logo.png" alt="Guasha House Logo" class="h-20 w-auto object-contain">
+            </div>
+            <h2 class="text-xl font-medium uppercase tracking-widest text-charcoal mb-1">GUASHA HOUSE</h2>
+            <p class="text-sm text-gray-500 uppercase tracking-widest">Billing Management System</p>
+        </div>
+
+        <!-- Alert Notification -->
+        <template x-if="message">
+            <div class="mb-5 p-4 rounded-lg text-sm border flex items-center gap-2"
+                 :class="success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                </svg>
+                <span x-text="message"></span>
+            </div>
+        </template>
+
+        <form @submit.prevent="submitLogin">
+            <div class="mb-5">
+                <label for="username" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">ชื่อผู้ใช้งาน / Username</label>
+                <input type="text" id="username" x-model="username" required
+                       class="w-full bg-cream border border-beige rounded-xl px-4 py-3 text-sm focus-gold placeholder-gray-400"
+                       placeholder="ป้อนชื่อผู้ใช้ (e.g. user1, user2)">
+            </div>
+
+            <div class="mb-6">
+                <label for="password" class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">รหัสผ่าน / Password</label>
+                <input type="password" id="password" x-model="password" required
+                       class="w-full bg-cream border border-beige rounded-xl px-4 py-3 text-sm focus-gold placeholder-gray-400"
+                       placeholder="ป้อนรหัสผ่าน">
+            </div>
+
+            <button type="submit" :disabled="loading"
+                    class="w-full bg-charcoal hover:bg-gold-dark text-white font-medium text-sm py-3 px-4 rounded-xl transition duration-300 flex items-center justify-center gap-2 tracking-widest uppercase shadow-md disabled:opacity-50">
+                <span x-show="!loading">เข้าสู่ระบบ / LOGIN</span>
+                <span x-show="loading" class="flex items-center gap-2">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    กำลังเข้าสู่ระบบ...
+                </span>
+            </button>
+        </form>
+
+        <div class="mt-8 text-center border-t border-beige pt-4">
+            <span class="text-xs text-gray-400">© 2026 GUASHA HOUSE CO., LTD. All rights reserved.</span>
+        </div>
+    </div>
+
+    <script>
+        function loginForm() {
+            return {
+                username: '',
+                password: '',
+                loading: false,
+                message: '',
+                success: false,
+                submitLogin() {
+                    this.loading = true;
+                    this.message = '';
+                    
+                    const formData = new URLSearchParams();
+                    formData.append('username', this.username);
+                    formData.append('password', this.password);
+
+                    fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: formData
+                    })
+                    .then(response => {
+                        return response.json().then(data => {
+                            if (!response.ok) {
+                                throw new Error(data.message || 'การเข้าสู่ระบบล้มเหลว');
+                            }
+                            return data;
+                        });
+                    })
+                    .then(data => {
+                        this.success = true;
+                        this.message = data.message;
+                        setTimeout(() => {
+                            window.location.href = '/admin';
+                        }, 800);
+                    })
+                    .catch(error => {
+                        this.success = false;
+                        this.message = error.message;
+                    })
+                    .finally(() => {
+                        this.loading = false;
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipping Label - {{ doc.document_number }}</title>
+    <link rel="stylesheet" href="https://cdn.tailwindcss.com">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @page {
+            size: 100mm 150mm; /* Standard A6 Thermal Sticker size */
+            margin: 5mm;
+        }
+        body {
+            font-family: 'Sarabun', sans-serif;
+            width: 90mm;
+            height: 140mm;
+            margin: 0 auto;
+            color: #000;
+        }
+        @media print {
+            body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-white text-black text-xs flex flex-col justify-between p-2 border-2 border-black rounded-lg h-full">
+
+    <div>
+        <!-- Sender Box -->
+        <div class="border-b-2 border-dashed border-black pb-2 mb-4">
+            <span class="font-bold text-[10px] uppercase block tracking-wider text-gray-500">ผู้ส่ง / Sender:</span>
+            <div class="font-bold text-sm">บริษัท กัวซา เฮ้าส์ จำกัด (GUASHA HOUSE)</div>
+            <div class="text-[11px] leading-relaxed text-gray-800">
+                199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240 <br>
+                โทรศัพท์: 061-496-6361
+            </div>
+        </div>
+
+        <!-- Receiver Box -->
+        <div class="flex-1 py-4">
+            <span class="font-bold text-[10px] uppercase block tracking-wider text-gray-500 mb-1">ผู้รับ / Receiver:</span>
+            <div class="font-bold text-lg leading-tight mb-2" x-text="receiverName">{{ doc.shipping_name or doc.customer_name }}</div>
+            <div class="text-sm font-bold mb-3">
+                โทรศัพท์: {{ doc.customer_phone or '-' }}
+            </div>
+            <div class="text-[13px] leading-relaxed font-medium whitespace-pre-line border border-black p-3 rounded bg-gray-50">
+                {{ doc.shipping_address or doc.customer_address }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer barcode/reference -->
+    <div class="border-t-2 border-dashed border-black pt-2 flex justify-between items-end">
+        <div>
+            <span class="text-[9px] text-gray-500 block">เลขที่อ้างอิงเอกสาร / Document Ref:</span>
+            <span class="font-bold text-[11px] font-mono">{{ doc.document_number }}</span>
+        </div>
+        <div class="text-right">
+            <span class="text-[8px] text-gray-400 font-light block">ระบบออกบิลกัวซาเฮ้าส์</span>
+            <span class="text-[8px] text-gray-400 font-light block">Guasha House ERP</span>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

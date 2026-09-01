@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guasha House - บริษัท กัวซา เฮ้าส์ จำกัด</title>
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="https://cdn.tailwindcss.com">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#fbfaf7',
+                        beige: '#f5f2eb',
+                        charcoal: '#1a1a1a',
+                        gold: '#c5a880',
+                        'gold-dark': '#b39268',
+                    },
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #fbfaf7;
+            font-family: 'Sarabun', sans-serif;
+        }
+    </style>
+</head>
+<body x-data="publicApp()">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-beige sticky top-0 z-50 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3">
+                <img src="/static/logo.png" alt="Guasha House Logo" class="h-12 w-auto object-contain">
+                <div>
+                    <h1 class="text-base font-bold text-charcoal tracking-wide leading-tight">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-widest leading-none font-serif">Guasha House Co., Ltd.</p>
+                </div>
+            </a>
+            
+            <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
+                <a href="#home" class="hover:text-gold transition">หน้าแรก</a>
+                <a href="#branches" class="hover:text-gold transition">สาขาของเรา</a>
+                <a href="#products" class="hover:text-gold transition">สินค้าของเรา</a>
+                <a href="#lessons" class="hover:text-gold transition">คอร์สเรียน & คลิปการสอน</a>
+                <a href="#contact" class="hover:text-gold transition">ติดต่อเรา</a>
+            </nav>
+
+            <div>
+                <a href="https://line.me" target="_blank"
+                   class="bg-charcoal hover:bg-gold text-white px-5 py-2 rounded-full text-xs font-semibold tracking-widest uppercase transition-all duration-300 shadow-md flex items-center gap-2">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M24 10.3c0-5.7-5.4-10.3-12-10.3C5.4 0 0 4.6 0 10.3c0 5.1 4.3 9.4 10.1 10.1.4 0 .9.2 1 .5.1.2.1.6 0 .9-.1.6-.4 2.4-.5 3.2 0 .2-.1.5.1.7.2.2.5.1.7 0 .2-.1 3-2 4.2-3.2 1-.9 1.6-1.5 2.1-2.4 3.9-2.3 6.3-5.9 6.3-9.8z"/>
+                    </svg>
+                    <span>ติดต่อทาง LINE</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 1. HERO SLIDER SECTION (SmartSlider simulation) -->
+    <section id="home" class="relative overflow-hidden bg-beige h-[500px]" x-data="heroSlider()">
+        <div class="h-full relative">
+            <template x-for="(slide, index) in slides" :key="index">
+                <div x-show="activeSlide === index"
+                     x-transition:enter="transition ease-out duration-1000"
+                     x-transition:enter-start="opacity-0 scale-105"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-500"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95"
+                     class="absolute inset-0 w-full h-full flex items-center justify-center">
+                     
+                    <!-- Sliding background images/luxury gradients -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-charcoal/80 to-charcoal/40 z-10" x-show="slide.title"></div>
+                    <div class="absolute inset-0 bg-cover bg-center" :style="`background-image: url('${slide.image}');`" class="w-full h-full"></div>
+                    
+                    <!-- Linkable banner slide if no title overlay -->
+                    <template x-if="!slide.title">
+                        <a :href="slide.link" class="absolute inset-0 z-20 cursor-pointer"></a>
+                    </template>
+
+                    <!-- Text Overlay Content -->
+                    <div class="relative z-20 max-w-4xl mx-auto px-6 text-center text-white space-y-6" x-show="slide.title">
+                        <span class="text-xs uppercase tracking-widest text-gold font-semibold" x-text="slide.subtitle"></span>
+                        <h2 class="text-3xl md:text-5xl font-bold font-serif leading-tight" x-text="slide.title"></h2>
+                        <p class="text-sm md:text-base text-gray-200 max-w-2xl mx-auto font-light leading-relaxed" x-text="slide.desc"></p>
+                        <div class="pt-4">
+                            <a :href="slide.link" class="inline-block bg-gold hover:bg-gold-dark text-white px-8 py-3 rounded-full text-xs tracking-widest uppercase transition duration-300 font-semibold shadow-lg">ดูข้อมูลเพิ่มเติม</a>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Slider controls -->
+        <button @click="prev()" class="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white/20 hover:bg-white/40 text-white rounded-full p-3 backdrop-blur-sm transition">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+        <button @click="next()" class="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white/20 hover:bg-white/40 text-white rounded-full p-3 backdrop-blur-sm transition">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </button>
+
+        <!-- Slider dots -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+            <template x-for="(slide, index) in slides" :key="index">
+                <button @click="activeSlide = index"
+                        :class="activeSlide === index ? 'bg-gold w-8' : 'bg-white/50 w-2.5'"
+                        class="h-2.5 rounded-full transition-all duration-300"></button>
+            </template>
+        </div>
+    </section>
+
+    <!-- 2. BRANCHES SECTION (Grouped by Region) -->
+    <section id="branches" class="max-w-7xl mx-auto px-6 py-20 space-y-12">
+        <div class="text-center max-w-xl mx-auto space-y-3">
+            <h3 class="text-xs uppercase tracking-widest text-gold font-bold">Guasha House Branches</h3>
+            <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">สาขาให้บริการของ กัวซา เฮ้าส์</h2>
+            <div class="h-1 w-12 bg-gold mx-auto"></div>
+            <p class="text-xs text-gray-500">เลือกสาขาใกล้บ้านคุณเพื่อสัมผัสบริการกัวซาต้นตำรับระดับพรีเมียม</p>
+        </div>
+
+        <!-- Filter tabs for regions -->
+        <div class="flex justify-center gap-3 flex-wrap">
+            <button @click="selectedRegion = 'ALL'"
+                    :class="selectedRegion === 'ALL' ? 'bg-charcoal text-white' : 'bg-white text-gray-600 hover:bg-beige border border-beige'"
+                    class="px-5 py-2 rounded-full text-xs font-semibold transition">ทุกภาค</button>
+            <template x-for="reg in regions" :key="reg">
+                <button @click="selectedRegion = reg"
+                        :class="selectedRegion === reg ? 'bg-charcoal text-white' : 'bg-white text-gray-600 hover:bg-beige border border-beige'"
+                        class="px-5 py-2 rounded-full text-xs font-semibold transition" x-text="reg"></button>
+            </template>
+        </div>
+
+        <!-- Branches Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <template x-for="branch in filteredBranches" :key="branch.id">
+                <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300">
+                    <!-- Storefront Image -->
+                    <div class="relative h-48 bg-cream flex-shrink-0">
+                        <img :src="branch.image_url || 'https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=600&q=80'" 
+                             alt="Storefront" class="w-full h-full object-cover">
+                        <div class="absolute top-4 right-4">
+                            <span class="bg-charcoal text-white text-[9px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full shadow" x-text="branch.region"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 flex flex-col justify-between flex-grow">
+                        <div class="space-y-4">
+                            <h4 class="text-lg font-bold text-charcoal" x-text="branch.name"></h4>
+                            <p class="text-xs text-gray-500 leading-relaxed min-h-[48px]" x-text="branch.address"></p>
+                            <div class="text-xs text-gray-600 flex items-center gap-2">
+                                <svg class="h-4 w-4 text-gold flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                                </svg>
+                                <span class="font-semibold" x-text="branch.phone || '-'"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 pt-6 border-t border-beige mt-6">
+                            <a :href="`tel:${branch.phone}`" class="text-center bg-cream hover:bg-beige text-charcoal border border-beige font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                                โทรติดต่อ
+                            </a>
+                            <a :href="branch.map_pin || '#'" target="_blank" class="text-center bg-gold hover:bg-gold-dark text-white font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                                แผนที่ Google Maps
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+        
+        <div x-show="filteredBranches.length === 0" class="text-center text-gray-400 py-12 text-sm">
+            ขออภัย ยังไม่มีข้อมูลสาขาในภูมิภาคนี้
+        </div>
+    </section>
+
+    <!-- 3. PRODUCTS SECTION -->
+    <section id="products" class="bg-beige/40 py-20 border-y border-beige">
+        <div class="max-w-7xl mx-auto px-6 space-y-12">
+            <div class="text-center max-w-xl mx-auto space-y-3">
+                <h3 class="text-xs uppercase tracking-widest text-gold font-bold">Guasha House Products</h3>
+                <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">ผลิตภัณฑ์แบรนด์กัวซาเฮ้าส์</h2>
+                <div class="h-1 w-12 bg-gold mx-auto"></div>
+                <p class="text-xs text-gray-500">ผลิตภัณฑ์ดูแลผิวหน้าและนวดบำรุงที่พัฒนาขึ้นเพื่อศาสตร์กัวซาโดยเฉพาะ</p>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <template x-for="prod in products" :key="prod.id">
+                    <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-300">
+                        <div class="h-48 bg-cream flex items-center justify-center relative overflow-hidden">
+                            <span class="absolute top-3 right-3 bg-charcoal text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase z-10" x-text="prod.is_service ? 'คอร์สเรียน/บริการ' : 'สินค้า'"></span>
+                            <template x-if="prod.image_url">
+                                <img :src="prod.image_url" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!prod.image_url">
+                                <div class="text-center space-y-2 p-6">
+                                    <img src="/static/logo.png" class="h-12 mx-auto object-contain opacity-25">
+                                    <p class="text-[10px] text-gray-400 font-mono tracking-widest" x-text="prod.code || 'P-000' + prod.id"></p>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                            <div class="space-y-1.5">
+                                <h4 class="font-bold text-charcoal text-sm" x-text="prod.name"></h4>
+                                <p class="text-xs text-gray-400 line-clamp-2 leading-relaxed" x-text="prod.description || 'ไม่มีรายละเอียดสินค้า'"></p>
+                            </div>
+                            <div class="flex items-center justify-between pt-2">
+                                <span class="text-charcoal font-bold text-base" x-text="formatCurrency(prod.unit_price)"></span>
+                                <a :href="`https://line.me/R/ti/p/@guashahouse?text=สนใจสั่งซื้อ ${encodeURIComponent(prod.name)}`" target="_blank"
+                                   class="bg-cream hover:bg-beige text-gold-dark font-bold text-[11px] px-3.5 py-2 rounded-xl transition border border-beige flex items-center gap-1">
+                                    <span>สั่งซื้อ/สอบถาม</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. VIDEO LESSONS SECTION -->
+    <section id="lessons" class="max-w-7xl mx-auto px-6 py-20 space-y-12">
+        <div class="text-center max-w-xl mx-auto space-y-3">
+            <h3 class="text-xs uppercase tracking-widest text-gold font-bold">Guasha Learning Hub</h3>
+            <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">คลิปการเรียนการสอนและแนะนำศาสตร์</h2>
+            <div class="h-1 w-12 bg-gold mx-auto"></div>
+            <p class="text-xs text-gray-500">เรียนรู้ทักษะเบื้องต้นและการทำกัวซาอย่างถูกวิธีจากวิทยากรผู้เชี่ยวชาญ</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm space-y-4">
+                <div class="relative aspect-video bg-charcoal flex items-center justify-center">
+                    <div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80');"></div>
+                    <div class="relative z-10 text-center text-white p-4 space-y-2">
+                        <button class="bg-gold hover:bg-gold-dark text-white rounded-full p-4 transition shadow-lg inline-flex items-center justify-center">
+                            <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-5 space-y-1.5">
+                    <span class="text-[10px] text-gold font-bold uppercase tracking-wider">Lesson 1 (พื้นฐาน)</span>
+                    <h4 class="font-bold text-charcoal text-sm">การจัดเตรียมอุปกรณ์และการเปิดต่อมน้ำเหลือง</h4>
+                    <p class="text-xs text-gray-400 leading-normal">เทคนิคการทำความสะอาดผิวหน้าและวิธีการเปิดจุดต่อมน้ำเหลืองเพื่อระบายของเสียอย่างถูกวิธี</p>
+                </div>
+            </div>
+            
+            <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm space-y-4">
+                <div class="relative aspect-video bg-charcoal flex items-center justify-center">
+                    <div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=600&q=80');"></div>
+                    <div class="relative z-10 text-center text-white p-4 space-y-2">
+                        <button class="bg-gold hover:bg-gold-dark text-white rounded-full p-4 transition shadow-lg inline-flex items-center justify-center">
+                            <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-5 space-y-1.5">
+                    <span class="text-[10px] text-gold font-bold uppercase tracking-wider">Lesson 2 (ขั้นกลาง)</span>
+                    <h4 class="font-bold text-charcoal text-sm">วิธีกวาดกัวซายกกระชับริ้วรอยร่องแก้มและหน้าผาก</h4>
+                    <p class="text-xs text-gray-400 leading-normal">เรียนรู้ทิศทางการลงน้ำหนักหินหยกกัวซาและการจัดรูปกรอบหน้าเพื่อลดริ้วรอยแห่งวัย</p>
+                </div>
+            </div>
+            
+            <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm space-y-4">
+                <div class="relative aspect-video bg-charcoal flex items-center justify-center">
+                    <div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=600&q=80');"></div>
+                    <div class="relative z-10 text-center text-white p-4 space-y-2">
+                        <button class="bg-gold hover:bg-gold-dark text-white rounded-full p-4 transition shadow-lg inline-flex items-center justify-center">
+                            <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-5 space-y-1.5">
+                    <span class="text-[10px] text-gold font-bold uppercase tracking-wider">Lesson 3 (มืออาชีพ)</span>
+                    <h4 class="font-bold text-charcoal text-sm">การบำบัดผิวพรรณด้วยครีมกัวซาธรรมชาติ</h4>
+                    <p class="text-xs text-gray-400 leading-normal">เทคนิคการนวดสปาหน้ากัวซาขั้นสูงที่เน้นการฟื้นฟูคอลลาเจนใต้ผิวหนังด้วยครีมธรรมชาติ</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER / BACK-OFFICE ACCESS -->
+    <footer id="contact" class="bg-charcoal text-white pt-16 pb-8 border-t border-beige">
+        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 pb-12 border-b border-gray-800">
+            <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                    <img src="/static/logo.png" alt="Guasha House Logo" class="h-10 w-auto brightness-200 object-contain">
+                    <h2 class="text-lg font-bold font-serif tracking-wide">GUASHA HOUSE</h2>
+                </div>
+                <p class="text-xs text-gray-400 leading-relaxed font-light">
+                    ผู้นำด้านการดูแลผิวพรรณและสปานวดหน้าด้วยศาสตร์หินหยกกัวซาต้นตำรับบำบัดธรรมชาติแบบครบวงจร
+                </p>
+            </div>
+            
+            <div class="space-y-4">
+                <h4 class="text-xs font-bold text-gold tracking-widest uppercase">ติดต่อเรา / Contact Info</h4>
+                <p class="text-xs text-gray-400 leading-relaxed font-light">
+                    บริษัท กัวซา เฮ้าส์ จำกัด <br>
+                    199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240<br>
+                    โทรศัพท์: 061-496-6361
+                </p>
+            </div>
+            
+            <div class="space-y-4">
+                <h4 class="text-xs font-bold text-gold tracking-widest uppercase">ติดตามช่องทางบริการ</h4>
+                <div class="flex gap-4">
+                    <a href="https://line.me" target="_blank" class="bg-gray-800 hover:bg-gold p-3 rounded-full transition">
+                        <svg class="h-4 w-4 fill-current text-white" viewBox="0 0 24 24">
+                            <path d="M24 10.3c0-5.7-5.4-10.3-12-10.3C5.4 0 0 4.6 0 10.3c0 5.1 4.3 9.4 10.1 10.1.4 0 .9.2 1 .5.1.2.1.6 0 .9-.1.6-.4 2.4-.5 3.2 0 .2-.1.5.1.7.2.2.5.1.7 0 .2-.1 3-2 4.2-3.2 1-.9 1.6-1.5 2.1-2.4 3.9-2.3 6.3-5.9 6.3-9.8z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-[10px] text-gray-500">&copy; 2026 Guasha House Co., Ltd. สงวนลิขสิทธิ์ทั้งหมด</p>
+            
+            <a href="/login" class="text-[9px] text-gray-600 hover:text-gold transition font-light italic">
+                ระบบจัดการหลังบ้าน (Staff/Admin Login)
+            </a>
+        </div>
+    </footer>
+
+    <script>
+        function publicApp() {
+            return {
+                selectedRegion: 'ALL',
+                regions: ['กรุงเทพฯ', 'ภาคกลาง', 'ภาคเหนือ', 'ภาคใต้', 'ภาคตะวันออกเฉียงเหนือ'],
+                branches: [],
+                products: [],
+                
+                init() {
+                    this.fetchPublicBranches();
+                    this.fetchPublicProducts();
+                },
+                
+                fetchPublicBranches() {
+                    fetch('/api/branches')
+                        .then(res => res.json())
+                        .then(data => {
+                            this.branches = data;
+                        })
+                        .catch(err => console.error(err));
+                },
+                
+                fetchPublicProducts() {
+                    fetch('/api/products')
+                        .then(res => res.json())
+                        .then(data => {
+                            this.products = data;
+                        })
+                        .catch(err => console.error(err));
+                },
+                
+                get filteredBranches() {
+                    if (this.selectedRegion === 'ALL') {
+                        return this.branches;
+                    }
+                    return this.branches.filter(b => b.region === this.selectedRegion);
+                },
+                
+                formatCurrency(val) {
+                    return '฿' + parseFloat(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+            }
+        }
+
+        function heroSlider() {
+            return {
+                activeSlide: 0,
+                slides: [
+                    {
+                        image: '/static/banner1.png',
+                        subtitle: '',
+                        title: '',
+                        desc: '',
+                        link: '#branches'
+                    },
+                    {
+                        image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
+                        subtitle: 'Professional Training Course',
+                        title: 'คอร์สเรียนสปานวดกัวซายกกระชับระดับมืออาชีพ',
+                        desc: 'หลักสูตรเรียนกัวซาอย่างละเอียดทุกขั้นตอน สอนเทคนิคการกวาดเปิดน้ำเหลืองและผ่อนคลายกล้ามเนื้อหน้าสำหรับทำธุรกิจหรือดูแลตัวเอง',
+                        link: '#lessons'
+                    },
+                    {
+                        image: 'https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?auto=format&fit=crop&w=1200&q=80',
+                        subtitle: 'Guasha House Skincare',
+                        title: 'ผลิตภัณฑ์ครีมบำรุงธรรมชาติสำหรับนวดกัวซา',
+                        desc: 'พัฒนาครีมและน้ำมันสูตรพิเศษสำหรับหล่อลื่นผิวขณะทำกัวซา อุดมด้วยสารสกัดธรรมชาติบริสุทธิ์เพื่อความกระจ่างใสเปล่งปลั่ง',
+                        link: '#products'
+                    }
+                ],
+                
+                init() {
+                    setInterval(() => {
+                        this.next();
+                    }, 6000);
+                },
+                
+                next() {
+                    this.activeSlide = (this.activeSlide + 1) % this.slides.length;
+                },
+                
+                prev() {
+                    this.activeSlide = (this.activeSlide - 1 + this.slides.length) % this.slides.length;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
