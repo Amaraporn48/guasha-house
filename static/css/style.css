@@ -82,19 +82,62 @@ h1, h2, h3, h4, h5, h6 {
     color: #000 !important;
     margin: 0 !important;
     padding: 0 !important;
-    font-size: 11pt;
+    font-size: 12pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
+  /* Documents Summary Table Print Enhancements */
   .print-documents-header {
     display: block !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 20px !important;
+    border-bottom: 3px solid #000 !important;
+  }
+
+  .print-documents-header h2 {
+    font-size: 16pt !important;
+    font-weight: 800 !important;
+    color: #000 !important;
   }
 
   .documents-table-box {
+    display: block !important;
+    width: 100% !important;
     box-shadow: none !important;
     border: none !important;
     border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .documents-table-box table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 12pt !important;
+  }
+
+  .documents-table-box th {
+    background-color: #f5f2eb !important;
+    color: #000 !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    padding: 10px 14px !important;
+    border: 1.5px solid #000 !important;
+  }
+
+  .documents-table-box td {
+    font-size: 11pt !important;
+    font-weight: 500 !important;
+    color: #000 !important;
+    padding: 10px 14px !important;
+    border: 1px solid #000 !important;
+  }
+
+  /* Hide the Action buttons column on print */
+  .documents-table-box th:last-child,
+  .documents-table-box td:last-child {
+    display: none !important;
   }
 
   /* Target printing wrapper specifically */
@@ -118,7 +161,7 @@ h1, h2, h3, h4, h5, h6 {
 
   th, td {
     border: 1px solid #1a1a1a !important;
-    padding: 6px 8px !important;
+    padding: 8px 10px !important;
   }
 
   /* Ensure lines and colors show clearly in PDF export */
