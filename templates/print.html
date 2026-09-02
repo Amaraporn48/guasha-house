@@ -23,22 +23,65 @@
     </script>
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
-        /* Extra styles to ensure precise print sizing */
+    <style>
         @page {
             size: A4;
             margin: 0;
         }
-        body {
-            background-color: white !important;
-            color: black !important;
-            font-size: 11pt;
-            line-height: 1.4;
+        @media screen {
+            body {
+                background-color: #fbfaf7 !important;
+                color: #1a1a1a !important;
+            }
+            .print-container {
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+                background-color: white !important;
+                border: 1px solid #f5f2eb;
+            }
+        }
+        @media print {
+            body {
+                background-color: white !important;
+                padding: 0 !important;
+            }
+            .print-container {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                padding: 15mm 15mm !important;
+            }
+            .no-print {
+                display: none !important;
+            }
         }
     </style>
 </head>
-<body class="bg-white">
+<body class="bg-cream min-h-screen">
     
-    <div class="print-container flex flex-col justify-between h-[280mm] max-w-[210mm] mx-auto p-[15mm]">
+    {% if share_mode %}
+    <!-- Mobile/Screen Top Bar for Line Shared Invoice -->
+    <div class="no-print bg-charcoal text-white p-3.5 sticky top-0 z-50 shadow-md">
+        <div class="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <img src="/static/logo.png" alt="Guasha House Logo" class="h-9 w-9 object-contain bg-white rounded-lg p-0.5">
+                <div>
+                    <h1 class="text-sm font-bold text-gold">กัวซา เฮ้าส์ - ใบกำกับภาษีออนไลน์</h1>
+                    <p class="text-[11px] text-gray-300">เอกสารเลขที่: {{ doc.document_number }}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <button onclick="window.print()" class="w-full sm:w-auto bg-gold hover:bg-gold-dark text-charcoal font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center justify-center gap-2 shadow">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    <span>พิมพ์เอกสาร / บันทึก PDF</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="print-container flex flex-col justify-between min-h-[280mm] w-full max-w-full sm:max-w-[210mm] mx-auto p-4 sm:p-[15mm] my-0 sm:my-6 rounded-none sm:rounded-2xl">
         
         <!-- TOP SECTION: COMPANY & CLIENT DETAILS -->
         <div>
