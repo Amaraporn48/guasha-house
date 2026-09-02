@@ -807,8 +807,17 @@
             <!-- 4. DOCUMENTS MANAGEMENT VIEW -->
             <div x-show="activeView === 'documents'" class="space-y-6">
                 <!-- Search & Filters Toolbar -->
-                <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm space-y-4">
-                    <h3 class="text-sm font-semibold tracking-wider text-charcoal uppercase">ค้นหาและกรองข้อมูลเอกสาร / Search & Filters</h3>
+                <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm space-y-4 no-print">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-beige pb-3">
+                        <div>
+                            <h3 class="text-sm font-semibold tracking-wider text-charcoal uppercase">ค้นหาและกรองข้อมูลเอกสาร / Search & Filters</h3>
+                            <p class="text-xs text-gray-400">ค้นหา กรอง และสั่งพิมพ์สรุปตารางรายการเอกสารทั้งหมดในระบบ</p>
+                        </div>
+                        <button @click="printDocumentsSummary()" class="bg-charcoal hover:bg-gold-dark text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2 self-stretch sm:self-auto justify-center">
+                            <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                            <span>พิมพ์รายงานตารางเอกสาร / Print List</span>
+                        </button>
+                    </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                         <div class="md:col-span-2">
@@ -859,8 +868,22 @@
                     </div>
                 </div>
 
+                <!-- Printable Header on Documents Print -->
+                <div class="hidden print-documents-header p-4 mb-4 border-b-2 border-black">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold uppercase">บริษัท กัวซา เฮ้าส์ จำกัด - รายงานสรุปรายการเอกสาร</h2>
+                            <p class="text-xs text-gray-600">GUASHA HOUSE CO., LTD. - DOCUMENTS SUMMARY REPORT</p>
+                        </div>
+                        <div class="text-right text-xs">
+                            <div>วันที่ออกรายงาน: <span class="font-bold" x-text="currentDateFormatted()"></span></div>
+                            <div>จำนวนรวม: <span class="font-bold" x-text="documents.length"></span> รายการ</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Invoice Listing Table -->
-                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden">
+                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden documents-table-box">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm">
                             <thead>
@@ -3152,6 +3175,10 @@
                 printInvoice(id) {
                     // Open full print layout in new window and invoke print
                     window.open(`/print/${id}`, '_blank');
+                },
+
+                printDocumentsSummary() {
+                    window.print();
                 },
 
                 printDraft() {

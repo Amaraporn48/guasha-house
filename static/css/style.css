@@ -68,7 +68,7 @@ h1, h2, h3, h4, h5, h6 {
 /* --- PRINT-SPECIFIC CSS --- */
 @media print {
   /* Hide interactive application UI components */
-  .no-print, nav, sidebar, button, .btn, .alert, header, aside, main {
+  .no-print, nav, sidebar, button, .btn, .alert, aside {
     display: none !important;
   }
   
@@ -82,11 +82,19 @@ h1, h2, h3, h4, h5, h6 {
     color: #000 !important;
     margin: 0 !important;
     padding: 0 !important;
-    width: 210mm;
-    height: 297mm;
-    font-size: 12pt;
+    font-size: 11pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .print-documents-header {
+    display: block !important;
+  }
+
+  .documents-table-box {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
   }
 
   /* Target printing wrapper specifically */
