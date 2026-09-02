@@ -82,9 +82,18 @@ h1, h2, h3, h4, h5, h6 {
     color: #000 !important;
     margin: 0 !important;
     padding: 0 !important;
-    font-size: 12pt;
+    width: 100% !important;
+    font-size: 13pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* Override Tailwind layout containers to span 100% full width */
+  main, .flex-1, .max-w-7xl, .space-y-6, .p-6, .px-6, .py-6 {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Documents Summary Table Print Enhancements */
