@@ -1183,6 +1183,7 @@
                                     <th class="px-4 py-3 text-center">ประเภท</th>
                                     <th class="px-4 py-3 text-right">ราคาต่อหน่วย</th>
                                     <th class="px-4 py-3 text-center font-bold text-charcoal">จำนวนที่ขายได้</th>
+                                    <th class="px-4 py-3 text-center font-bold text-charcoal">คงเหลือในสต็อก</th>
                                     <th class="px-4 py-3 text-right font-bold text-charcoal">ยอดขายรวม (฿)</th>
                                     <th class="px-4 py-3 text-right">สัดส่วน</th>
                                 </tr>
@@ -1219,6 +1220,16 @@
                                                   :class="p.sold_qty > 0 ? 'bg-gold/20 text-gold-dark ring-1 ring-gold/40' : 'bg-gray-100 text-gray-400'"
                                                   x-text="p.sold_qty + ' ชิ้น'"></span>
                                         </td>
+                                        <td class="px-4 py-3.5 text-center">
+                                            <template x-if="p.is_service">
+                                                <span class="text-[10px] text-gray-400 font-medium">ไม่จำกัด (คอร์ส)</span>
+                                            </template>
+                                            <template x-if="!p.is_service">
+                                                <span class="inline-block px-2.5 py-1 rounded-xl text-xs font-bold font-mono shadow-sm"
+                                                      :class="p.stock_quantity <= 5 ? 'bg-red-50 text-red-600 ring-1 ring-red-200 animate-pulse' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'"
+                                                      x-text="(p.stock_quantity || 0) + ' ชิ้น'"></span>
+                                            </template>
+                                        </td>
                                         <td class="px-4 py-3.5 text-right font-mono font-bold text-xs"
                                             :class="p.total_amount > 0 ? 'text-charcoal' : 'text-gray-400'"
                                             x-text="formatCurrency(p.total_amount)"></td>
@@ -1228,7 +1239,7 @@
                                     </tr>
                                 </template>
                                 <tr x-show="!reportData.product_sales || reportData.product_sales.length === 0">
-                                    <td colspan="6" class="text-center py-8 text-xs text-gray-400">
+                                    <td colspan="7" class="text-center py-8 text-xs text-gray-400">
                                         ไม่มีรายการขายสินค้าในช่วงเวลาที่เลือก
                                     </td>
                                 </tr>
