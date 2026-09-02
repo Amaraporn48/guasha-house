@@ -3178,7 +3178,13 @@
                 },
 
                 printDocumentsSummary() {
-                    window.print();
+                    const params = new URLSearchParams({
+                        query: this.docFilter.query || '',
+                        year: this.docFilter.year || '',
+                        month: this.docFilter.month || '',
+                        payment_method: this.docFilter.payment_method || ''
+                    });
+                    window.open(`/print/summary/list?${params.toString()}`, '_blank');
                 },
 
                 printDraft() {

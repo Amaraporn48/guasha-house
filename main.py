@@ -1395,6 +1395,76 @@ def print_shipping_label(doc_id: int, request: Request, db: Session = Depends(ge
         }
     )
 
+@app.get("/print/summary/list", response_class=HTMLResponse)
+def print_documents_summary(
+    request: Request,
+    query: Optional[str] = None,
+    year: Optional[str] = None,
+    month: Optional[str] = None,
+    payment_method: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    stmt = db.query(Document)
+    
+    if year:
+        if month and month != "ALL" and month != "":
+            pattern = f"{year}-{int(month):02d}-%"
+        else:
+            pattern = f"{year}-%"
+        stmt = stmt.filter(Document.date.like(pattern))
+        
+    if payment_method:
+        stmt = stmt.filter(Document.payment_method == payment_method)
+        
+    documents = stmt.order_by(Document.date.desc(), Document.id.desc()).all()
+    
+    # Filter by query string if provided
+    if query:
+        q_clean = query.strip().lower()
+        documents = [
+            d for d in documents 
+            if q_clean in (d.document_number or "").lower() or q_clean in (d.customer_name or "").lower()
+        ]
+        
+    # Format dates
+    months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+    total_sum = 0.0
+    for doc in documents:
+        total_sum += float(doc.total_amount_after_vat or 0.0)
+        if doc.date:
+            parts = doc.date.split('-')
+            if len(parts) == 3:
+                y = int(parts[0]) + 543
+                m_idx = int(parts[1]) - 1
+                d = int(parts[2])
+                doc.formatted_date = f"{d} {months_th[m_idx]} {y}"
+            else:
+                doc.formatted_date = doc.date
+        else:
+            doc.formatted_date = "-"
+
+    # Thai Date Today
+    today = datetime.date.today()
+    print_date = f"{today.day} {months_th[today.month - 1]} {today.year + 543}"
+    
+    filter_parts = []
+    if year: filter_parts.append(f"ปี {year}")
+    if month: filter_parts.append(f"เดือน {month}")
+    if payment_method: filter_parts.append(f"วิธีชำระเงิน: {payment_method}")
+    if query: filter_parts.append(f"คำค้นหา: '{query}'")
+    filter_desc = " | ".join(filter_parts) if filter_parts else "ทั้งหมด"
+
+    return templates.TemplateResponse(
+        request=request,
+        name="print_summary.html",
+        context={
+            "documents": documents,
+            "total_amount_sum": total_sum,
+            "print_date": print_date,
+            "filter_desc": filter_desc
+        }
+    )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
