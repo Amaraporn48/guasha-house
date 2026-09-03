@@ -23,6 +23,8 @@
         }
     </script>
     <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Alpine.js CDN -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
@@ -346,6 +348,44 @@
                         <div class="p-4 bg-cream border border-gold/40 rounded-xl space-y-1">
                             <span class="text-[11px] font-bold text-gold-dark uppercase tracking-wider block">กำไรสุทธิสะสม / Net Profit</span>
                             <span class="text-xl font-bold text-charcoal font-mono" x-text="formatCurrency((stats.total_sales || 0) - (stats.total_expenses || 0))">฿0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Visual Charts Panel -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Dual Bar Chart: Revenues vs Expenses Monthly -->
+                    <div class="lg:col-span-2 bg-white border border-beige rounded-2xl p-6 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-beige pb-3">
+                            <div>
+                                <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase flex items-center gap-2">
+                                    <span>📊 กราฟแท่งเปรียบเทียบรายรับ - รายจ่าย รายเดือน</span>
+                                </h3>
+                                <p class="text-xs text-gray-400 mt-0.5">เปรียบเทียบรายรับ (สีเขียว) และรายจ่าย (สีแดง) ประจำเดือน Jan - Dec</p>
+                            </div>
+                            <div class="flex items-center gap-4 text-xs font-semibold">
+                                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-sm"></span> รายรับ</span>
+                                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500 inline-block shadow-sm"></span> รายจ่าย</span>
+                            </div>
+                        </div>
+                        <div class="h-72 relative">
+                            <canvas id="dashboardRevenueExpenseChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Doughnut Chart: Financial Proportion -->
+                    <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm space-y-4 flex flex-col justify-between">
+                        <div class="border-b border-beige pb-3">
+                            <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase flex items-center gap-2">
+                                <span>🍩 สัดส่วนงบการเงินสะสม</span>
+                            </h3>
+                            <p class="text-xs text-gray-400 mt-0.5">อัตราส่วนกำไรสุทธิสะสม และรายจ่ายรวม</p>
+                        </div>
+                        <div class="h-60 relative flex items-center justify-center">
+                            <canvas id="dashboardFinancialDoughnutChart"></canvas>
+                        </div>
+                        <div class="pt-2 border-t border-beige text-center">
+                            <span class="text-[11px] text-gray-400 font-medium">คำนวณสรุปผลตามจริงจากระบบกัวซา เฮ้าส์ ERP</span>
                         </div>
                     </div>
                 </div>
@@ -2325,7 +2365,122 @@
                 fetchDashboardStats() {
                     fetch('/api/dashboard/stats')
                         .then(res => res.json())
-                        .then(data => this.stats = data);
+                        .then(data => {
+                            this.stats = data;
+                            this.$nextTick(() => {
+                                this.renderDashboardCharts(data.months_chart_data, data.total_sales, data.total_expenses);
+                            });
+                        });
+                },
+
+                renderDashboardCharts(chartData, totalSales, totalExpenses) {
+                    if (!window.Chart || !chartData) return;
+                    
+                    const labels = chartData.map(d => d.month_name);
+                    const salesData = chartData.map(d => d.sales);
+                    const expensesData = chartData.map(d => d.expenses);
+                    
+                    // 1. Dual Bar Chart
+                    const barCanvas = document.getElementById('dashboardRevenueExpenseChart');
+                    if (barCanvas) {
+                        if (this.dashBarChartInstance) this.dashBarChartInstance.destroy();
+                        this.dashBarChartInstance = new Chart(barCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [
+                                    {
+                                        label: 'รายรับ (บาท)',
+                                        data: salesData,
+                                        backgroundColor: '#10b981',
+                                        borderColor: '#059669',
+                                        borderWidth: 1,
+                                        borderRadius: 5
+                                    },
+                                    {
+                                        label: 'รายจ่าย (บาท)',
+                                        data: expensesData,
+                                        backgroundColor: '#ef4444',
+                                        borderColor: '#dc2626',
+                                        borderWidth: 1,
+                                        borderRadius: 5
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                let label = context.dataset.label || '';
+                                                if (label) label += ': ';
+                                                if (context.parsed.y !== null) {
+                                                    label += '฿' + context.parsed.y.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                                }
+                                                return label;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: { font: { family: 'Sarabun' } },
+                                        grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                    },
+                                    x: {
+                                        ticks: { font: { family: 'Sarabun' } },
+                                        grid: { display: false }
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    // 2. Doughnut Chart
+                    const doughnutCanvas = document.getElementById('dashboardFinancialDoughnutChart');
+                    if (doughnutCanvas) {
+                        if (this.dashDoughnutChartInstance) this.dashDoughnutChartInstance.destroy();
+                        const profit = Math.max(0, (totalSales || 0) - (totalExpenses || 0));
+                        this.dashDoughnutChartInstance = new Chart(doughnutCanvas, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['กำไรสุทธิสะสม', 'รายจ่ายรวมทั้งหมด'],
+                                datasets: [{
+                                    data: [profit, totalExpenses || 0],
+                                    backgroundColor: ['#c5a880', '#ef4444'],
+                                    borderWidth: 3,
+                                    borderColor: '#ffffff'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: { font: { family: 'Sarabun', size: 11 } }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                let label = context.label || '';
+                                                if (label) label += ': ';
+                                                if (context.parsed !== null) {
+                                                    label += '฿' + context.parsed.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                                }
+                                                return label;
+                                            }
+                                        }
+                                    }
+                                },
+                                cutout: '70%'
+                            }
+                        });
+                    }
                 },
 
                 fetchCustomers() {

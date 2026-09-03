@@ -968,6 +968,30 @@ def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depe
     # Total customers
     total_cust = db.query(Customer).count()
     
+    # 12 Months breakdown for Dashboard Chart
+    months_chart_data = []
+    months_th = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+    for m in range(1, 13):
+        m_str = f"{now.year}-{m:02d}"
+        
+        s_sum = db.query(func.sum(Document.total_amount_after_vat)).filter(
+            Document.date.like(f"{m_str}-%")
+        ).scalar()
+        s_val = float(s_sum) if s_sum else 0.0
+        
+        e_sum = db.query(func.sum(Expense.amount)).filter(
+            Expense.date.like(f"{m_str}-%")
+        ).scalar()
+        e_val = float(e_sum) if e_sum else 0.0
+        
+        months_chart_data.append({
+            "month_num": m,
+            "month_name": months_th[m-1],
+            "sales": s_val,
+            "expenses": e_val,
+            "profit": s_val - e_val
+        })
+
     # Recent documents (5)
     recent_docs = db.query(Document).order_by(Document.document_number.desc()).limit(5).all()
     
@@ -992,6 +1016,7 @@ def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depe
         "total_sales": total_sales,
         "total_expenses": total_expenses,
         "total_customers": total_cust,
+        "months_chart_data": months_chart_data,
         "recent_documents": recent_list
     }
 
