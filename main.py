@@ -1270,15 +1270,46 @@ def get_expenses(db: Session = Depends(get_db), current_user: User = Depends(get
 @app.post("/api/expenses")
 def create_expense(exp_data: ExpenseCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from database import Expense
-    new_exp = Expense(
-        amount=exp_data.amount,
-        category=exp_data.category,
-        description=exp_data.description,
-        date=exp_data.date
-    )
+    
+    v_num = exp_data.voucher_number
+    if not v_num or not v_num.strip():
+        count = db.query(Expense).count() + 1
+        year_str = datetime.date.today().year
+        v_num = f"PV-{year_str}-{count:04d}"
+        
+    sub_amt = exp_data.subtotal if (exp_data.subtotal and exp_data.subtotal > 0) else exp_data.amount
+    net_amt = exp_data.net_amount if (exp_data.net_amount and exp_data.net_amount > 0) else exp_data.amount
+    wht_amt = exp_data.withholding_tax_amount or 0.0
+
+    new_exp = Expense()
+    new_exp.date = exp_data.date
+    new_exp.category = exp_data.category
+    new_exp.amount = net_amt
+    new_exp.description = exp_data.description or exp_data.pay_to or exp_data.category
+    
+    # Safe assignments for newly added Payment Voucher columns
+    for attr, val in [
+        ("voucher_number", v_num),
+        ("pay_to", exp_data.pay_to),
+        ("address", exp_data.address),
+        ("tax_id", exp_data.tax_id),
+        ("items_json", exp_data.items_json),
+        ("subtotal", sub_amt),
+        ("withholding_tax_percent", exp_data.withholding_tax_percent or 0.0),
+        ("withholding_tax_amount", wht_amt),
+        ("net_amount", net_amt),
+        ("note", exp_data.note)
+    ]:
+        try:
+            setattr(new_exp, attr, val)
+        except Exception:
+            pass
+
     db.add(new_exp)
     db.commit()
-    return {"success": True, "message": "บันทึกรายจ่ายสำเร็จ", "expense_id": new_exp.id}
+    
+    res_v_num = getattr(new_exp, "voucher_number", None) or f"PV-{new_exp.id:04d}"
+    return {"success": True, "message": "บันทึกใบสำคัญจ่ายสำเร็จ", "expense_id": new_exp.id, "voucher_number": res_v_num}
 
 @app.delete("/api/expenses/{exp_id}")
 def delete_expense(exp_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

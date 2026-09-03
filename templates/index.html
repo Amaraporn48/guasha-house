@@ -2984,20 +2984,20 @@
                     this.calculateExpenseTotals();
                     
                     const payload = {
-                        voucher_number: this.expenseModal.voucher_number,
-                        date: this.expenseModal.date,
+                        voucher_number: this.expenseModal.voucher_number || '',
+                        date: this.expenseModal.date || new Date().toISOString().substring(0, 10),
                         category: this.expenseModal.category,
-                        pay_to: this.expenseModal.pay_to,
-                        address: this.expenseModal.address,
-                        tax_id: this.expenseModal.tax_id,
+                        pay_to: this.expenseModal.pay_to || '',
+                        address: this.expenseModal.address || '',
+                        tax_id: this.expenseModal.tax_id || '',
                         description: this.expenseModal.description || this.expenseModal.pay_to || this.expenseModal.category,
-                        items_json: JSON.stringify(this.expenseModal.items),
-                        subtotal: this.expenseModal.subtotal,
+                        items_json: JSON.stringify(this.expenseModal.items || []),
+                        subtotal: this.expenseModal.subtotal || 0,
                         withholding_tax_percent: this.expenseModal.has_withholding_tax ? (parseFloat(this.expenseModal.withholding_tax_percent) || 3) : 0,
-                        withholding_tax_amount: this.expenseModal.withholding_tax_amount,
-                        amount: this.expenseModal.amount,
-                        net_amount: this.expenseModal.amount,
-                        note: this.expenseModal.note
+                        withholding_tax_amount: this.expenseModal.withholding_tax_amount || 0,
+                        amount: this.expenseModal.amount || 0,
+                        net_amount: this.expenseModal.amount || 0,
+                        note: this.expenseModal.note || ''
                     };
 
                     fetch('/api/expenses', {
@@ -3005,22 +3005,26 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            this.showToast(data.message || 'บันทึกใบสำคัญจ่ายสำเร็จ');
-                            this.expenseModal.open = false;
-                            this.fetchExpenses();
-                            this.fetchExpenseCategories();
-                            this.fetchReportsData();
-                            this.fetchDashboardStats();
-                            
-                            if (confirm('บันทึกใบสำคัญจ่ายสำเร็จ! คุณต้องการสั่งพิมพ์ใบสำคัญจ่ายทันทีใช่หรือไม่?')) {
-                                window.open(`/print/expense/${data.expense_id}`, '_blank');
-                            }
-                        } else {
-                            alert(data.detail || 'เกิดข้อผิดพลาดในการบันทึก');
+                    .then(async res => {
+                        const data = await res.json();
+                        if (!res.ok || !data.success) {
+                            alert('เกิดข้อผิดพลาดในการบันทึก: ' + (data.detail || data.message || 'กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง'));
+                            return;
                         }
+                        
+                        this.showToast(data.message || 'บันทึกใบสำคัญจ่ายสำเร็จ');
+                        this.expenseModal.open = false;
+                        this.fetchExpenses();
+                        this.fetchExpenseCategories();
+                        this.fetchReportsData();
+                        this.fetchDashboardStats();
+                        
+                        if (confirm('บันทึกใบสำคัญจ่ายสำเร็จ! คุณต้องการสั่งพิมพ์ใบสำคัญจ่ายทันทีใช่หรือไม่?')) {
+                            window.open(`/print/expense/${data.expense_id}`, '_blank');
+                        }
+                    })
+                    .catch(err => {
+                        alert('เกิดข้อผิดพลาดในการส่งข้อมูล: ' + err);
                     });
                 },
 
