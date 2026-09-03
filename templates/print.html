@@ -199,8 +199,8 @@
                             <td class="px-3 py-2 text-center border-r border-gray-300">{{ loop.index }}</td>
                             <td class="px-3 py-2 border-r border-gray-300 font-medium">{{ item.description }}</td>
                             <td class="px-3 py-2 text-center border-r border-gray-300">{{ item.quantity|int if item.quantity == item.quantity|int else item.quantity }}</td>
-                            <td class="px-3 py-2 text-right border-r border-gray-300">฿{{ "{:,.2f}".format(item.unit_price) }}</td>
-                            <td class="px-3 py-2 text-right font-semibold">฿{{ "{:,.2f}".format(item.amount) }}</td>
+                            <td class="px-3 py-2 text-right border-r border-gray-300">฿{{ "{:,.2f}".format(item.unit_price or 0) }}</td>
+                            <td class="px-3 py-2 text-right font-semibold">฿{{ "{:,.2f}".format(item.amount or 0) }}</td>
                         </tr>
                         {% endfor %}
                         
@@ -233,15 +233,15 @@
                 <div class="sm:col-span-4 text-[10.5px] divide-y divide-gray-300">
                     <div class="flex justify-between p-2">
                         <span class="text-gray-500 font-medium">ราคาสินค้า / Subtotal</span>
-                        <span class="font-bold">฿{{ "{:,.2f}".format(doc.total_amount_before_vat) }}</span>
+                        <span class="font-bold">฿{{ "{:,.2f}".format(doc.total_amount_before_vat or 0) }}</span>
                     </div>
                     <div class="flex justify-between p-2">
                         <span class="text-gray-500 font-medium">ภาษีมูลค่าเพิ่ม VAT 7%</span>
-                        <span class="font-bold">฿{{ "{:,.2f}".format(doc.vat_amount) }}</span>
+                        <span class="font-bold">฿{{ "{:,.2f}".format(doc.vat_amount or 0) }}</span>
                     </div>
                     <div class="flex justify-between p-2 bg-gray-100 font-bold">
                         <span class="text-gray-800 font-semibold">รวมทั้งสิ้น / Grand Total</span>
-                        <span class="font-bold text-gray-900">฿{{ "{:,.2f}".format(doc.total_amount_after_vat) }}</span>
+                        <span class="font-bold text-gray-900">฿{{ "{:,.2f}".format(doc.total_amount_after_vat or 0) }}</span>
                     </div>
                 </div>
             </div>
