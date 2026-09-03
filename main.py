@@ -1528,7 +1528,7 @@ def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(g
 
     setattr(exp, "formatted_date", formatted_date)
     
-    padding_count = max(0, 14 - (len(items) if items else 1))
+    padding_count = max(0, 8 - (len(items) if items else 1))
     padding_rows = range(padding_count)
 
     return templates.TemplateResponse(
