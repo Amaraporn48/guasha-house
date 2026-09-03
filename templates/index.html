@@ -399,45 +399,188 @@
                     </div>
                 </div>
 
-                <!-- Recent Documents Section -->
-                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-beige flex items-center justify-between">
-                        <h3 class="text-sm font-semibold tracking-wider text-charcoal uppercase">เอกสารล่าสุด / Recent Documents</h3>
-                        <button @click="setView('documents')" class="text-xs font-semibold text-gold-dark hover:text-charcoal uppercase transition">ดูทั้งหมด / View All &rarr;</button>
+                <!-- 1. Monthly Account Breakdown Table (แทนที่ส่วนเอกสารล่าสุดที่ตัดออก) -->
+                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden space-y-4 p-6">
+                    <div class="flex items-center justify-between border-b border-beige pb-4">
+                        <div>
+                            <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase flex items-center gap-2">
+                                <span>🗓️ ข้อมูลสรุปบัญชีรายเดือน 12 เดือน / Monthly Account Breakdown</span>
+                            </h3>
+                            <p class="text-xs text-gray-400 mt-1">สรุปจำนวนใบสำคัญ ภาษีขายสะสม และยอดเงินรวมสะสมประจำเดือน ม.ค. - ธ.ค.</p>
+                        </div>
+                        <a href="/api/reports/print-summary" target="_blank" class="bg-charcoal hover:bg-gold-dark text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5">
+                            <span>🖨️ พิมพ์รายงานสรุป / PDF</span>
+                        </a>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm">
                             <thead>
                                 <tr class="bg-cream border-b border-beige text-xs text-gray-500 uppercase font-semibold">
-                                    <th class="px-6 py-4">เลขที่เอกสาร / No.</th>
-                                    <th class="px-6 py-4">วันที่ / Date</th>
-                                    <th class="px-6 py-4">ลูกค้า / Customer</th>
-                                    <th class="px-6 py-4 text-right">จำนวนเงินรวม / Total</th>
-                                    <th class="px-6 py-4">ผู้จัดทำ / Created By</th>
-                                    <th class="px-6 py-4 text-right">Actions</th>
+                                    <th class="px-6 py-3.5">เดือน / Month</th>
+                                    <th class="px-6 py-3.5 text-center">จำนวนใบสำคัญ / Count</th>
+                                    <th class="px-6 py-3.5 text-right">ภาษีขายสะสม / VAT (7%)</th>
+                                    <th class="px-6 py-3.5 text-right font-bold text-charcoal">ยอดเงินรวมสะสม / Gross Total</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <template x-for="doc in stats.recent_documents" :key="doc.id">
-                                    <tr class="border-b border-beige hover:bg-cream/50 transition">
-                                        <td class="px-6 py-4 font-semibold text-charcoal" x-text="doc.document_number"></td>
-                                        <td class="px-6 py-4 text-gray-600" x-text="formatThaiDate(doc.date)"></td>
-                                        <td class="px-6 py-4 font-medium text-gray-800" x-text="doc.customer_name"></td>
-                                        <td class="px-6 py-4 text-right font-bold text-charcoal" x-text="formatCurrency(doc.total_amount)"></td>
-                                        <td class="px-6 py-4 text-xs text-gray-500" x-text="doc.created_by"></td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="inline-flex gap-2">
-                                                <button @click="viewInvoice(doc.id)" class="text-xs bg-beige text-charcoal px-3 py-1.5 rounded-lg border border-beige hover:border-gold hover:text-gold-dark transition font-medium">ดู / View</button>
-                                                <button @click="printInvoice(doc.id)" class="text-xs bg-charcoal hover:bg-gold-dark text-white px-3 py-1.5 rounded-lg transition font-medium">พิมพ์ / Print</button>
+                            <tbody class="divide-y divide-beige">
+                                <template x-for="item in reportData.months_data" :key="item.month_num">
+                                    <tr class="hover:bg-cream/40 transition">
+                                        <td class="px-6 py-3 font-semibold text-charcoal" x-text="item.month_name"></td>
+                                        <td class="px-6 py-3 text-center font-medium text-gray-600" x-text="item.count"></td>
+                                        <td class="px-6 py-3 text-right font-bold text-amber-700 font-mono" x-text="formatCurrency(item.vat)"></td>
+                                        <td class="px-6 py-3 text-right font-bold text-charcoal font-mono" x-text="formatCurrency(item.sales)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. Expenses & Net Profit Breakdown Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Expense Breakdown Card -->
+                    <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm space-y-4">
+                        <h4 class="text-xs font-bold tracking-wider text-gray-400 uppercase">สัดส่วนรายจ่ายตามหมวดหมู่ / Expense Breakdown</h4>
+                        
+                        <div class="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                            <template x-for="exp in reportData.expenses_breakdown" :key="exp.category">
+                                <div class="p-3 border border-beige rounded-xl bg-red-50/10 hover:bg-red-50/20 transition">
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="font-bold text-red-700" x-text="exp.category"></span>
+                                        <span class="font-bold text-gray-700 font-mono" x-text="formatCurrency(exp.amount)"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 h-2 rounded-full mt-2 overflow-hidden">
+                                        <div class="bg-red-500 h-full" :style="`width: ${reportData.total_expenses > 0 ? (exp.amount / reportData.total_expenses)*100 : 0}%`"></div>
+                                    </div>
+                                    <div class="text-right text-[8.5px] text-gray-400 font-semibold mt-1" 
+                                         x-text="reportData.total_expenses > 0 ? ((exp.amount / reportData.total_expenses)*100).toFixed(1) + '%' : '0%' "></div>
+                                </div>
+                            </template>
+                            <div x-show="!reportData.expenses_breakdown || reportData.expenses_breakdown.length === 0" 
+                                 class="text-center py-12 text-xs text-gray-400">
+                                ยังไม่มีข้อมูลบันทึกรายจ่ายในปีนี้
+                            </div>
+                        </div>
+                        
+                        <div class="border-t border-beige pt-3 flex justify-between items-center text-xs">
+                            <span class="text-gray-400 font-semibold">รายจ่ายรวมทั้งหมด</span>
+                            <span class="text-sm font-bold text-red-600 font-mono" x-text="formatCurrency(reportData.total_expenses || 0)"></span>
+                        </div>
+                    </div>
+
+                    <!-- Profit & Loss Summary Card -->
+                    <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <h4 class="text-xs font-bold tracking-wider text-gray-400 uppercase">สรุปงบกำไร-ขาดทุน / Profit & Loss Statement</h4>
+                            
+                            <div class="divide-y divide-beige text-xs">
+                                <div class="flex justify-between py-2.5">
+                                    <span class="text-gray-500 font-semibold">รายรับรวม (Revenues)</span>
+                                    <span class="font-bold text-green-600 text-sm font-mono" x-text="formatCurrency(reportData.total_sales)"></span>
+                                </div>
+                                <div class="flex justify-between py-2.5">
+                                    <span class="text-gray-500 font-semibold">รายจ่ายรวม (Expenses)</span>
+                                    <span class="font-bold text-red-500 text-sm font-mono" x-text="formatCurrency(reportData.total_expenses || 0)"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t border-beige pt-6 mt-6">
+                            <span class="text-xs text-gray-400 font-bold block mb-1">กำไรสุทธิสะสม / Net Profit</span>
+                            <div class="text-3xl font-extrabold font-mono tracking-tight"
+                                 :class="(reportData.total_sales - (reportData.total_expenses || 0)) >= 0 ? 'text-green-600' : 'text-red-600'"
+                                 x-text="formatCurrency(reportData.total_sales - (reportData.total_expenses || 0))"></div>
+                            <span class="text-[9px] text-gray-400 mt-1 block">ตัวเลขเบื้องต้นก่อนหักภาษีเงินได้นิติบุคคล</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Product Sales Breakdown Section -->
+                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden space-y-6 p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-beige">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-xs font-bold tracking-wider text-charcoal uppercase">📦 ยอดขายแยกตามรายสินค้า / Product Sales & Units Breakdown</h4>
+                                <span class="bg-gold/20 text-gold-dark text-[10px] font-bold px-2.5 py-0.5 rounded-full"
+                                      x-text="dashMonth === 'ALL' ? `ประจำปี ${dashYear}` : `ประจำเดือน ${dashMonth}/${dashYear}`"></span>
+                            </div>
+                            <p class="text-xs text-gray-400">ตรวจสอบจำนวนชิ้นที่ขายได้ (Units Sold) และยอดขายรวมของสินค้าแต่ละรายการในเดือนหรือปีที่เลือก</p>
+                        </div>
+                        <div class="bg-cream border border-beige rounded-xl px-4 py-2 flex items-center gap-3 self-start sm:self-auto">
+                            <span class="text-xs text-gray-500 font-semibold">จำนวนชิ้นที่ขายได้รวม:</span>
+                            <span class="text-lg font-bold text-gold-dark font-mono" x-text="reportData.total_items_sold || 0"></span>
+                            <span class="text-xs text-gray-500">ชิ้น/ครั้ง</span>
+                        </div>
+                    </div>
+
+                    <!-- Products Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="bg-cream border-b border-beige text-xs text-gray-500 uppercase font-semibold">
+                                    <th class="px-4 py-3">สินค้า / รายการ</th>
+                                    <th class="px-4 py-3 text-center">ประเภท</th>
+                                    <th class="px-4 py-3 text-right">ราคาต่อหน่วย</th>
+                                    <th class="px-4 py-3 text-center font-bold text-charcoal">จำนวนที่ขายได้</th>
+                                    <th class="px-4 py-3 text-center font-bold text-charcoal">คงเหลือในสต็อก</th>
+                                    <th class="px-4 py-3 text-right font-bold text-charcoal">ยอดขายรวม (฿)</th>
+                                    <th class="px-4 py-3 text-right">สัดส่วน</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-beige">
+                                <template x-for="(p, idx) in reportData.product_sales" :key="idx">
+                                    <tr class="hover:bg-cream/40 transition">
+                                        <td class="px-4 py-3.5 flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-lg bg-beige/30 overflow-hidden flex-shrink-0 border border-beige flex items-center justify-center">
+                                                <template x-if="p.image_url">
+                                                    <img :src="p.image_url" class="w-full h-full object-cover">
+                                                </template>
+                                                <template x-if="!p.image_url">
+                                                    <span class="text-[9px] font-bold text-gold">GS</span>
+                                                </template>
                                             </div>
+                                            <div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[9px] font-mono bg-beige/60 text-charcoal px-1.5 py-0.5 rounded font-semibold" x-text="p.code || 'CUSTOM'"></span>
+                                                    <span class="font-bold text-charcoal text-xs" x-text="p.name"></span>
+                                                </div>
+                                                <p class="text-[11px] text-gray-400 line-clamp-1 mt-0.5" x-text="p.description || '-'"></p>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3.5 text-center">
+                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                                  :class="p.is_service ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'"
+                                                  x-text="p.is_service ? 'บริการ/คอร์ส' : 'สินค้าทั่วไป'"></span>
+                                        </td>
+                                        <td class="px-4 py-3.5 text-right font-mono text-xs text-gray-600" x-text="formatCurrency(p.unit_price)"></td>
+                                        <td class="px-4 py-3.5 text-center">
+                                            <span class="inline-block px-3 py-1 rounded-xl text-xs font-bold font-mono"
+                                                  :class="p.sold_qty > 0 ? 'bg-gold/20 text-gold-dark ring-1 ring-gold/40' : 'bg-gray-100 text-gray-400'"
+                                                  x-text="p.sold_qty + ' ชิ้น'"></span>
+                                        </td>
+                                        <td class="px-4 py-3.5 text-center">
+                                            <template x-if="p.is_service">
+                                                <span class="text-[10px] text-gray-400 font-medium">ไม่จำกัด (คอร์ส)</span>
+                                            </template>
+                                            <template x-if="!p.is_service">
+                                                <span class="inline-block px-2.5 py-1 rounded-xl text-xs font-bold font-mono shadow-sm"
+                                                      :class="p.stock_quantity <= 5 ? 'bg-red-50 text-red-600 ring-1 ring-red-200 animate-pulse' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'"
+                                                      x-text="(p.stock_quantity || 0) + ' ชิ้น'"></span>
+                                            </template>
+                                        </td>
+                                        <td class="px-4 py-3.5 text-right font-mono font-bold text-xs"
+                                            :class="p.total_amount > 0 ? 'text-charcoal' : 'text-gray-400'"
+                                            x-text="formatCurrency(p.total_amount)"></td>
+                                        <td class="px-4 py-3.5 text-right text-xs font-mono text-gray-500">
+                                            <span x-text="reportData.total_sales > 0 ? ((p.total_amount / reportData.total_sales)*100).toFixed(1) + '%' : '0.0%'"></span>
                                         </td>
                                     </tr>
                                 </template>
-                                <template x-if="!stats.recent_documents || stats.recent_documents.length === 0">
-                                    <tr>
-                                        <td colspan="6" class="px-6 py-12 text-center text-gray-400">ยังไม่มีประวัติการออกเอกสารในระบบ</td>
-                                    </tr>
-                                </template>
+                                <tr x-show="!reportData.product_sales || reportData.product_sales.length === 0">
+                                    <td colspan="7" class="text-center py-8 text-xs text-gray-400">
+                                        ไม่มีรายการขายสินค้าในช่วงเวลาที่เลือก
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -2914,6 +3057,8 @@
 
                 // --- FETCH UTILITIES ---
                 fetchDashboardStats() {
+                    this.reportYear = this.dashYear;
+                    this.reportMonth = this.dashMonth;
                     const params = [];
                     if (this.dashYear) params.push(`year=${this.dashYear}`);
                     if (this.dashMonth) params.push(`month=${this.dashMonth}`);
@@ -2926,6 +3071,7 @@
                                 this.renderDashboardCharts(data.months_chart_data, data.total_sales, data.total_expenses);
                             });
                         });
+                    this.fetchReportsData();
                 },
 
                 renderDashboardCharts(chartData, totalSales, totalExpenses) {
