@@ -399,43 +399,6 @@
                     </div>
                 </div>
 
-                <!-- 1. Monthly Account Breakdown Table (แทนที่ส่วนเอกสารล่าสุดที่ตัดออก) -->
-                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden space-y-4 p-6">
-                    <div class="flex items-center justify-between border-b border-beige pb-4">
-                        <div>
-                            <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase flex items-center gap-2">
-                                <span>🗓️ ข้อมูลสรุปบัญชีรายเดือน 12 เดือน / Monthly Account Breakdown</span>
-                            </h3>
-                            <p class="text-xs text-gray-400 mt-1">สรุปจำนวนใบสำคัญ ภาษีขายสะสม และยอดเงินรวมสะสมประจำเดือน ม.ค. - ธ.ค.</p>
-                        </div>
-                        <a :href="'/print/summary/list?year=' + dashYear + '&month=' + dashMonth" target="_blank" class="bg-charcoal hover:bg-gold-dark text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5">
-                            <span>🖨️ พิมพ์รายงานสรุป / PDF</span>
-                        </a>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead>
-                                <tr class="bg-cream border-b border-beige text-xs text-gray-500 uppercase font-semibold">
-                                    <th class="px-6 py-3.5">เดือน / Month</th>
-                                    <th class="px-6 py-3.5 text-center">จำนวนใบสำคัญ / Count</th>
-                                    <th class="px-6 py-3.5 text-right">ภาษีขายสะสม / VAT (7%)</th>
-                                    <th class="px-6 py-3.5 text-right font-bold text-charcoal">ยอดเงินรวมสะสม / Gross Total</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-beige">
-                                <template x-for="item in reportData.months_data" :key="item.month_num">
-                                    <tr class="hover:bg-cream/40 transition">
-                                        <td class="px-6 py-3 font-semibold text-charcoal" x-text="item.month_name"></td>
-                                        <td class="px-6 py-3 text-center font-medium text-gray-600" x-text="item.count"></td>
-                                        <td class="px-6 py-3 text-right font-bold text-amber-700 font-mono" x-text="formatCurrency(item.vat)"></td>
-                                        <td class="px-6 py-3 text-right font-bold text-charcoal font-mono" x-text="formatCurrency(item.sales)"></td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
                 <!-- 2. Financial Breakdown Trio (Payment Methods, Expenses, P&L) -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <!-- Card 1: Payment Method Breakdown -->
@@ -621,6 +584,43 @@
                                         ไม่มีรายการขายสินค้าในช่วงเวลาที่เลือก
                                     </td>
                                 </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. Monthly Account Breakdown Table (ล่างสุดของหน้า) -->
+                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden space-y-4 p-6">
+                    <div class="flex items-center justify-between border-b border-beige pb-4">
+                        <div>
+                            <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase flex items-center gap-2">
+                                <span>🗓️ ข้อมูลสรุปบัญชีรายเดือน 12 เดือน / Monthly Account Breakdown</span>
+                            </h3>
+                            <p class="text-xs text-gray-400 mt-1">สรุปจำนวนใบสำคัญ ภาษีขายสะสม และยอดเงินรวมสะสมประจำเดือน ม.ค. - ธ.ค.</p>
+                        </div>
+                        <a :href="'/print/summary/list?year=' + dashYear + '&month=' + dashMonth" target="_blank" class="bg-charcoal hover:bg-gold-dark text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5">
+                            <span>🖨️ พิมพ์รายงานสรุป / PDF</span>
+                        </a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="bg-cream border-b border-beige text-xs text-gray-500 uppercase font-semibold">
+                                    <th class="px-6 py-3.5">เดือน / Month</th>
+                                    <th class="px-6 py-3.5 text-center">จำนวนใบสำคัญ / Count</th>
+                                    <th class="px-6 py-3.5 text-right">ภาษีขายสะสม / VAT (7%)</th>
+                                    <th class="px-6 py-3.5 text-right font-bold text-charcoal">ยอดเงินรวมสะสม / Gross Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-beige">
+                                <template x-for="item in reportData.months_data" :key="item.month_num">
+                                    <tr class="hover:bg-cream/40 transition">
+                                        <td class="px-6 py-3 font-semibold text-charcoal" x-text="item.month_name"></td>
+                                        <td class="px-6 py-3 text-center font-medium text-gray-600" x-text="item.count"></td>
+                                        <td class="px-6 py-3 text-right font-bold text-amber-700 font-mono" x-text="formatCurrency(item.vat)"></td>
+                                        <td class="px-6 py-3 text-right font-bold text-charcoal font-mono" x-text="formatCurrency(item.sales)"></td>
+                                    </tr>
+                                </template>
                             </tbody>
                         </table>
                     </div>
