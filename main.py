@@ -930,6 +930,8 @@ def delete_document(doc_id: int, db: Session = Depends(get_db), current_user: Us
 # ----------------- DASHBOARD API -----------------
 @app.get("/api/dashboard/stats")
 def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from database import Expense
+    
     # Total documents
     total_docs = db.query(Document).count()
     
@@ -945,6 +947,23 @@ def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depe
         Document.date.like(f"{current_month_str}-%")
     ).scalar()
     month_sales = float(month_sales_query) if month_sales_query else 0.0
+    
+    # Current month expenses
+    month_exp_query = db.query(func.sum(Expense.amount)).filter(
+        Expense.date.like(f"{current_month_str}-%")
+    ).scalar()
+    month_expenses = float(month_exp_query) if month_exp_query else 0.0
+    
+    # Net profit current month
+    net_profit_month = month_sales - month_expenses
+    
+    # Total sales all time
+    total_sales_query = db.query(func.sum(Document.total_amount_after_vat)).scalar()
+    total_sales = float(total_sales_query) if total_sales_query else 0.0
+    
+    # Total expenses all time
+    total_exp_query = db.query(func.sum(Expense.amount)).scalar()
+    total_expenses = float(total_exp_query) if total_exp_query else 0.0
     
     # Total customers
     total_cust = db.query(Customer).count()
@@ -968,6 +987,10 @@ def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depe
         "total_documents": total_docs,
         "monthly_documents": month_docs,
         "monthly_sales": month_sales,
+        "monthly_expenses": month_expenses,
+        "net_profit_month": net_profit_month,
+        "total_sales": total_sales,
+        "total_expenses": total_expenses,
         "total_customers": total_cust,
         "recent_documents": recent_list
     }
