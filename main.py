@@ -1006,6 +1006,7 @@ def get_dashboard_stats(
         
     return {
         "total_documents": total_docs,
+        "monthly_documents": total_docs,
         "total_sales": total_sales,
         "total_expenses": total_expenses,
         "net_profit": net_profit,
