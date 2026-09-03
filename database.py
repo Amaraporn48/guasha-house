@@ -133,6 +133,20 @@ class Expense(Base):
     note = Column(String, nullable=True) # หมายเหตุ
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+class VideoCourse(Base):
+    __tablename__ = "video_courses"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    category = Column(String, default="ทั่วไป")
+    video_url = Column(String, nullable=False)
+    embed_url = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    instructor = Column(String, default="กัวซา เฮ้าส์")
+    duration = Column(String, nullable=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
 def init_db():
     try:
         Base.metadata.create_all(bind=engine)

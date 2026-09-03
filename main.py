@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text, and_, or_, func
 from sqlalchemy.exc import IntegrityError
 
-from database import engine, SessionLocal, init_db, User, Customer, Product, Document, DocumentItem
+from database import engine, SessionLocal, init_db, User, Customer, Product, Document, DocumentItem, Expense, Branch, VideoCourse
 
 # Initialize database safely
 try:
@@ -249,6 +249,40 @@ def seed_database():
             db.add_all([br1, br2, br3])
             db.commit()
             print("Database seeded with default branches")
+
+        # Check if video_courses table is empty
+        video_count = db.query(VideoCourse).count()
+        if video_count == 0:
+            v1 = VideoCourse(
+                title="เทคนิคการนวดกัวซายกกระชับใบหน้า (Facial Guasha Lifting)",
+                category="กัวซาใบหน้า",
+                video_url="https://www.youtube.com/watch?v=5qap5aO4i9A",
+                embed_url="https://www.youtube.com/embed/5qap5aO4i9A",
+                description="คอร์สสอนเทคนิคการใช้แผ่นกัวซาหินธรรมชาติขูดกระตุ้นคอลลาเจน ยกกระชับกรอบหน้า ลดถุงใต้ตา และขับน้ำเหลืองเสียอย่างถูกต้อง",
+                instructor="อ.กัวซา เฮ้าส์",
+                duration="12:45 นาที"
+            )
+            v2 = VideoCourse(
+                title="ขั้นตอนการใช้น้ำมันมะพร้าวสกัดเย็นบริสุทธิ์ร่วมกับหินกัวซา",
+                category="เทคนิคการใช้ผลิตภัณฑ์",
+                video_url="https://www.youtube.com/watch?v=5qap5aO4i9A",
+                embed_url="https://www.youtube.com/embed/5qap5aO4i9A",
+                description="แนะนำวิธีการใช้น้ำมันมะพร้าวสกัดเย็น 100% ควบคู่กับการนวดหินกัวซาพิงค์ควอตซ์ เพื่อลดการเสียดสี บำรุงผิวล้ำลึก และป้องกันผิวช้ำ",
+                instructor="ผู้เชี่ยวชาญกัวซา",
+                duration="08:30 นาที"
+            )
+            v3 = VideoCourse(
+                title="เทคนิคนวดขูดกัวซาแผ่นหลังเพื่อรีดสารพิษและคลายกล้ามเนื้อ",
+                category="กัวซาร่างกาย",
+                video_url="https://www.youtube.com/watch?v=5qap5aO4i9A",
+                embed_url="https://www.youtube.com/embed/5qap5aO4i9A",
+                description="สอนทักษะการลงน้ำหนัก การสไลด์แผ่นกัวซาตามแนวเส้นลมปราณแผ่นหลัง เพื่อระบายพิษสะสม และลดอาการออฟฟิศซินโดรม",
+                instructor="อ.กัวซา เฮ้าส์",
+                duration="18:20 นาที"
+            )
+            db.add_all([v1, v2, v3])
+            db.commit()
+            print("Database seeded with default video courses")
             
     except Exception as e:
         db.rollback()
@@ -1684,6 +1718,91 @@ def print_documents_summary(
     except Exception as e:
         print(f"Error rendering print_summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ----------------- VIDEO COURSES API -----------------
+class VideoCourseSchema(BaseModel):
+    title: str
+    category: str = "ทั่วไป"
+    video_url: str
+    description: Optional[str] = None
+    instructor: Optional[str] = "กัวซา เฮ้าส์"
+    duration: Optional[str] = None
+
+def convert_to_embed_url(url: str) -> str:
+    if not url:
+        return ""
+    url = url.strip()
+    if "youtube.com/watch?v=" in url:
+        v_id = url.split("watch?v=")[1].split("&")[0]
+        return f"https://www.youtube.com/embed/{v_id}"
+    elif "youtu.be/" in url:
+        v_id = url.split("youtu.be/")[1].split("?")[0]
+        return f"https://www.youtube.com/embed/{v_id}"
+    elif "drive.google.com/file/d/" in url:
+        f_id = url.split("drive.google.com/file/d/")[1].split("/")[0]
+        return f"https://drive.google.com/file/d/{f_id}/preview"
+    return url
+
+@app.get("/api/videos")
+def get_videos(category: Optional[str] = None, query: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    q = db.query(VideoCourse)
+    if category and category != "ALL" and category != "":
+        q = q.filter(VideoCourse.category == category)
+    if query:
+        search_pattern = f"%{query.strip()}%"
+        q = q.filter(
+            or_(
+                VideoCourse.title.ilike(search_pattern),
+                VideoCourse.description.ilike(search_pattern),
+                VideoCourse.instructor.ilike(search_pattern)
+            )
+        )
+    return q.order_by(VideoCourse.id.desc()).all()
+
+@app.post("/api/videos")
+def create_video(payload: VideoCourseSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    embed = convert_to_embed_url(payload.video_url)
+    v = VideoCourse(
+        title=payload.title,
+        category=payload.category or "ทั่วไป",
+        video_url=payload.video_url,
+        embed_url=embed,
+        description=payload.description,
+        instructor=payload.instructor or "กัวซา เฮ้าส์",
+        duration=payload.duration,
+        created_by_user_id=current_user.id
+    )
+    db.add(v)
+    db.commit()
+    db.refresh(v)
+    return {"success": True, "message": "เพิ่มคลิปการสอนเรียบร้อยแล้ว", "video": v}
+
+@app.put("/api/videos/{video_id}")
+def update_video(video_id: int, payload: VideoCourseSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    v = db.query(VideoCourse).filter(VideoCourse.id == video_id).first()
+    if not v:
+        raise HTTPException(status_code=404, detail="ไม่พบคลิปการสอนที่ต้องการแก้ไข")
+    
+    v.title = payload.title
+    v.category = payload.category or "ทั่วไป"
+    v.video_url = payload.video_url
+    v.embed_url = convert_to_embed_url(payload.video_url)
+    v.description = payload.description
+    v.instructor = payload.instructor or "กัวซา เฮ้าส์"
+    v.duration = payload.duration
+    db.commit()
+    db.refresh(v)
+    return {"success": True, "message": "อัปเดตข้อมูลคลิปการสอนเรียบร้อยแล้ว", "video": v}
+
+@app.delete("/api/videos/{video_id}")
+def delete_video(video_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    v = db.query(VideoCourse).filter(VideoCourse.id == video_id).first()
+    if not v:
+        raise HTTPException(status_code=404, detail="ไม่พบคลิปการสอนที่ต้องการลบ")
+    
+    db.delete(v)
+    db.commit()
+    return {"success": True, "message": "ลบคลิปการสอนเรียบร้อยแล้ว"}
 
 if __name__ == "__main__":
     import uvicorn
