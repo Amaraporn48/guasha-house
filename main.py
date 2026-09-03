@@ -1626,6 +1626,7 @@ def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(g
     )
 
 @app.get("/print/summary/list", response_class=HTMLResponse)
+@app.get("/api/reports/print-summary", response_class=HTMLResponse)
 def print_documents_summary(
     request: Request,
     query: Optional[str] = None,
