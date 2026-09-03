@@ -1,6 +1,6 @@
 import os
 import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
@@ -117,11 +117,40 @@ class Branch(Base):
 class Expense(Base):
     __tablename__ = "expenses"
     id = Column(Integer, primary_key=True, index=True)
-    amount = Column(Float, default=0.0)
-    category = Column(String, nullable=False) # ค่าน้ำ-ค่าไฟ, ค่าเช่า, ค่าแรง, ซื้อของเข้าสต็อก, อื่นๆ
-    description = Column(String, nullable=True)
+    voucher_number = Column(String, nullable=True) # PV-2026-0001
     date = Column(String, nullable=False) # YYYY-MM-DD
+    category = Column(String, nullable=False) # ค่าน้ำ-ค่าไฟ, ค่าเช่า, ค่าแรง, ซื้อสินค้าเข้าสต็อก, ฯลฯ
+    pay_to = Column(String, nullable=True) # จ่ายให้แก่ใคร
+    address = Column(String, nullable=True) # ที่อยู่ผู้รับเงิน
+    tax_id = Column(String, nullable=True) # เลขประจำตัวผู้เสียภาษีผู้รับเงิน
+    description = Column(String, nullable=True) # รายละเอียดสรุป
+    items_json = Column(Text, nullable=True) # รายการสินค้า/บริการในตาราง (JSON)
+    subtotal = Column(Float, default=0.0) # จำนวนเงินรวมก่อนหักภาษี
+    withholding_tax_percent = Column(Float, default=0.0) # 3% หรือ 0%
+    withholding_tax_amount = Column(Float, default=0.0) # ยอดเงินหัก ณ ที่จ่าย
+    amount = Column(Float, default=0.0) # จำนวนเงินสุทธิ (net_amount)
+    net_amount = Column(Float, default=0.0) # จำนวนเงินสุทธิ
+    note = Column(String, nullable=True) # หมายเหตุ
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # Auto-add missing columns for SQLite/PostgreSQL fallback
+    with engine.connect() as conn:
+        for col_name, col_type in [
+            ("voucher_number", "VARCHAR"),
+            ("pay_to", "VARCHAR"),
+            ("address", "VARCHAR"),
+            ("tax_id", "VARCHAR"),
+            ("items_json", "TEXT"),
+            ("subtotal", "FLOAT"),
+            ("withholding_tax_percent", "FLOAT"),
+            ("withholding_tax_amount", "FLOAT"),
+            ("net_amount", "FLOAT"),
+            ("note", "VARCHAR")
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE expenses ADD COLUMN {col_name} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass

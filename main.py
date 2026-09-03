@@ -1189,10 +1189,20 @@ class BranchCreateSchema(BaseModel):
     image_url: Optional[str] = ""
 
 class ExpenseCreateSchema(BaseModel):
-    amount: float
-    category: str
-    description: Optional[str] = ""
+    voucher_number: Optional[str] = ""
     date: str
+    category: str
+    pay_to: Optional[str] = ""
+    address: Optional[str] = ""
+    tax_id: Optional[str] = ""
+    description: Optional[str] = ""
+    items_json: Optional[str] = "[]"
+    subtotal: Optional[float] = 0.0
+    withholding_tax_percent: Optional[float] = 0.0
+    withholding_tax_amount: Optional[float] = 0.0
+    amount: float
+    net_amount: Optional[float] = 0.0
+    note: Optional[str] = ""
 
 # ----------------- BRANCHES API -----------------
 @app.get("/api/branches")
@@ -1440,6 +1450,46 @@ def print_shipping_label(doc_id: int, request: Request, db: Session = Depends(ge
         name="shipping_label.html",
         context={
             "doc": doc
+        }
+    )
+
+@app.get("/print/expense/{exp_id}", response_class=HTMLResponse)
+def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(get_db)):
+    import json
+    from database import Expense
+    exp = db.query(Expense).filter(Expense.id == exp_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="ไม่พบใบสำคัญจ่ายที่ระบุ")
+        
+    items = []
+    if exp.items_json:
+        try:
+            items = json.loads(exp.items_json)
+        except Exception:
+            items = []
+            
+    months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+    formatted_date = str(exp.date)
+    if exp.date:
+        try:
+            parts = str(exp.date).split('T')[0].split('-')
+            if len(parts) == 3:
+                y = int(parts[0]) + 543
+                m = int(parts[1])
+                d = int(parts[2])
+                if 1 <= m <= 12:
+                    formatted_date = f"{d} {months_th[m-1]} {y}"
+        except Exception:
+            pass
+
+    setattr(exp, "formatted_date", formatted_date)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="print_voucher.html",
+        context={
+            "exp": exp,
+            "items": items
         }
     )
 

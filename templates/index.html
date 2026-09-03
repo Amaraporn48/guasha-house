@@ -1500,30 +1500,43 @@
                         <table class="w-full text-left text-sm">
                             <thead>
                                 <tr class="bg-cream border-b border-beige text-xs text-gray-500 uppercase font-semibold">
-                                    <th class="px-6 py-4">วันที่ / Date</th>
-                                    <th class="px-6 py-4">หมวดหมู่ / Category</th>
-                                    <th class="px-6 py-4">รายละเอียด / Description</th>
-                                    <th class="px-6 py-4 text-right">จำนวนเงิน / Amount</th>
-                                    <th class="px-6 py-4 text-center">จัดการ</th>
+                                    <th class="px-4 py-3.5">เลขที่ PV / Date</th>
+                                    <th class="px-4 py-3.5">หมวดหมู่ / Category</th>
+                                    <th class="px-4 py-3.5">จ่ายให้แก่ / Pay To</th>
+                                    <th class="px-4 py-3.5 text-right">จำนวนเงินสุทธิ / Net</th>
+                                    <th class="px-4 py-3.5 text-center">จัดการ / Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="exp in expenses" :key="exp.id">
                                     <tr class="border-b border-beige hover:bg-cream/40">
-                                        <td class="px-6 py-4 text-xs font-semibold text-gray-600" x-text="formatThaiDate(exp.date)"></td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-3.5">
+                                            <div class="font-bold font-mono text-charcoal text-xs" x-text="exp.voucher_number || ('PV-' + String(exp.id).padStart(4, '0'))"></div>
+                                            <div class="text-[10px] text-gray-400" x-text="formatThaiDate(exp.date)"></div>
+                                        </td>
+                                        <td class="px-4 py-3.5 whitespace-nowrap">
                                             <span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-beige text-gold-dark whitespace-nowrap"
                                                   x-text="exp.category"></span>
                                         </td>
-                                        <td class="px-6 py-4 text-xs text-gray-500" x-text="exp.description || '-'"></td>
-                                        <td class="px-6 py-4 text-right font-bold text-red-600" x-text="formatCurrency(exp.amount)"></td>
-                                        <td class="px-6 py-4 text-center">
-                                            <button @click="deleteExpense(exp.id)" class="text-xs text-red-600 hover:underline">ลบ</button>
+                                        <td class="px-4 py-3.5 text-xs text-gray-700">
+                                            <div class="font-semibold text-gray-900" x-text="exp.pay_to || '-'"></div>
+                                            <div class="text-[10px] text-gray-400 truncate max-w-[150px]" x-text="exp.description || '-'"></div>
+                                        </td>
+                                        <td class="px-4 py-3.5 text-right font-bold text-red-600 font-mono text-xs" x-text="formatCurrency(exp.net_amount || exp.amount)"></td>
+                                        <td class="px-4 py-3.5 text-center">
+                                            <div class="inline-flex gap-1.5">
+                                                <button @click="printExpenseVoucher(exp.id)" class="text-[11px] bg-beige hover:bg-gold hover:text-white text-charcoal px-2.5 py-1 rounded-lg border border-beige font-semibold transition">
+                                                    🖨️ พิมพ์ A4
+                                                </button>
+                                                <button @click="deleteExpense(exp.id)" class="text-[11px] bg-red-50 hover:bg-red-600 hover:text-white text-red-600 px-2.5 py-1 rounded-lg border border-red-100 font-semibold transition">
+                                                    ลบ
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </template>
                                 <tr x-show="expenses.length === 0">
-                                    <td colspan="5" class="text-center py-8 text-xs text-gray-400">ยังไม่มีประวัติการบันทึกรายจ่าย</td>
+                                    <td colspan="5" class="text-center py-8 text-xs text-gray-400">ยังไม่มีประวัติการบันทึกใบสำคัญจ่าย</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2061,51 +2074,236 @@
         </div>
     </div>
 
-    <!-- Expense Modal Form -->
-    <div x-show="expenseModal.open" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 no-print" x-transition>
-        <div class="bg-white border border-beige rounded-2xl max-w-md w-full shadow-2xl overflow-hidden relative">
-            <div class="p-6 border-b border-beige flex items-center justify-between">
-                <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase">บันทึกรายจ่ายใหม่ / Add Expense</h3>
-                <button @click="expenseModal.open = false" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+    <!-- Payment Voucher Modal Form -->
+    <div x-show="expenseModal.open" class="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50 no-print overflow-y-auto" x-transition>
+        <div class="bg-white border border-beige rounded-2xl max-w-6xl w-full shadow-2xl overflow-hidden relative my-auto max-h-[92vh] flex flex-col">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-beige bg-cream/60 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-red-100/80 text-red-700 rounded-xl">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-charcoal uppercase">สร้างใบสำคัญจ่าย / PAYMENT VOUCHER FORM</h3>
+                        <p class="text-xs text-gray-400">กรอกข้อมูลผู้รับเงิน รายการค่าใช้จ่าย และการหักภาษี ณ ที่จ่าย 3%</p>
+                    </div>
+                </div>
+                <button @click="expenseModal.open = false" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
             </div>
             
-            <form @submit.prevent="saveExpenseFromModal()" class="p-6 space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่จ่าย / Date</label>
-                        <input type="date" x-model="expenseModal.date" required
-                               class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
+            <form @submit.prevent="saveExpenseFromModal()" class="p-6 overflow-y-auto space-y-6 flex-1">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Left Column: Form Inputs (7 cols) -->
+                    <div class="lg:col-span-7 space-y-5">
+                        
+                        <!-- Row 1: Voucher No, Date, Category -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">เลขที่ใบสำคัญจ่าย</label>
+                                <input type="text" x-model="expenseModal.voucher_number" required
+                                       class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2 text-sm font-mono font-bold focus-gold">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">วันที่จ่าย / Date</label>
+                                <input type="date" x-model="expenseModal.date" required
+                                       class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2 text-sm focus-gold">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">หมวดหมู่รายจ่าย *</label>
+                                <input type="text" x-model="expenseModal.category" list="expense-category-list" required
+                                       placeholder="เลือกหมวดหมู่..."
+                                       class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2 text-sm font-bold text-gold-dark focus-gold">
+                                <datalist id="expense-category-list">
+                                    <template x-for="cat in expenseCategories" :key="cat">
+                                        <option :value="cat"></option>
+                                    </template>
+                                </datalist>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Payee Information -->
+                        <div class="p-4 bg-cream/50 border border-beige rounded-xl space-y-3">
+                            <h4 class="text-xs font-bold text-charcoal uppercase tracking-wider flex items-center gap-1.5">
+                                <span>👤 ข้อมูลผู้รับเงิน / PAYEE DETAILS</span>
+                            </h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-gray-500 mb-1">จ่ายให้แก่ใคร / Pay To</label>
+                                    <input type="text" x-model="expenseModal.pay_to" placeholder="ระบุชื่อบุคคล หรือ ชื่อบริษัทผู้รับเงิน"
+                                           class="w-full bg-white border border-beige rounded-lg px-3 py-1.5 text-sm focus-gold">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-gray-500 mb-1">เลขผู้เสียภาษี / Tax ID</label>
+                                    <input type="text" x-model="expenseModal.tax_id" placeholder="เลขประจำตัว 13 หลัก (ถ้ามี)"
+                                           class="w-full bg-white border border-beige rounded-lg px-3 py-1.5 text-sm font-mono focus-gold">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-500 mb-1">ที่อยู่ผู้รับเงิน / Payee Address</label>
+                                <input type="text" x-model="expenseModal.address" placeholder="ระบุที่อยู่ผู้รับเงินสำหรับออกใบสำคัญจ่าย"
+                                       class="w-full bg-white border border-beige rounded-lg px-3 py-1.5 text-sm focus-gold">
+                            </div>
+                        </div>
+
+                        <!-- Line Items Table -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-xs font-bold text-charcoal uppercase tracking-wider">ตารางรายการค่าใช้จ่าย / Line Items</h4>
+                                <button type="button" @click="addExpenseItem()" class="text-xs font-bold text-gold-dark hover:text-charcoal flex items-center gap-1">
+                                    <span>+ เพิ่มรายการ</span>
+                                </button>
+                            </div>
+                            <div class="border border-beige rounded-xl overflow-hidden">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-cream border-b border-beige font-bold text-gray-600 uppercase">
+                                        <tr>
+                                            <th class="px-3 py-2 w-8 text-center">#</th>
+                                            <th class="px-3 py-2">รายการค่าใช้จ่าย / Item Description</th>
+                                            <th class="px-3 py-2 w-16 text-center">จำนวน</th>
+                                            <th class="px-3 py-2 w-16 text-center">หน่วย</th>
+                                            <th class="px-3 py-2 w-24 text-right">ราคา/หน่วย</th>
+                                            <th class="px-3 py-2 w-24 text-right">จำนวนเงิน</th>
+                                            <th class="px-3 py-2 w-10 text-center"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-beige">
+                                        <template x-for="(item, idx) in expenseModal.items" :key="idx">
+                                            <tr class="hover:bg-cream/40">
+                                                <td class="px-3 py-2 text-center font-mono text-gray-400" x-text="idx + 1"></td>
+                                                <td class="px-2 py-1.5">
+                                                    <input type="text" x-model="item.description" @input="calculateExpenseTotals()" placeholder="ระบุรายการ..."
+                                                           class="w-full bg-white border border-beige rounded px-2 py-1 text-xs focus-gold">
+                                                </td>
+                                                <td class="px-2 py-1.5">
+                                                    <input type="number" step="any" x-model.number="item.quantity" @input="calculateExpenseTotals()" min="1"
+                                                           class="w-full bg-white border border-beige rounded px-2 py-1 text-xs text-center font-mono focus-gold">
+                                                </td>
+                                                <td class="px-2 py-1.5">
+                                                    <input type="text" x-model="item.unit" @input="calculateExpenseTotals()" placeholder="หน่วย"
+                                                           class="w-full bg-white border border-beige rounded px-2 py-1 text-xs text-center focus-gold">
+                                                </td>
+                                                <td class="px-2 py-1.5">
+                                                    <input type="number" step="any" x-model.number="item.unit_price" @input="calculateExpenseTotals()" placeholder="0.00"
+                                                           class="w-full bg-white border border-beige rounded px-2 py-1 text-xs text-right font-mono focus-gold">
+                                                </td>
+                                                <td class="px-3 py-2 text-right font-mono font-bold text-charcoal" x-text="formatCurrency(item.amount || 0)"></td>
+                                                <td class="px-2 py-1.5 text-center">
+                                                    <button type="button" @click="removeExpenseItem(idx)" class="text-red-500 hover:text-red-700 font-bold">&times;</button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Remarks & Withholding Tax 3% Option -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">หมายเหตุ / Remarks</label>
+                                <textarea x-model="expenseModal.note" rows="3" placeholder="ระบุหมายเหตุ เช่น ชำระด้วยโอนเงินธนาคารกสิกรไทย..."
+                                          class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2 text-xs focus-gold"></textarea>
+                            </div>
+                            <div class="p-3 bg-cream/60 border border-beige rounded-xl space-y-2 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-charcoal uppercase tracking-wider block mb-1">หักภาษี ณ ที่จ่าย / Withholding Tax</span>
+                                    <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700">
+                                        <input type="checkbox" x-model="expenseModal.has_withholding_tax" @change="calculateExpenseTotals()"
+                                               class="rounded border-beige text-gold-dark focus:ring-gold w-4 h-4">
+                                        <span>หัก ณ ที่จ่าย 3% (Withholding Tax 3%)</span>
+                                    </label>
+                                </div>
+                                <div class="space-y-1 text-xs border-t border-beige pt-2">
+                                    <div class="flex justify-between text-gray-500">
+                                        <span>รวมก่อนภาษี:</span>
+                                        <span class="font-mono font-semibold" x-text="formatCurrency(expenseModal.subtotal || 0)"></span>
+                                    </div>
+                                    <div x-show="expenseModal.has_withholding_tax" class="flex justify-between text-red-600 font-semibold">
+                                        <span>หัก ณ ที่จ่าย 3%:</span>
+                                        <span class="font-mono" x-text="'- ' + formatCurrency(expenseModal.withholding_tax_amount || 0)"></span>
+                                    </div>
+                                    <div class="flex justify-between text-sm font-bold text-red-600 pt-1 border-t border-beige">
+                                        <span>คงเหลือสุทธิ:</span>
+                                        <span class="font-mono" x-text="formatCurrency(expenseModal.amount || 0)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">หมวดหมู่ / Category</label>
-                        <input type="text" x-model="expenseModal.category" list="expense-category-list" required
-                               placeholder="พิมพ์หรือเลือกหมวดหมู่..."
-                               class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
-                        <datalist id="expense-category-list">
-                            <template x-for="cat in expenseCategories" :key="cat">
-                                <option :value="cat"></option>
-                            </template>
-                        </datalist>
+
+                    <!-- Right Column: Live Payment Voucher A4 Preview (5 cols) -->
+                    <div class="lg:col-span-5 border border-beige rounded-2xl p-4 bg-cream/30 space-y-3 flex flex-col justify-between">
+                        <div class="flex items-center justify-between border-b border-beige pb-2">
+                            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">📄 ตัวอย่างใบสำคัญจ่าย A4 (Live Preview)</span>
+                            <span class="text-[10px] bg-gold/20 text-gold-dark px-2 py-0.5 rounded font-bold uppercase">A4 Format</span>
+                        </div>
+                        
+                        <!-- Simulated Payment Voucher Sheet -->
+                        <div class="bg-white border border-gray-300 rounded-xl p-4 text-[11px] shadow-sm space-y-3 font-sans flex-1 overflow-y-auto max-h-[380px]">
+                            <!-- Company Logo & Header -->
+                            <div class="flex justify-between items-start border-b border-gray-300 pb-2">
+                                <div>
+                                    <div class="font-bold text-gray-900 text-xs">บริษัท กัวซา เฮ้าส์ จำกัด</div>
+                                    <div class="text-[9px] text-gray-400">GUASHA HOUSE CO., LTD.</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold text-gray-900 text-xs uppercase">ใบสำคัญจ่าย</div>
+                                    <div class="font-mono text-[10px] text-gold-dark font-bold" x-text="expenseModal.voucher_number || 'PV-XXXX'"></div>
+                                </div>
+                            </div>
+
+                            <!-- Payee Info -->
+                            <div class="bg-gray-50 p-2 rounded border border-gray-200 space-y-0.5 text-[10px]">
+                                <div><span class="font-bold text-gray-600">จ่ายให้แก่:</span> <span class="font-bold text-gray-900" x-text="expenseModal.pay_to || 'ระบุชื่อผู้รับเงิน'"></span></div>
+                                <div><span class="font-bold text-gray-600">ที่อยู่:</span> <span class="text-gray-700" x-text="expenseModal.address || '-'"></span></div>
+                            </div>
+
+                            <!-- Table Items -->
+                            <table class="w-full border-collapse border border-gray-300 text-[10px]">
+                                <thead class="bg-gray-100 font-bold text-gray-700">
+                                    <tr>
+                                        <th class="border border-gray-300 px-1 py-0.5 text-center">#</th>
+                                        <th class="border border-gray-300 px-1 py-0.5 text-left">รายการ</th>
+                                        <th class="border border-gray-300 px-1 py-0.5 text-center">จำนวน</th>
+                                        <th class="border border-gray-300 px-1 py-0.5 text-right">จำนวนเงิน</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(item, i) in expenseModal.items" :key="i">
+                                        <tr>
+                                            <td class="border border-gray-300 px-1 py-0.5 text-center font-mono" x-text="i + 1"></td>
+                                            <td class="border border-gray-300 px-1 py-0.5" x-text="item.description || 'รายการค่าใช้จ่าย'"></td>
+                                            <td class="border border-gray-300 px-1 py-0.5 text-center font-mono" x-text="item.quantity"></td>
+                                            <td class="border border-gray-300 px-1 py-0.5 text-right font-mono font-bold" x-text="formatCurrency(item.amount || 0)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+
+                            <!-- Total calculations -->
+                            <div class="space-y-0.5 text-right text-[10px] pt-1">
+                                <div><span class="text-gray-500">รวมก่อนภาษี:</span> <span class="font-mono font-bold" x-text="formatCurrency(expenseModal.subtotal || 0)"></span></div>
+                                <div x-show="expenseModal.has_withholding_tax" class="text-red-600"><span class="text-gray-500">หัก ณ ที่จ่าย 3%:</span> <span class="font-mono font-bold" x-text="'- ' + formatCurrency(expenseModal.withholding_tax_amount || 0)"></span></div>
+                                <div class="text-xs font-bold text-gray-900 border-t border-gray-300 pt-1"><span>คงเหลือสุทธิ:</span> <span class="font-mono text-red-600" x-text="formatCurrency(expenseModal.amount || 0)"></span></div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-white border border-beige rounded-xl text-xs space-y-1">
+                            <span class="font-bold text-gray-700 block">💡 ข้อมูลการหัก ณ ที่จ่าย:</span>
+                            <p class="text-[11px] text-gray-500">เมื่อบันทึกแล้ว รายจ่ายนี้จะไปคำนวณแบ่งสัดส่วนในกราฟวงกลมประจำหมวดหมู่ <strong class="text-gold-dark" x-text="expenseModal.category"></strong> ให้อัตโนมัติ</p>
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">จำนวนเงิน (บาท) / Amount</label>
-                    <input type="number" step="any" x-model.number="expenseModal.amount" required placeholder="0.00"
-                           class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold font-bold text-red-600">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">รายละเอียดเพิ่มเติม / Description</label>
-                    <textarea x-model="expenseModal.description" rows="2" placeholder="ระบุรายละเอียด เช่น ค่าน้ำเดือน มิ.ย., ค่าแรงช่างภาพ..."
-                              class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold"></textarea>
-                </div>
-
-                <div class="flex justify-end gap-3 pt-4 border-t border-beige">
+                <!-- Footer Action Buttons -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-beige flex-shrink-0">
                     <button type="button" @click="expenseModal.open = false" 
-                            class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-3.5 rounded-xl border border-beige transition">ยกเลิก</button>
+                            class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-6 py-3.5 rounded-xl border border-beige transition">ยกเลิก / Cancel</button>
                     <button type="submit" 
-                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase font-bold">บันทึกรายจ่าย</button>
+                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-bold px-7 py-3.5 rounded-xl transition tracking-wider uppercase shadow-md flex items-center gap-2">
+                        <span>💾 บันทึกใบสำคัญจ่าย / Save Voucher</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -2689,45 +2887,123 @@
                         .then(res => res.json())
                         .then(data => this.expenses = data);
                 },
+
+                addExpenseItem() {
+                    this.expenseModal.items.push({
+                        description: '',
+                        quantity: 1,
+                        unit: 'รายการ',
+                        unit_price: 0,
+                        amount: 0
+                    });
+                },
+
+                removeExpenseItem(index) {
+                    if (this.expenseModal.items.length > 1) {
+                        this.expenseModal.items.splice(index, 1);
+                        this.calculateExpenseTotals();
+                    }
+                },
+
+                calculateExpenseTotals() {
+                    let sub = 0;
+                    this.expenseModal.items.forEach(item => {
+                        const qty = parseFloat(item.quantity) || 0;
+                        const price = parseFloat(item.unit_price) || 0;
+                        item.amount = qty * price;
+                        sub += item.amount;
+                    });
+                    this.expenseModal.subtotal = sub;
+                    
+                    if (this.expenseModal.has_withholding_tax) {
+                        const pct = parseFloat(this.expenseModal.withholding_tax_percent) || 3;
+                        this.expenseModal.withholding_tax_amount = sub * (pct / 100);
+                    } else {
+                        this.expenseModal.withholding_tax_amount = 0;
+                    }
+                    
+                    this.expenseModal.amount = sub - this.expenseModal.withholding_tax_amount;
+                },
+
                 openExpenseModal() {
+                    const todayStr = new Date().toISOString().substring(0, 10);
+                    const pvCount = (this.expenses ? this.expenses.length : 0) + 1;
+                    const yearStr = new Date().getFullYear();
+                    
                     this.expenseModal = {
                         open: true,
                         id: null,
-                        date: new Date().toISOString().substring(0, 10),
-                        category: '',
+                        voucher_number: `PV-${yearStr}-${String(pvCount).padStart(4, '0')}`,
+                        date: todayStr,
+                        category: 'ค่าสินค้า/วัตถุดิบ',
+                        pay_to: '',
+                        address: '',
+                        tax_id: '',
                         description: '',
-                        amount: 0.0
+                        items: [
+                            { description: 'รายการค่าใช้จ่าย', quantity: 1, unit: 'รายการ', unit_price: 0, amount: 0 }
+                        ],
+                        subtotal: 0.0,
+                        has_withholding_tax: false,
+                        withholding_tax_percent: 3.0,
+                        withholding_tax_amount: 0.0,
+                        amount: 0.0,
+                        note: ''
                     };
+                    this.calculateExpenseTotals();
                 },
+
                 saveExpenseFromModal() {
-                    if (!this.expenseModal.category.trim()) {
+                    if (!this.expenseModal.category) {
                         alert('กรุณาระบุหมวดหมู่รายจ่าย');
                         return;
                     }
                     
+                    this.calculateExpenseTotals();
+                    
+                    const payload = {
+                        voucher_number: this.expenseModal.voucher_number,
+                        date: this.expenseModal.date,
+                        category: this.expenseModal.category,
+                        pay_to: this.expenseModal.pay_to,
+                        address: this.expenseModal.address,
+                        tax_id: this.expenseModal.tax_id,
+                        description: this.expenseModal.description || this.expenseModal.pay_to || this.expenseModal.category,
+                        items_json: JSON.stringify(this.expenseModal.items),
+                        subtotal: this.expenseModal.subtotal,
+                        withholding_tax_percent: this.expenseModal.has_withholding_tax ? (parseFloat(this.expenseModal.withholding_tax_percent) || 3) : 0,
+                        withholding_tax_amount: this.expenseModal.withholding_tax_amount,
+                        amount: this.expenseModal.amount,
+                        net_amount: this.expenseModal.amount,
+                        note: this.expenseModal.note
+                    };
+
                     fetch('/api/expenses', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            amount: parseFloat(this.expenseModal.amount),
-                            category: this.expenseModal.category.trim(),
-                            description: this.expenseModal.description,
-                            date: this.expenseModal.date
-                        })
+                        body: JSON.stringify(payload)
                     })
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            this.showToast(data.message || 'บันทึกรายจ่ายสำเร็จ');
+                            this.showToast(data.message || 'บันทึกใบสำคัญจ่ายสำเร็จ');
                             this.expenseModal.open = false;
                             this.fetchExpenses();
                             this.fetchExpenseCategories();
                             this.fetchReportsData();
                             this.fetchDashboardStats();
+                            
+                            if (confirm('บันทึกใบสำคัญจ่ายสำเร็จ! คุณต้องการสั่งพิมพ์ใบสำคัญจ่ายทันทีใช่หรือไม่?')) {
+                                window.open(`/print/expense/${data.expense_id}`, '_blank');
+                            }
                         } else {
-                            alert(data.detail || 'เกิดข้อผิดพลาด');
+                            alert(data.detail || 'เกิดข้อผิดพลาดในการบันทึก');
                         }
                     });
+                },
+
+                printExpenseVoucher(expId) {
+                    window.open(`/print/expense/${expId}`, '_blank');
                 },
                 fetchExpenseCategories() {
                     fetch('/api/expenses/categories')
