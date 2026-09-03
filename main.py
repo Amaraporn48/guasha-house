@@ -1388,17 +1388,16 @@ def restock_product(restock_data: RestockSchema, db: Session = Depends(get_db), 
     db.commit()
     return {"success": True, "message": "เพิ่มสินค้าเข้าสต็อกและบันทึกรายจ่ายสำเร็จ", "new_stock": prod.stock_quantity}
 
-# ----------------- PAYMENT SLIP UPLOAD -----------------
+# ----------------- PAYMENT SLIP & IMAGE UPLOAD -----------------
 from fastapi import File, UploadFile
 import shutil
 import uuid
 import os
+import base64
 
 @app.post("/api/documents/upload-slip")
 def upload_payment_slip(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    UPLOAD_DIR = "static/uploads/slips"
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    
+    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "slips")
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp", ".pdf"]:
         raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP, PDF)")
@@ -1407,18 +1406,25 @@ def upload_payment_slip(file: UploadFile = File(...), current_user: User = Depen
     filepath = os.path.join(UPLOAD_DIR, filename)
     
     try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการบันทึกไฟล์: {e}")
-        
-    return {"success": True, "filename": filename, "url": f"/static/uploads/slips/{filename}"}
+        return {"success": True, "filename": filename, "url": f"/static/uploads/slips/{filename}"}
+    except Exception:
+        try:
+            file.file.seek(0)
+            content = file.file.read()
+            mime_ext = ext.replace(".", "")
+            mime = "application/pdf" if mime_ext == "pdf" else f"image/{'jpeg' if mime_ext == 'jpg' else mime_ext}"
+            b64_str = base64.b64encode(content).decode("utf-8")
+            data_url = f"data:{mime};base64,{b64_str}"
+            return {"success": True, "filename": data_url, "url": data_url}
+        except Exception as err:
+            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลสลิป: {err}")
 
 @app.post("/api/branches/upload-image")
 def upload_branch_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    UPLOAD_DIR = "static/uploads/branches"
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    
+    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "branches")
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP)")
@@ -1427,18 +1433,26 @@ def upload_branch_image(file: UploadFile = File(...), current_user: User = Depen
     filepath = os.path.join(UPLOAD_DIR, filename)
     
     try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการบันทึกไฟล์: {e}")
-        
-    return {"success": True, "filename": filename, "url": f"/static/uploads/branches/{filename}"}
+        return {"success": True, "filename": filename, "url": f"/static/uploads/branches/{filename}"}
+    except Exception:
+        try:
+            file.file.seek(0)
+            content = file.file.read()
+            mime_ext = ext.replace(".", "")
+            if mime_ext == "jpg":
+                mime_ext = "jpeg"
+            b64_str = base64.b64encode(content).decode("utf-8")
+            data_url = f"data:image/{mime_ext};base64,{b64_str}"
+            return {"success": True, "filename": data_url, "url": data_url}
+        except Exception as err:
+            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพ: {err}")
 
 @app.post("/api/products/upload-image")
 def upload_product_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    UPLOAD_DIR = "static/uploads/products"
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    
+    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "products")
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP)")
@@ -1447,12 +1461,22 @@ def upload_product_image(file: UploadFile = File(...), current_user: User = Depe
     filepath = os.path.join(UPLOAD_DIR, filename)
     
     try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการบันทึกไฟล์: {e}")
-        
-    return {"success": True, "filename": filename, "url": f"/static/uploads/products/{filename}"}
+        return {"success": True, "filename": filename, "url": f"/static/uploads/products/{filename}"}
+    except Exception:
+        try:
+            file.file.seek(0)
+            content = file.file.read()
+            mime_ext = ext.replace(".", "")
+            if mime_ext == "jpg":
+                mime_ext = "jpeg"
+            b64_str = base64.b64encode(content).decode("utf-8")
+            data_url = f"data:image/{mime_ext};base64,{b64_str}"
+            return {"success": True, "filename": data_url, "url": data_url}
+        except Exception as err:
+            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพสินค้า: {err}")
 
 # ----------------- SHARE ROUTE -----------------
 @app.get("/share/invoice/{doc_id}", response_class=HTMLResponse)

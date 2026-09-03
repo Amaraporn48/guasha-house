@@ -710,7 +710,7 @@
                                             <span class="text-red-500 font-bold text-[10px]">PDF</span>
                                         </template>
                                         <template x-if="!docForm.payment_slip.toLowerCase().endsWith('.pdf')">
-                                            <img :src="'/static/uploads/slips/' + docForm.payment_slip" class="w-full h-full object-cover">
+                                            <img :src="docForm.payment_slip.startsWith('data:') ? docForm.payment_slip : '/static/uploads/slips/' + docForm.payment_slip" class="w-full h-full object-cover">
                                         </template>
                                     </div>
                                     <div>
@@ -1890,12 +1890,12 @@
                         <div x-show="viewModal.doc.payment_slip" class="border border-gray-200 p-3 rounded-lg text-[10px] mt-3">
                             <span class="font-bold text-gray-500 block uppercase tracking-wider mb-2">หลักฐานการโอนเงินแนบ / ATTACHED SLIP</span>
                             <div class="flex items-center justify-start gap-4">
-                                <a :href="'/static/uploads/slips/' + viewModal.doc.payment_slip" target="_blank" class="block border border-gray-300 rounded overflow-hidden max-w-[120px] max-h-[120px]">
-                                    <img :src="'/static/uploads/slips/' + viewModal.doc.payment_slip" class="w-full h-full object-cover">
+                                <a :href="viewModal.doc.payment_slip.startsWith('data:') ? viewModal.doc.payment_slip : '/static/uploads/slips/' + viewModal.doc.payment_slip" target="_blank" class="block border border-gray-300 rounded overflow-hidden max-w-[120px] max-h-[120px]">
+                                    <img :src="viewModal.doc.payment_slip.startsWith('data:') ? viewModal.doc.payment_slip : '/static/uploads/slips/' + viewModal.doc.payment_slip" class="w-full h-full object-cover">
                                 </a>
                                 <div>
-                                    <p class="text-[9px] text-gray-500 font-mono" x-text="viewModal.doc.payment_slip"></p>
-                                    <a :href="'/static/uploads/slips/' + viewModal.doc.payment_slip" target="_blank" class="text-xs text-gold-dark hover:underline font-bold mt-1 inline-block">เปิดดูไฟล์ขนาดใหญ่ ↗</a>
+                                    <p class="text-[9px] text-gray-500 font-mono" x-text="viewModal.doc.payment_slip.startsWith('data:') ? 'สลิปโอนเงิน (Attached Slip)' : viewModal.doc.payment_slip"></p>
+                                    <a :href="viewModal.doc.payment_slip.startsWith('data:') ? viewModal.doc.payment_slip : '/static/uploads/slips/' + viewModal.doc.payment_slip" target="_blank" class="text-xs text-gold-dark hover:underline font-bold mt-1 inline-block">เปิดดูไฟล์ขนาดใหญ่ ↗</a>
                                 </div>
                             </div>
                         </div>
