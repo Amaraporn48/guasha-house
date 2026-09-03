@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานสรุปตารางรายการเอกสาร - บริษัท กัวซา เฮ้าส์ จำกัด</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #fbfaf7;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .summary-page {
+            background-color: white;
+            width: 100%;
+            max-width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 12mm 15mm;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        @media print {
+            body {
+                background-color: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .summary-page {
+                box-shadow: none !important;
+                border: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .summary-table th {
+            background-color: #f5f2eb !important;
+            color: #1a1a1a;
+            font-size: 15pt;
+            font-weight: 800;
+            padding: 14px 18px;
+            border: 2px solid #1a1a1a;
+            text-align: left;
+        }
+
+        .summary-table td {
+            font-size: 14pt;
+            font-weight: 600;
+            color: #1a1a1a;
+            padding: 14px 18px;
+            border: 1.5px solid #333;
+        }
+
+        .summary-table tr:nth-child(even) td {
+            background-color: #faf9f6 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Screen Top Control Bar -->
+    <div class="no-print bg-[#1a1a1a] text-white p-3.5 sticky top-0 z-50 shadow-md mb-6">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="/static/logo.png" alt="Logo" class="h-9 w-9 object-contain bg-white rounded-lg p-0.5">
+                <div>
+                    <h1 class="text-sm font-bold text-[#c5a880]">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
+                    <p class="text-[11px] text-gray-300">รายงานสรุปตารางรายการเอกสาร (Full Page A4)</p>
+                </div>
+            </div>
+            <button onclick="window.print()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                <span>สั่งพิมพ์กระดาษ A4 / บันทึก PDF</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Printable A4 Summary Page -->
+    <div class="summary-page flex flex-col justify-between">
+        
+        <div>
+            <!-- Header Section -->
+            <div class="border-b-2 border-black pb-4 mb-4 flex justify-between items-start">
+                <div class="flex items-center gap-4">
+                    <img src="/static/logo.png" alt="Logo" class="h-16 w-16 object-contain">
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900 uppercase">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
+                        <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-widest">GUASHA HOUSE CO., LTD.</h2>
+                        <h3 class="text-base font-bold text-[#c5a880] mt-1">รายงานสรุปรายการเอกสาร (DOCUMENTS SUMMARY REPORT)</h3>
+                    </div>
+                </div>
+                <div class="text-right text-xs text-gray-600 space-y-1">
+                    <div><span class="font-bold">วันที่พิมพ์รายงาน:</span> {{ print_date }}</div>
+                    <div><span class="font-bold">จำนวนเอกสารรวม:</span> <span class="text-sm font-bold text-gray-900">{{ documents|length }}</span> รายการ</div>
+                    {% if filter_desc %}
+                    <div class="text-[11px] text-gray-500">เงื่อนไข: {{ filter_desc }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Documents Table -->
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th class="w-12 text-center">ลำดับ</th>
+                        <th class="w-32">เลขที่เอกสาร</th>
+                        <th class="w-28 text-center">วันที่ออก</th>
+                        <th>ชื่อลูกค้า / CUSTOMER</th>
+                        <th class="w-32 text-right">จำนวนเงิน (บาท)</th>
+                        <th class="w-28 text-center">วิธีชำระเงิน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td class="text-center font-mono font-semibold">{{ loop.index }}</td>
+                        <td class="font-bold font-mono text-gray-900">{{ doc.document_number }}</td>
+                        <td class="text-center font-medium">{{ doc.formatted_date }}</td>
+                        <td class="font-bold text-gray-900">{{ doc.customer_name }}</td>
+                        <td class="text-right font-bold font-mono">฿{{ "{:,.2f}".format(doc.total_amount_after_vat) }}</td>
+                        <td class="text-center">
+                            {% if doc.payment_method == 'CASH' %}
+                            <span class="font-bold text-green-700">เงินสด</span>
+                            {% else %}
+                            <span class="font-bold text-blue-700">เช็คธนาคาร</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-10 text-gray-400 font-medium">ไม่พบรายการเอกสารตรงตามเงื่อนไขที่เลือก</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer Grand Total Box -->
+        <div class="mt-8 pt-4 border-t-2 border-black">
+            <div class="flex justify-between items-center bg-gray-100 p-4 border border-gray-400 rounded-lg">
+                <div>
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider block">สรุปยอดรวมรายการเอกสารทั้งหมด</span>
+                    <span class="text-sm font-bold text-gray-800">จำนวนรวมทั้งสิ้น: {{ documents|length }} รายการ</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider block">ยอดเงินรวมทั้งสิ้น (GRAND TOTAL)</span>
+                    <span class="text-xl font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(total_amount_sum) }}</span>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center text-[10px] text-gray-400 mt-4">
+                <span>ออกโดยระบบบริหารจัดการเอกสาร บริษัท กัวซา เฮ้าส์ จำกัด (Guasha House ERP)</span>
+                <span>หน้า 1 จาก 1</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(() => {
+                window.print();
+            }, 600);
+        };
+    </script>
+</body>
+</html>
