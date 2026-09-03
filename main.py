@@ -1629,91 +1629,76 @@ def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(g
 @app.get("/api/reports/print-summary", response_class=HTMLResponse)
 def print_documents_summary(
     request: Request,
-    query: Optional[str] = None,
     year: Optional[str] = None,
     month: Optional[str] = None,
-    payment_method: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     try:
-        stmt = db.query(Document)
+        now = datetime.date.today()
+        target_year = year.strip() if (year and year.strip()) else str(now.year)
         
-        if year and year.strip():
-            if month and month.strip() and month != "ALL":
-                try:
-                    pattern = f"{year.strip()}-{int(month.strip()):02d}-%"
-                except ValueError:
-                    pattern = f"{year.strip()}-%"
-            else:
-                pattern = f"{year.strip()}-%"
-            stmt = stmt.filter(Document.date.like(pattern))
-            
-        if payment_method and payment_method.strip():
-            stmt = stmt.filter(Document.payment_method == payment_method.strip())
-            
-        raw_documents = stmt.order_by(Document.date.desc(), Document.id.desc()).all()
+        # Fast bulk aggregation for 12 months (Jan - Dec)
+        year_pattern = f"{target_year}-%"
+        year_docs = db.query(Document.date, Document.total_amount_after_vat, Document.vat_amount).filter(
+            Document.date.like(year_pattern)
+        ).all()
         
-        # Filter by query string if provided
-        if query and query.strip():
-            q_clean = query.strip().lower()
-            raw_documents = [
-                d for d in raw_documents 
-                if q_clean in (d.document_number or "").lower() or q_clean in (d.customer_name or "").lower()
-            ]
-            
-        # Format dates & build safe dictionary list
-        months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
-        doc_list = []
-        total_sum = 0.0
-
-        for doc in raw_documents:
-            amt = float(doc.total_amount_after_vat or 0.0)
-            total_sum += amt
-            
-            formatted_date = "-"
-            if doc.date:
+        months_th = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
+        monthly_stats = {m: {"sales": 0.0, "vat": 0.0, "count": 0} for m in range(1, 13)}
+        
+        total_docs_count = 0
+        total_vat_sum = 0.0
+        total_sales_sum = 0.0
+        
+        for doc_date, sales, vat in year_docs:
+            if doc_date and len(doc_date) >= 7:
                 try:
-                    parts = str(doc.date).split('T')[0].split('-')
-                    if len(parts) == 3:
-                        y = int(parts[0]) + 543
-                        m = int(parts[1])
-                        d = int(parts[2])
-                        if 1 <= m <= 12:
-                            formatted_date = f"{d} {months_th[m-1]} {y}"
-                        else:
-                            formatted_date = str(doc.date)
-                    else:
-                        formatted_date = str(doc.date)
+                    m = int(doc_date.split("-")[1])
+                    if 1 <= m <= 12:
+                        s_val = float(sales or 0.0)
+                        v_val = float(vat or 0.0)
+                        monthly_stats[m]["sales"] += s_val
+                        monthly_stats[m]["vat"] += v_val
+                        monthly_stats[m]["count"] += 1
+                        
+                        total_docs_count += 1
+                        total_vat_sum += v_val
+                        total_sales_sum += s_val
                 except Exception:
-                    formatted_date = str(doc.date)
+                    pass
 
-            doc_list.append({
-                "document_number": doc.document_number or "-",
-                "formatted_date": formatted_date,
-                "customer_name": doc.customer_name or "-",
-                "total_amount_after_vat": amt,
-                "payment_method": doc.payment_method or "CASH"
+        months_list = []
+        for m in range(1, 13):
+            months_list.append({
+                "month_num": m,
+                "month_name": months_th[m-1],
+                "count": monthly_stats[m]["count"],
+                "vat": monthly_stats[m]["vat"],
+                "sales": monthly_stats[m]["sales"]
             })
+            
+        # Expenses for target_year
+        exp_sum = db.query(func.sum(Expense.amount)).filter(Expense.date.like(year_pattern)).scalar()
+        total_expenses = float(exp_sum) if exp_sum else 0.0
+        net_profit = total_sales_sum - total_expenses
 
         # Thai Date Today
-        today = datetime.date.today()
-        print_date = f"{today.day} {months_th[today.month - 1]} {today.year + 543}"
-        
-        filter_parts = []
-        if year and year.strip(): filter_parts.append(f"ปี {year.strip()}")
-        if month and month.strip(): filter_parts.append(f"เดือน {month.strip()}")
-        if payment_method and payment_method.strip(): filter_parts.append(f"วิธีชำระเงิน: {payment_method.strip()}")
-        if query and query.strip(): filter_parts.append(f"คำค้นหา: '{query.strip()}'")
-        filter_desc = " | ".join(filter_parts) if filter_parts else "ทั้งหมด"
+        print_date = f"{now.day} {months_th[now.month - 1]} {now.year + 543}"
+        target_year_th = int(target_year) + 543 if target_year.isdigit() else target_year
 
         return templates.TemplateResponse(
             request=request,
             name="print_summary.html",
             context={
-                "documents": doc_list,
-                "total_amount_sum": total_sum,
-                "print_date": print_date,
-                "filter_desc": filter_desc
+                "target_year": target_year,
+                "target_year_th": target_year_th,
+                "months_data": months_list,
+                "total_docs_count": total_docs_count,
+                "total_vat_sum": total_vat_sum,
+                "total_sales_sum": total_sales_sum,
+                "total_expenses": total_expenses,
+                "net_profit": net_profit,
+                "print_date": print_date
             }
         )
     except Exception as e:
