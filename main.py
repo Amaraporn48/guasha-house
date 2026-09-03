@@ -966,22 +966,42 @@ def get_dashboard_stats(
     total_docs = doc_query.count()
     total_cust = db.query(Customer).count()
     
-    # 12 Months breakdown for Dashboard Chart for target_year
+    # 12 Months breakdown for Dashboard Chart for target_year (Bulk 2-query aggregation for fast response)
+    year_pattern = f"{target_year}-%"
+    year_docs = db.query(Document.date, Document.total_amount_after_vat).filter(
+        Document.date.like(year_pattern)
+    ).all()
+    
+    year_exps = db.query(Expense.date, Expense.amount).filter(
+        Expense.date.like(year_pattern)
+    ).all()
+    
+    sales_by_month = {m: 0.0 for m in range(1, 13)}
+    expenses_by_month = {m: 0.0 for m in range(1, 13)}
+    
+    for doc_date, amount in year_docs:
+        if doc_date and len(doc_date) >= 7:
+            try:
+                m = int(doc_date.split("-")[1])
+                if 1 <= m <= 12:
+                    sales_by_month[m] += float(amount or 0.0)
+            except Exception:
+                pass
+                
+    for exp_date, amount in year_exps:
+        if exp_date and len(exp_date) >= 7:
+            try:
+                m = int(exp_date.split("-")[1])
+                if 1 <= m <= 12:
+                    expenses_by_month[m] += float(amount or 0.0)
+            except Exception:
+                pass
+
     months_chart_data = []
     months_th = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
     for m in range(1, 13):
-        m_str = f"{target_year}-{m:02d}"
-        
-        s_sum = db.query(func.sum(Document.total_amount_after_vat)).filter(
-            Document.date.like(f"{m_str}-%")
-        ).scalar()
-        s_val = float(s_sum) if s_sum else 0.0
-        
-        e_sum = db.query(func.sum(Expense.amount)).filter(
-            Expense.date.like(f"{m_str}-%")
-        ).scalar()
-        e_val = float(e_sum) if e_sum else 0.0
-        
+        s_val = sales_by_month[m]
+        e_val = expenses_by_month[m]
         months_chart_data.append({
             "month_num": m,
             "month_name": months_th[m-1],
@@ -1024,31 +1044,33 @@ def get_reports_summary(year: Optional[str] = None, month: Optional[str] = None,
     if not year:
         year = str(datetime.date.today().year)
         
-    # Generate data for months Jan-Dec
+    # Generate data for months Jan-Dec using 1 bulk query
+    year_pattern = f"{year}-%"
+    year_docs = db.query(Document.date, Document.total_amount_after_vat, Document.vat_amount).filter(
+        Document.date.like(year_pattern)
+    ).all()
+    
+    monthly_stats = {m: {"sales": 0.0, "vat": 0.0, "count": 0} for m in range(1, 13)}
+    for doc_date, sales, vat in year_docs:
+        if doc_date and len(doc_date) >= 7:
+            try:
+                m = int(doc_date.split("-")[1])
+                if 1 <= m <= 12:
+                    monthly_stats[m]["sales"] += float(sales or 0.0)
+                    monthly_stats[m]["vat"] += float(vat or 0.0)
+                    monthly_stats[m]["count"] += 1
+            except Exception:
+                pass
+
     months_data = []
+    months_th = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
     for m in range(1, 13):
-        m_str = f"{year}-{m:02d}"
-        
-        sales_sum = db.query(func.sum(Document.total_amount_after_vat)).filter(
-            Document.date.like(f"{m_str}-%")
-        ).scalar()
-        sales_sum = float(sales_sum) if sales_sum else 0.0
-        
-        vat_sum = db.query(func.sum(Document.vat_amount)).filter(
-            Document.date.like(f"{m_str}-%")
-        ).scalar()
-        vat_sum = float(vat_sum) if vat_sum else 0.0
-        
-        count = db.query(Document).filter(
-            Document.date.like(f"{m_str}-%")
-        ).count()
-        
         months_data.append({
             "month_num": m,
-            "month_name": ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."][m-1],
-            "sales": sales_sum,
-            "vat": vat_sum,
-            "count": count
+            "month_name": months_th[m-1],
+            "sales": monthly_stats[m]["sales"],
+            "vat": monthly_stats[m]["vat"],
+            "count": monthly_stats[m]["count"]
         })
         
     # Determine date pattern for filtered breakdown (year only or specific month)
