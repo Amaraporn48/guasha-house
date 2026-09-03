@@ -136,21 +136,20 @@ class Expense(Base):
 def init_db():
     Base.metadata.create_all(bind=engine)
     # Auto-add missing columns for SQLite/PostgreSQL fallback
-    with engine.connect() as conn:
-        for col_name, col_type in [
-            ("voucher_number", "VARCHAR"),
-            ("pay_to", "VARCHAR"),
-            ("address", "VARCHAR"),
-            ("tax_id", "VARCHAR"),
-            ("items_json", "TEXT"),
-            ("subtotal", "FLOAT"),
-            ("withholding_tax_percent", "FLOAT"),
-            ("withholding_tax_amount", "FLOAT"),
-            ("net_amount", "FLOAT"),
-            ("note", "VARCHAR")
-        ]:
-            try:
-                conn.execute(text(f"ALTER TABLE expenses ADD COLUMN {col_name} {col_type}"))
-                conn.commit()
-            except Exception:
-                pass
+    for col_name, col_type in [
+        ("voucher_number", "VARCHAR"),
+        ("pay_to", "VARCHAR"),
+        ("address", "VARCHAR"),
+        ("tax_id", "VARCHAR"),
+        ("items_json", "TEXT"),
+        ("subtotal", "FLOAT"),
+        ("withholding_tax_percent", "FLOAT"),
+        ("withholding_tax_amount", "FLOAT"),
+        ("net_amount", "FLOAT"),
+        ("note", "VARCHAR")
+    ]:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE expenses ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+        except Exception:
+            pass
