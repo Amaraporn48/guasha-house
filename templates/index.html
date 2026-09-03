@@ -2113,16 +2113,8 @@
                                 <select x-model="expenseModal.category" required
                                         class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2 text-sm font-bold text-gold-dark focus-gold cursor-pointer">
                                     <option value="" disabled>-- เลือกหมวดหมู่รายจ่าย --</option>
-                                    <option value="ค่าสินค้า/วัตถุดิบ">ค่าสินค้า/วัตถุดิบ</option>
-                                    <option value="ค่าเช่า/สถานที่">ค่าเช่า/สถานที่</option>
-                                    <option value="ค่าเงินเดือน/ค่าแรง">ค่าเงินเดือน/ค่าแรง</option>
-                                    <option value="ค่าการตลาด/โฆษณา">ค่าการตลาด/โฆษณา</option>
-                                    <option value="ค่าน้ำ/ค่าไฟ/สาธารณูปโภค">ค่าน้ำ/ค่าไฟ/สาธารณูปโภค</option>
-                                    <option value="ค่าใช้จ่ายทั่วไป">ค่าใช้จ่ายทั่วไป</option>
-                                    <template x-for="cat in expenseCategories" :key="cat">
-                                        <template x-if="!['ค่าสินค้า/วัตถุดิบ', 'ค่าเช่า/สถานที่', 'ค่าเงินเดือน/ค่าแรง', 'ค่าการตลาด/โฆษณา', 'ค่าน้ำ/ค่าไฟ/สาธารณูปโภค', 'ค่าใช้จ่ายทั่วไป'].includes(cat)">
-                                            <option :value="cat" x-text="cat"></option>
-                                        </template>
+                                    <template x-for="cat in (expenseCategories && expenseCategories.length ? expenseCategories : ['ค่าสินค้า/วัตถุดิบ', 'ค่าเช่า/สถานที่', 'ค่าเงินเดือน/ค่าแรง', 'ค่าการตลาด/โฆษณา', 'ค่าน้ำ/ค่าไฟ/สาธารณูปโภค', 'ค่าใช้จ่ายทั่วไป'])" :key="cat">
+                                        <option :value="cat" x-text="cat"></option>
                                     </template>
                                 </select>
                             </div>

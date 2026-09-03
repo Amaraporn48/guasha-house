@@ -1256,11 +1256,24 @@ def get_expense_categories(db: Session = Depends(get_db), current_user: User = D
     from database import Expense
     distinct_cats = db.query(Expense.category).distinct().all()
     cats = [c[0] for c in distinct_cats if c[0]]
-    defaults = ["ค่าน้ำ-ค่าไฟ", "ค่าเช่าสถานที่", "ค่าแรง/จ้างงาน", "ซื้อสินค้าเข้าสต็อก", "อื่นๆ"]
-    for d in defaults:
-        if d not in cats:
-            cats.append(d)
-    return cats
+    defaults = ["ค่าสินค้า/วัตถุดิบ", "ค่าเช่า/สถานที่", "ค่าเงินเดือน/ค่าแรง", "ค่าการตลาด/โฆษณา", "ค่าน้ำ/ค่าไฟ/สาธารณูปโภค", "ค่าใช้จ่ายทั่วไป"]
+    
+    # Mapping legacy names to clean official names
+    legacy_map = {
+        "ค่าน้ำ-ค่าไฟ": "ค่าน้ำ/ค่าไฟ/สาธารณูปโภค",
+        "ค่าเช่าสถานที่": "ค่าเช่า/สถานที่",
+        "ค่าแรง/จ้างงาน": "ค่าเงินเดือน/ค่าแรง",
+        "ซื้อสินค้าเข้าสต็อก": "ค่าสินค้า/วัตถุดิบ",
+        "อื่นๆ": "ค่าใช้จ่ายทั่วไป"
+    }
+    
+    result = list(defaults)
+    for c in cats:
+        clean_c = legacy_map.get(c, c)
+        if clean_c not in result:
+            result.append(clean_c)
+            
+    return result
 
 @app.get("/api/expenses")
 def get_expenses(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
