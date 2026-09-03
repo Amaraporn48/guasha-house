@@ -2273,6 +2273,7 @@
                                         <th class="border border-gray-300 px-1 py-0.5 text-center">ลำดับ</th>
                                         <th class="border border-gray-300 px-1 py-0.5 text-left">รายการ</th>
                                         <th class="border border-gray-300 px-1 py-0.5 text-center">จำนวน</th>
+                                        <th class="border border-gray-300 px-1 py-0.5 text-center">หน่วย</th>
                                         <th class="border border-gray-300 px-1 py-0.5 text-right">จำนวนเงิน</th>
                                     </tr>
                                 </thead>
@@ -2282,6 +2283,7 @@
                                             <td class="border border-gray-300 px-1 py-0.5 text-center font-mono" x-text="i + 1"></td>
                                             <td class="border border-gray-300 px-1 py-0.5" x-text="item.description || 'รายการค่าใช้จ่าย'"></td>
                                             <td class="border border-gray-300 px-1 py-0.5 text-center font-mono" x-text="item.quantity"></td>
+                                            <td class="border border-gray-300 px-1 py-0.5 text-center" x-text="item.unit || 'รายการ'"></td>
                                             <td class="border border-gray-300 px-1 py-0.5 text-right font-mono font-bold" x-text="formatCurrency(item.amount || 0)"></td>
                                         </tr>
                                     </template>
