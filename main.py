@@ -929,50 +929,48 @@ def delete_document(doc_id: int, db: Session = Depends(get_db), current_user: Us
 
 # ----------------- DASHBOARD API -----------------
 @app.get("/api/dashboard/stats")
-def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_dashboard_stats(
+    year: Optional[str] = None,
+    month: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     from database import Expense
+    import datetime
     
-    # Total documents
-    total_docs = db.query(Document).count()
-    
-    # Get current month pattern YYYY-MM
     now = datetime.date.today()
-    current_month_str = f"{now.year}-{now.month:02d}"
+    target_year = int(year) if (year and year.isdigit()) else now.year
     
-    # Current month documents count
-    month_docs = db.query(Document).filter(Document.date.like(f"{current_month_str}-%")).count()
+    # Base queries according to year & month filter
+    doc_query = db.query(Document)
+    exp_query = db.query(Expense)
     
-    # Current month sales (sum of total_amount_after_vat)
-    month_sales_query = db.query(func.sum(Document.total_amount_after_vat)).filter(
-        Document.date.like(f"{current_month_str}-%")
-    ).scalar()
-    month_sales = float(month_sales_query) if month_sales_query else 0.0
+    if month and month != "ALL" and month.isdigit():
+        m_int = int(month)
+        pattern = f"{target_year}-{m_int:02d}-%"
+        doc_query = doc_query.filter(Document.date.like(pattern))
+        exp_query = exp_query.filter(Expense.date.like(pattern))
+    elif year and year != "ALL":
+        pattern = f"{target_year}-%"
+        doc_query = doc_query.filter(Document.date.like(pattern))
+        exp_query = exp_query.filter(Expense.date.like(pattern))
+        
+    sales_sum = doc_query.with_entities(func.sum(Document.total_amount_after_vat)).scalar()
+    total_sales = float(sales_sum) if sales_sum else 0.0
     
-    # Current month expenses
-    month_exp_query = db.query(func.sum(Expense.amount)).filter(
-        Expense.date.like(f"{current_month_str}-%")
-    ).scalar()
-    month_expenses = float(month_exp_query) if month_exp_query else 0.0
+    exp_sum = exp_query.with_entities(func.sum(Expense.amount)).scalar()
+    total_expenses = float(exp_sum) if exp_sum else 0.0
     
-    # Net profit current month
-    net_profit_month = month_sales - month_expenses
+    net_profit = total_sales - total_expenses
     
-    # Total sales all time
-    total_sales_query = db.query(func.sum(Document.total_amount_after_vat)).scalar()
-    total_sales = float(total_sales_query) if total_sales_query else 0.0
-    
-    # Total expenses all time
-    total_exp_query = db.query(func.sum(Expense.amount)).scalar()
-    total_expenses = float(total_exp_query) if total_exp_query else 0.0
-    
-    # Total customers
+    total_docs = doc_query.count()
     total_cust = db.query(Customer).count()
     
-    # 12 Months breakdown for Dashboard Chart
+    # 12 Months breakdown for Dashboard Chart for target_year
     months_chart_data = []
     months_th = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
     for m in range(1, 13):
-        m_str = f"{now.year}-{m:02d}"
+        m_str = f"{target_year}-{m:02d}"
         
         s_sum = db.query(func.sum(Document.total_amount_after_vat)).filter(
             Document.date.like(f"{m_str}-%")
@@ -993,8 +991,7 @@ def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depe
         })
 
     # Recent documents (5)
-    recent_docs = db.query(Document).order_by(Document.document_number.desc()).limit(5).all()
-    
+    recent_docs = db.query(Document).order_by(Document.id.desc()).limit(5).all()
     recent_list = []
     for doc in recent_docs:
         recent_list.append({
@@ -1009,13 +1006,13 @@ def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depe
         
     return {
         "total_documents": total_docs,
-        "monthly_documents": month_docs,
-        "monthly_sales": month_sales,
-        "monthly_expenses": month_expenses,
-        "net_profit_month": net_profit_month,
         "total_sales": total_sales,
         "total_expenses": total_expenses,
+        "net_profit": net_profit,
         "total_customers": total_cust,
+        "monthly_sales": total_sales,
+        "monthly_expenses": total_expenses,
+        "net_profit_month": net_profit,
         "months_chart_data": months_chart_data,
         "recent_documents": recent_list
     }

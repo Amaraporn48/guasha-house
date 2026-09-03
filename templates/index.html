@@ -247,6 +247,38 @@
             <!-- 2. DASHBOARD VIEW -->
             <div x-show="activeView === 'dashboard'" class="space-y-8">
                 
+                <!-- Annual & Monthly Filter Controls for Dashboard -->
+                <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase">ภาพรวมผลประกอบการ / Financial Dashboard</h3>
+                        <p class="text-xs text-gray-400 mt-0.5">เลือกปีและเดือนที่ต้องการดูสรุปยอดขาย รายจ่าย กำไรสุทธิ และรายงานสถิติย่อของร้าน</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <select x-model="dashYear" @change="fetchDashboardStats()"
+                                class="bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
+                            <option value="2025">ปี 2025</option>
+                            <option value="2026">ปี 2026</option>
+                            <option value="2027">ปี 2027</option>
+                        </select>
+                        <select x-model="dashMonth" @change="fetchDashboardStats()"
+                                class="bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
+                            <option value="ALL">🗓️ ตลอดทั้งปี (ม.ค. - ธ.ค.)</option>
+                            <option value="1">01 มกราคม (ม.ค.)</option>
+                            <option value="2">02 กุมภาพันธ์ (ก.พ.)</option>
+                            <option value="3">03 มีนาคม (มี.ค.)</option>
+                            <option value="4">04 เมษายน (เม.ย.)</option>
+                            <option value="5">05 พฤษภาคม (พ.ค.)</option>
+                            <option value="6">06 มิถุนายน (มิ.ย.)</option>
+                            <option value="7">07 กรกฎาคม (ก.ค.)</option>
+                            <option value="8">08 สิงหาคม (ส.ค.)</option>
+                            <option value="9">09 กันยายน (ก.ย.)</option>
+                            <option value="10">10 ตุลาคม (ต.ค.)</option>
+                            <option value="11">11 พฤศจิกายน (พ.ย.)</option>
+                            <option value="12">12 ธันวาคม (ธ.ค.)</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Stats KPI Cards -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
@@ -2511,6 +2543,10 @@
                 // Feedback UI
                 toast: { message: '', type: 'success' },
 
+                // Dashboard States
+                dashYear: new Date().getFullYear().toString(),
+                dashMonth: 'ALL',
+
                 // Reports States
                 reportYear: new Date().getFullYear().toString(),
                 reportMonth: 'ALL',
@@ -2639,7 +2675,11 @@
 
                 // --- FETCH UTILITIES ---
                 fetchDashboardStats() {
-                    fetch('/api/dashboard/stats')
+                    const params = [];
+                    if (this.dashYear) params.push(`year=${this.dashYear}`);
+                    if (this.dashMonth) params.push(`month=${this.dashMonth}`);
+
+                    fetch('/api/dashboard/stats?' + params.join('&'))
                         .then(res => res.json())
                         .then(data => {
                             this.stats = data;
