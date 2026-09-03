@@ -1502,7 +1502,6 @@
                                 <tr class="bg-cream border-b border-beige text-xs text-gray-500 uppercase font-semibold">
                                     <th class="px-4 py-3.5">เลขที่ PV / Date</th>
                                     <th class="px-4 py-3.5">หมวดหมู่ / Category</th>
-                                    <th class="px-4 py-3.5">จ่ายให้แก่ / Pay To</th>
                                     <th class="px-4 py-3.5 text-right">จำนวนเงินสุทธิ / Net</th>
                                     <th class="px-4 py-3.5 text-center">จัดการ / Actions</th>
                                 </tr>
@@ -1518,13 +1517,12 @@
                                             <span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-beige text-gold-dark whitespace-nowrap"
                                                   x-text="exp.category"></span>
                                         </td>
-                                        <td class="px-4 py-3.5 text-xs text-gray-700">
-                                            <div class="font-semibold text-gray-900" x-text="exp.pay_to || '-'"></div>
-                                            <div class="text-[10px] text-gray-400 truncate max-w-[150px]" x-text="exp.description || '-'"></div>
-                                        </td>
                                         <td class="px-4 py-3.5 text-right font-bold text-red-600 font-mono text-xs" x-text="formatCurrency(exp.net_amount || exp.amount)"></td>
                                         <td class="px-4 py-3.5 text-center">
                                             <div class="inline-flex gap-1.5">
+                                                <button @click="openViewExpenseModal(exp)" class="text-[11px] bg-gold/15 hover:bg-gold hover:text-white text-gold-dark px-2.5 py-1 rounded-lg border border-gold/30 font-bold transition flex items-center gap-1">
+                                                    👁️ ดู
+                                                </button>
                                                 <button @click="printExpenseVoucher(exp.id)" class="text-[11px] bg-beige hover:bg-gold hover:text-white text-charcoal px-2.5 py-1 rounded-lg border border-beige font-semibold transition">
                                                     🖨️ พิมพ์ A4
                                                 </button>
@@ -1536,7 +1534,7 @@
                                     </tr>
                                 </template>
                                 <tr x-show="expenses.length === 0">
-                                    <td colspan="5" class="text-center py-8 text-xs text-gray-400">ยังไม่มีประวัติการบันทึกใบสำคัญจ่าย</td>
+                                    <td colspan="4" class="text-center py-8 text-xs text-gray-400">ยังไม่มีประวัติการบันทึกใบสำคัญจ่าย</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2323,6 +2321,104 @@
         </div>
     </div>
 
+    <!-- View Payment Voucher Details Modal -->
+    <div x-show="viewExpenseModal.open" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 no-print" x-transition>
+        <div class="bg-white border border-beige rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-beige flex items-center justify-between bg-cream/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📄</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-charcoal uppercase">รายละเอียดใบสำคัญจ่าย / PAYMENT VOUCHER DETAILS</h3>
+                        <p class="text-[11px] text-gray-500 font-mono" x-text="viewExpenseModal.exp ? (viewExpenseModal.exp.voucher_number || ('PV-' + String(viewExpenseModal.exp.id).padStart(4, '0'))) : ''"></p>
+                    </div>
+                </div>
+                <button @click="viewExpenseModal.open = false" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">&times;</button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-4 flex-1 font-sans" x-show="viewExpenseModal.exp">
+                <!-- Voucher Sheet Preview Card -->
+                <div class="bg-white border border-gray-300 rounded-xl p-5 text-xs shadow-sm space-y-4" x-if="viewExpenseModal.exp">
+                    <!-- Header with Logo -->
+                    <div class="flex justify-between items-start border-b-2 border-gray-300 pb-3">
+                        <div class="flex items-start gap-3">
+                            <img src="/static/logo.png" alt="Guasha House Logo" class="h-12 w-12 object-contain flex-shrink-0">
+                            <div>
+                                <div class="font-bold text-gray-900 text-sm uppercase leading-tight font-serif">บริษัท กัวซา เฮ้าส์ จำกัด</div>
+                                <div class="text-[9px] font-semibold text-gray-400 uppercase tracking-widest">GUASHA HOUSE CO., LTD.</div>
+                                <div class="text-[9px] text-gray-500 leading-tight mt-0.5">
+                                    199/4 ถ.กรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กทม. 10240<br>
+                                    โทร. 061-496-6361 | เลขผู้เสียภาษี: 0105565028948
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right border-l-2 border-gold pl-3 min-w-[130px]">
+                            <div class="font-bold text-gray-900 text-sm uppercase leading-tight">ใบสำคัญจ่าย</div>
+                            <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">PAYMENT VOUCHER</div>
+                            <div class="text-[10px] space-y-0.5 text-gray-600">
+                                <div><span class="font-bold">เลขที่:</span> <span class="font-mono font-bold text-gold-dark" x-text="viewExpenseModal.exp ? (viewExpenseModal.exp.voucher_number || ('PV-' + String(viewExpenseModal.exp.id).padStart(4, '0'))) : ''"></span></div>
+                                <div><span class="font-bold">วันที่:</span> <span class="font-medium" x-text="viewExpenseModal.exp ? formatThaiDate(viewExpenseModal.exp.date) : ''"></span></div>
+                                <div><span class="font-bold">หมวดหมู่:</span> <span class="font-bold text-gold-dark" x-text="viewExpenseModal.exp ? viewExpenseModal.exp.category : ''"></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payee Information -->
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-1 text-xs">
+                        <div class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">ข้อมูลผู้รับเงิน / PAYEE INFORMATION</div>
+                        <div><span class="font-bold text-gray-700">จ่ายให้แก่:</span> <span class="font-bold text-gray-900 text-sm" x-text="viewExpenseModal.exp ? (viewExpenseModal.exp.pay_to || '-') : '-'"></span></div>
+                        <div><span class="font-bold text-gray-700">ที่อยู่:</span> <span class="text-gray-800" x-text="viewExpenseModal.exp ? (viewExpenseModal.exp.address || '-') : '-'"></span></div>
+                        <div x-show="viewExpenseModal.exp && viewExpenseModal.exp.tax_id"><span class="font-bold text-gray-700">เลขผู้เสียภาษี:</span> <span class="font-mono text-gray-800" x-text="viewExpenseModal.exp ? viewExpenseModal.exp.tax_id : ''"></span></div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <table class="w-full border-collapse border border-gray-300 text-xs">
+                        <thead class="bg-gray-100 font-bold text-gray-800 border-b border-gray-300">
+                            <tr>
+                                <th class="border-r border-gray-300 px-2 py-1.5 text-center w-10">ลำดับ</th>
+                                <th class="border-r border-gray-300 px-2.5 py-1.5 text-left">รายการค่าใช้จ่าย</th>
+                                <th class="border-r border-gray-300 px-2 py-1.5 text-center w-16">จำนวน</th>
+                                <th class="px-2.5 py-1.5 text-right w-24">จำนวนเงิน</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <template x-for="(item, i) in (viewExpenseModal.items.length ? viewExpenseModal.items : [{description: viewExpenseModal.exp ? (viewExpenseModal.exp.description || viewExpenseModal.exp.category) : '', quantity: 1, amount: viewExpenseModal.exp ? (viewExpenseModal.exp.subtotal || viewExpenseModal.exp.amount) : 0}])" :key="i">
+                                <tr>
+                                    <td class="border-r border-gray-200 px-2 py-1.5 text-center font-mono text-gray-500" x-text="i + 1"></td>
+                                    <td class="border-r border-gray-200 px-2.5 py-1.5 font-medium text-gray-900" x-text="item.description || 'รายการค่าใช้จ่าย'"></td>
+                                    <td class="border-r border-gray-200 px-2 py-1.5 text-center font-mono" x-text="item.quantity || 1"></td>
+                                    <td class="px-2.5 py-1.5 text-right font-mono font-bold text-gray-900" x-text="formatCurrency(item.amount || 0)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+
+                    <!-- Totals & Remarks -->
+                    <div class="grid grid-cols-2 gap-4 border-t border-gray-200 pt-3">
+                        <div class="text-xs">
+                            <span class="font-bold text-gray-500 block mb-1">หมายเหตุ / REMARKS</span>
+                            <p class="text-gray-700 whitespace-pre-line bg-gray-50 p-2 rounded border border-gray-200" x-text="viewExpenseModal.exp ? (viewExpenseModal.exp.note || '-') : '-'"></p>
+                        </div>
+                        <div class="space-y-1 text-right text-xs pt-1">
+                            <div><span class="text-gray-500 font-medium">รวมก่อนภาษี:</span> <span class="font-mono font-bold text-gray-800" x-text="viewExpenseModal.exp ? formatCurrency(viewExpenseModal.exp.subtotal || viewExpenseModal.exp.amount) : '0.00'"></span></div>
+                            <div x-show="viewExpenseModal.exp && viewExpenseModal.exp.withholding_tax_amount && viewExpenseModal.exp.withholding_tax_amount > 0" class="text-red-600"><span class="text-gray-500">หัก ณ ที่จ่าย 3%:</span> <span class="font-mono font-bold" x-text="viewExpenseModal.exp ? ('- ' + formatCurrency(viewExpenseModal.exp.withholding_tax_amount)) : ''"></span></div>
+                            <div class="text-sm font-bold text-gray-900 border-t border-gray-300 pt-1"><span>คงเหลือสุทธิ:</span> <span class="font-mono text-red-600 font-bold" x-text="viewExpenseModal.exp ? formatCurrency(viewExpenseModal.exp.net_amount || viewExpenseModal.exp.amount) : '0.00'"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="flex justify-between items-center p-4 border-t border-beige bg-cream/40 flex-shrink-0">
+                <button type="button" @click="viewExpenseModal.open = false" 
+                        class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-2.5 rounded-xl border border-beige transition">ปิด / Close</button>
+                <button type="button" @click="printExpenseVoucher(viewExpenseModal.exp.id)" 
+                        class="bg-charcoal hover:bg-gold-dark text-white text-xs font-bold px-6 py-2.5 rounded-xl transition tracking-wider uppercase shadow-md flex items-center gap-2">
+                    <span>🖨️ พิมพ์ใบสำคัญจ่าย A4 / Print Voucher</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Restock Modal Form -->
     <div x-show="restockModal.open" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 no-print" x-transition>
         <div class="bg-white border border-beige rounded-2xl max-w-md w-full shadow-2xl overflow-hidden relative">
@@ -3018,6 +3114,22 @@
                     .catch(err => {
                         alert('เกิดข้อผิดพลาดในการส่งข้อมูล: ' + err);
                     });
+                },
+
+                viewExpenseModal: {
+                    open: false,
+                    exp: null,
+                    items: []
+                },
+
+                openViewExpenseModal(exp) {
+                    this.viewExpenseModal.exp = exp;
+                    try {
+                        this.viewExpenseModal.items = JSON.parse(exp.items_json || '[]');
+                    } catch(e) {
+                        this.viewExpenseModal.items = [];
+                    }
+                    this.viewExpenseModal.open = true;
                 },
 
                 printExpenseVoucher(expId) {
