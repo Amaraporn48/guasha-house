@@ -2166,10 +2166,9 @@
                                         <tr>
                                             <th class="px-3 py-2 text-center">ลำดับ</th>
                                             <th class="px-3 py-2">รายการค่าใช้จ่าย / Item Description</th>
-                                            <th class="px-3 py-2 w-16 text-center">จำนวน</th>
-                                            <th class="px-3 py-2 w-16 text-center">หน่วย</th>
-                                            <th class="px-3 py-2 w-24 text-right">ราคา/หน่วย</th>
-                                            <th class="px-3 py-2 w-24 text-right">จำนวนเงิน</th>
+                                            <th class="px-3 py-2 w-20 text-center">จำนวน</th>
+                                            <th class="px-3 py-2 w-28 text-right">ราคา/หน่วย</th>
+                                            <th class="px-3 py-2 w-28 text-right">จำนวนเงิน</th>
                                             <th class="px-3 py-2 w-10 text-center"></th>
                                         </tr>
                                     </thead>
@@ -2184,10 +2183,6 @@
                                                 <td class="px-2 py-1.5">
                                                     <input type="number" step="any" x-model.number="item.quantity" @input="calculateExpenseTotals()" min="1"
                                                            class="w-full bg-white border border-beige rounded px-2 py-1 text-xs text-center font-mono focus-gold">
-                                                </td>
-                                                <td class="px-2 py-1.5">
-                                                    <input type="text" x-model="item.unit" @input="calculateExpenseTotals()" placeholder="หน่วย"
-                                                           class="w-full bg-white border border-beige rounded px-2 py-1 text-xs text-center focus-gold">
                                                 </td>
                                                 <td class="px-2 py-1.5">
                                                     <input type="number" step="any" x-model.number="item.unit_price" @input="calculateExpenseTotals()" placeholder="0.00"
@@ -2273,7 +2268,6 @@
                                         <th class="border border-gray-300 px-1 py-0.5 text-center">ลำดับ</th>
                                         <th class="border border-gray-300 px-1 py-0.5 text-left">รายการ</th>
                                         <th class="border border-gray-300 px-1 py-0.5 text-center">จำนวน</th>
-                                        <th class="border border-gray-300 px-1 py-0.5 text-center">หน่วย</th>
                                         <th class="border border-gray-300 px-1 py-0.5 text-right">จำนวนเงิน</th>
                                     </tr>
                                 </thead>
@@ -2283,7 +2277,6 @@
                                             <td class="border border-gray-300 px-1 py-0.5 text-center font-mono" x-text="i + 1"></td>
                                             <td class="border border-gray-300 px-1 py-0.5" x-text="item.description || 'รายการค่าใช้จ่าย'"></td>
                                             <td class="border border-gray-300 px-1 py-0.5 text-center font-mono" x-text="item.quantity"></td>
-                                            <td class="border border-gray-300 px-1 py-0.5 text-center" x-text="item.unit || 'รายการ'"></td>
                                             <td class="border border-gray-300 px-1 py-0.5 text-right font-mono font-bold" x-text="formatCurrency(item.amount || 0)"></td>
                                         </tr>
                                     </template>

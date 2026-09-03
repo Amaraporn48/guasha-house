@@ -122,7 +122,6 @@
                         <th class="w-12 text-center">ลำดับ</th>
                         <th>รายการค่าใช้จ่าย / Description</th>
                         <th class="w-20 text-center">จำนวน</th>
-                        <th class="w-20 text-center">หน่วย</th>
                         <th class="w-32 text-right">จำนวนเงิน (บาท)</th>
                     </tr>
                 </thead>
@@ -132,7 +131,6 @@
                         <td class="text-center font-mono">{{ loop.index }}</td>
                         <td class="font-semibold text-gray-900">{{ item.description }}</td>
                         <td class="text-center font-mono">{{ item.quantity }}</td>
-                        <td class="text-center">{{ item.unit or 'รายการ' }}</td>
                         <td class="text-right font-mono font-bold">฿{{ "{:,.2f}".format(item.amount) }}</td>
                     </tr>
                     {% else %}
@@ -140,7 +138,6 @@
                         <td class="text-center font-mono">1</td>
                         <td class="font-semibold text-gray-900">{{ exp.description or exp.category }}</td>
                         <td class="text-center font-mono">1</td>
-                        <td class="text-center">รายการ</td>
                         <td class="text-right font-mono font-bold">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
                     </tr>
                     {% endfor %}
