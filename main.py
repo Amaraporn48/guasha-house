@@ -1730,7 +1730,7 @@ def convert_to_embed_url(url: str) -> str:
     return url
 
 @app.get("/api/videos")
-def get_videos(category: Optional[str] = None, query: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_videos(category: Optional[str] = None, query: Optional[str] = None, db: Session = Depends(get_db)):
     q = db.query(VideoCourse)
     if category and category != "ALL" and category != "":
         q = q.filter(VideoCourse.category == category)

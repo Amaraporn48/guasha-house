@@ -253,67 +253,90 @@
     <section id="lessons" class="max-w-7xl mx-auto px-6 py-20 space-y-12">
         <div class="text-center max-w-xl mx-auto space-y-3">
             <h3 class="text-xs uppercase tracking-widest text-gold font-bold">Guasha Learning Hub</h3>
-            <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">คลิปการเรียนการสอนและแนะนำศาสตร์</h2>
+            <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">คอร์สเรียน & คลิปการสอน</h2>
             <div class="h-1 w-12 bg-gold mx-auto"></div>
             <p class="text-xs text-gray-500">เรียนรู้ทักษะเบื้องต้นและการทำกัวซาอย่างถูกวิธีจากวิทยากรผู้เชี่ยวชาญ</p>
         </div>
 
+        <!-- Dynamic Videos Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm space-y-4">
-                <div class="relative aspect-video bg-charcoal flex items-center justify-center">
-                    <div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80');"></div>
-                    <div class="relative z-10 text-center text-white p-4 space-y-2">
-                        <button class="bg-gold hover:bg-gold-dark text-white rounded-full p-4 transition shadow-lg inline-flex items-center justify-center">
-                            <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
-                            </svg>
+            <template x-for="v in videos" :key="v.id">
+                <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm space-y-4 hover:shadow-md transition flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="relative aspect-video bg-charcoal overflow-hidden group cursor-pointer" @click="openPlayVideoModal(v)">
+                            <template x-if="v.embed_url">
+                                <iframe :src="v.embed_url" class="w-full h-full pointer-events-none" frameborder="0"></iframe>
+                            </template>
+                            <template x-if="!v.embed_url">
+                                <div class="w-full h-full bg-charcoal flex items-center justify-center text-gold font-bold text-sm">GUASHA VIDEO</div>
+                            </template>
+                            <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition flex items-center justify-center">
+                                <div class="bg-gold/90 group-hover:bg-gold text-white rounded-full p-4 transition shadow-lg inline-flex items-center justify-center transform group-hover:scale-110">
+                                    <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                                        <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <span class="absolute top-3 left-3 bg-gold text-charcoal text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow" x-text="v.category || 'ทั่วไป'"></span>
+                            <span x-show="v.duration" class="absolute bottom-3 right-3 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded" x-text="v.duration"></span>
+                        </div>
+
+                        <div class="p-5 space-y-2">
+                            <h4 class="font-bold text-charcoal text-sm leading-snug line-clamp-2" x-text="v.title"></h4>
+                            <p class="text-xs text-gray-500 leading-relaxed line-clamp-2" x-text="v.description || 'ไม่มีคำอธิบายเพิ่มเติม'"></p>
+                            <div class="text-[11px] text-gray-400 font-semibold pt-1 border-t border-beige flex items-center justify-between">
+                                <span>ผู้สอน: <strong class="text-charcoal" x-text="v.instructor || 'กัวซา เฮ้าส์'"></strong></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-5 pt-0">
+                        <button @click="openPlayVideoModal(v)" class="w-full bg-charcoal hover:bg-gold-dark text-white font-bold text-xs py-2.5 rounded-xl transition shadow flex items-center justify-center gap-2">
+                            <span>▶️ เปิดดูคลิปการสอน</span>
                         </button>
                     </div>
                 </div>
-                <div class="p-5 space-y-1.5">
-                    <span class="text-[10px] text-gold font-bold uppercase tracking-wider">Lesson 1 (พื้นฐาน)</span>
-                    <h4 class="font-bold text-charcoal text-sm">การจัดเตรียมอุปกรณ์และการเปิดต่อมน้ำเหลือง</h4>
-                    <p class="text-xs text-gray-400 leading-normal">เทคนิคการทำความสะอาดผิวหน้าและวิธีการเปิดจุดต่อมน้ำเหลืองเพื่อระบายของเสียอย่างถูกวิธี</p>
-                </div>
-            </div>
-            
-            <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm space-y-4">
-                <div class="relative aspect-video bg-charcoal flex items-center justify-center">
-                    <div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=600&q=80');"></div>
-                    <div class="relative z-10 text-center text-white p-4 space-y-2">
-                        <button class="bg-gold hover:bg-gold-dark text-white rounded-full p-4 transition shadow-lg inline-flex items-center justify-center">
-                            <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="p-5 space-y-1.5">
-                    <span class="text-[10px] text-gold font-bold uppercase tracking-wider">Lesson 2 (ขั้นกลาง)</span>
-                    <h4 class="font-bold text-charcoal text-sm">วิธีกวาดกัวซายกกระชับริ้วรอยร่องแก้มและหน้าผาก</h4>
-                    <p class="text-xs text-gray-400 leading-normal">เรียนรู้ทิศทางการลงน้ำหนักหินหยกกัวซาและการจัดรูปกรอบหน้าเพื่อลดริ้วรอยแห่งวัย</p>
-                </div>
-            </div>
-            
-            <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm space-y-4">
-                <div class="relative aspect-video bg-charcoal flex items-center justify-center">
-                    <div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=600&q=80');"></div>
-                    <div class="relative z-10 text-center text-white p-4 space-y-2">
-                        <button class="bg-gold hover:bg-gold-dark text-white rounded-full p-4 transition shadow-lg inline-flex items-center justify-center">
-                            <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="p-5 space-y-1.5">
-                    <span class="text-[10px] text-gold font-bold uppercase tracking-wider">Lesson 3 (มืออาชีพ)</span>
-                    <h4 class="font-bold text-charcoal text-sm">การบำบัดผิวพรรณด้วยครีมกัวซาธรรมชาติ</h4>
-                    <p class="text-xs text-gray-400 leading-normal">เทคนิคการนวดสปาหน้ากัวซาขั้นสูงที่เน้นการฟื้นฟูคอลลาเจนใต้ผิวหนังด้วยครีมธรรมชาติ</p>
-                </div>
-            </div>
+            </template>
+        </div>
+
+        <div x-show="!videos || videos.length === 0" class="text-center py-12 text-gray-400 text-sm">
+            ยังไม่มีคลิปการสอนในระบบ
         </div>
     </section>
+
+    <!-- Play Video Player Modal for Public Home Page -->
+    <div x-show="playVideoModal.open" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50" x-transition>
+        <div class="bg-white border border-beige rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
+            <div class="p-4 bg-charcoal text-white flex items-center justify-between">
+                <div class="flex items-center gap-2 truncate">
+                    <span class="bg-gold text-charcoal text-[10px] font-bold px-2.5 py-0.5 rounded-full" x-text="playVideoModal.category || 'วิดีโอการสอน'"></span>
+                    <h3 class="text-xs sm:text-sm font-bold truncate" x-text="playVideoModal.title"></h3>
+                </div>
+                <button @click="playVideoModal.open = false; playVideoModal.embed_url = ''" class="text-white hover:text-gold text-2xl font-bold px-2">&times;</button>
+            </div>
+            
+            <!-- Video Frame Container -->
+            <div class="w-full bg-black aspect-video relative flex items-center justify-center">
+                <template x-if="playVideoModal.embed_url">
+                    <iframe :src="playVideoModal.embed_url" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </template>
+                <template x-if="!playVideoModal.embed_url && playVideoModal.video_url">
+                    <div class="text-center p-6 text-white space-y-3">
+                        <p class="text-sm">วิดีโอนี้ไม่สามารถฝังเล่นโดยตรงได้ กรุณากดปุ่มด้านล่างเพื่อเปิดดู:</p>
+                        <a :href="playVideoModal.video_url" target="_blank" class="inline-block bg-gold text-charcoal font-bold text-xs px-6 py-3 rounded-xl shadow">เปิดดูวิดีโอในแท็บใหม่ ↗</a>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Video Description Details -->
+            <div class="p-5 overflow-y-auto space-y-2 bg-white">
+                <div class="flex items-center justify-between text-xs text-gray-500 font-semibold border-b border-beige pb-2">
+                    <span>ผู้สอน: <strong class="text-charcoal" x-text="playVideoModal.instructor || 'กัวซา เฮ้าส์'"></strong></span>
+                    <span x-show="playVideoModal.duration">ความยาว: <strong class="text-charcoal" x-text="playVideoModal.duration"></strong></span>
+                </div>
+                <p class="text-xs text-gray-600 leading-relaxed pt-1" x-text="playVideoModal.description || 'ไม่มีคำอธิบายบทเรียนเพิ่มเติม'"></p>
+            </div>
+        </div>
+    </div>
 
     <!-- FOOTER / BACK-OFFICE ACCESS -->
     <footer id="contact" class="bg-charcoal text-white pt-16 pb-8 border-t border-beige">
@@ -366,10 +389,13 @@
                 regions: ['กรุงเทพฯ', 'ภาคกลาง', 'ภาคเหนือ', 'ภาคใต้', 'ภาคตะวันออกเฉียงเหนือ'],
                 branches: [],
                 products: [],
+                videos: [],
+                playVideoModal: { open: false, title: '', category: '', embed_url: '', video_url: '', instructor: '', duration: '', description: '' },
                 
                 init() {
                     this.fetchPublicBranches();
                     this.fetchPublicProducts();
+                    this.fetchPublicVideos();
                 },
                 
                 fetchPublicBranches() {
@@ -388,6 +414,28 @@
                             this.products = data;
                         })
                         .catch(err => console.error(err));
+                },
+
+                fetchPublicVideos() {
+                    fetch('/api/videos')
+                        .then(res => res.json())
+                        .then(data => {
+                            this.videos = data;
+                        })
+                        .catch(err => console.error(err));
+                },
+
+                openPlayVideoModal(v) {
+                    this.playVideoModal = {
+                        open: true,
+                        title: v.title,
+                        category: v.category,
+                        embed_url: v.embed_url,
+                        video_url: v.video_url,
+                        instructor: v.instructor,
+                        duration: v.duration,
+                        description: v.description
+                    };
                 },
                 
                 get filteredBranches() {
