@@ -385,7 +385,7 @@ def login_api(username: str = Form(...), password: str = Form(...), db: Session 
 
 @app.get("/api/auth/logout")
 def logout_api():
-    response = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+    response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie(key="access_token")
     return response
 
