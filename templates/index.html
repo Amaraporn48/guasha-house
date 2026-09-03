@@ -39,43 +39,42 @@
                mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
            ]" 
            class="fixed inset-y-0 left-0 z-50 md:sticky md:top-0 bg-white border-r border-beige flex flex-col justify-between h-screen no-print flex-shrink-0 transition-all duration-300 ease-in-out shadow-2xl md:shadow-none">
-        <div>
-            <!-- Header/Logo Section -->
-            <div class="p-3 border-b border-beige relative flex flex-col items-center justify-center min-h-[76px]">
-                <!-- Mobile Close Button -->
-                <button @click="mobileMenuOpen = false" class="md:hidden absolute left-3 top-4 text-gray-400 hover:text-charcoal p-1">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <!-- Header/Logo Section -->
+        <div class="p-3 border-b border-beige relative flex flex-col items-center justify-center min-h-[76px] flex-shrink-0">
+            <!-- Mobile Close Button -->
+            <button @click="mobileMenuOpen = false" class="md:hidden absolute left-3 top-4 text-gray-400 hover:text-charcoal p-1">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+
+            <!-- Expanded View Header -->
+            <div x-show="!sidebarCollapsed" x-transition.opacity class="w-full text-center relative py-1">
+                <button @click="toggleSidebar()" 
+                        class="hidden md:block absolute right-0 top-0 text-gray-400 hover:text-gold-dark hover:bg-cream p-1.5 rounded-xl transition duration-200"
+                        title="ย่อแถบเมนู (Collapse)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                    </svg>
                 </button>
-
-                <!-- Expanded View Header -->
-                <div x-show="!sidebarCollapsed" x-transition.opacity class="w-full text-center relative py-1">
-                    <button @click="toggleSidebar()" 
-                            class="hidden md:block absolute right-0 top-0 text-gray-400 hover:text-gold-dark hover:bg-cream p-1.5 rounded-xl transition duration-200"
-                            title="ย่อแถบเมนู (Collapse)">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
-                        </svg>
-                    </button>
-                    <img src="/static/logo.png" alt="Guasha House Logo" class="h-14 mx-auto mb-2 object-contain">
-                    <h2 class="text-base font-bold tracking-widest text-charcoal">GUASHA HOUSE</h2>
-                    <p class="text-xs text-gray-400 uppercase tracking-widest mt-0.5 font-medium">Invoice & Receipt</p>
-                </div>
-
-                <!-- Collapsed View Header -->
-                <div x-show="sidebarCollapsed" x-transition.opacity class="flex flex-col items-center gap-1.5 py-1 w-full">
-                    <button @click="toggleSidebar()" 
-                            class="hidden md:block text-gray-500 hover:text-gold-dark hover:bg-cream p-2 rounded-xl transition duration-200"
-                            title="ขยายแถบเมนู (Expand)">
-                        <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
-                        </svg>
-                    </button>
-                    <img src="/static/logo.png" alt="Guasha House Logo" class="h-8 object-contain">
-                </div>
+                <img src="/static/logo.png" alt="Guasha House Logo" class="h-14 mx-auto mb-2 object-contain">
+                <h2 class="text-base font-bold tracking-widest text-charcoal">GUASHA HOUSE</h2>
+                <p class="text-xs text-gray-400 uppercase tracking-widest mt-0.5 font-medium">Invoice & Receipt</p>
             </div>
-            
-            <!-- Navigation Links -->
-            <nav class="p-3 space-y-5 overflow-y-auto max-h-[calc(100vh-190px)]">
+
+            <!-- Collapsed View Header -->
+            <div x-show="sidebarCollapsed" x-transition.opacity class="flex flex-col items-center gap-1.5 py-1 w-full">
+                <button @click="toggleSidebar()" 
+                        class="hidden md:block text-gray-500 hover:text-gold-dark hover:bg-cream p-2 rounded-xl transition duration-200"
+                        title="ขยายแถบเมนู (Expand)">
+                    <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <img src="/static/logo.png" alt="Guasha House Logo" class="h-8 object-contain">
+            </div>
+        </div>
+        
+        <!-- Navigation Links -->
+        <nav class="flex-1 overflow-y-auto min-h-0 p-3 space-y-5">
                 <!-- Group 1: OVERVIEW -->
                 <div class="space-y-1">
                     <p x-show="!sidebarCollapsed" x-transition.opacity class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ภาพรวม / Overview</p>
@@ -190,10 +189,9 @@
                     </a>
                 </div>
             </nav>
-        </div>
         
         <!-- User logged in block -->
-        <div class="p-3 border-t border-beige bg-cream flex flex-col gap-2">
+        <div class="p-3 border-t border-beige bg-cream flex flex-col gap-2 flex-shrink-0 shadow-sm">
             <div class="flex items-center gap-3" :class="sidebarCollapsed ? 'justify-center' : 'justify-start'">
                 <div class="w-9 h-9 rounded-full bg-gold flex items-center justify-center text-white text-xs font-bold shadow-sm flex-shrink-0" :title="user.fullname">
                     <span x-text="user.fullname ? user.fullname.charAt(0) : 'U'"></span>
