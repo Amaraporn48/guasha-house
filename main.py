@@ -14,8 +14,11 @@ from sqlalchemy.exc import IntegrityError
 
 from database import engine, SessionLocal, init_db, User, Customer, Product, Document, DocumentItem
 
-# Initialize database
-init_db()
+# Initialize database safely
+try:
+    init_db()
+except Exception:
+    pass
 
 # Secret configurations for JWT
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "guasa_house_secret_key_2026_luxury_corp")
@@ -29,12 +32,15 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
 # Ensure upload directories exist safely
-try:
-    os.makedirs(os.path.join(STATIC_DIR, "uploads", "slips"), exist_ok=True)
-    os.makedirs(os.path.join(STATIC_DIR, "uploads", "branches"), exist_ok=True)
-    os.makedirs(os.path.join(STATIC_DIR, "uploads", "products"), exist_ok=True)
-except Exception:
-    pass
+for path in [
+    os.path.join(STATIC_DIR, "uploads", "slips"),
+    os.path.join(STATIC_DIR, "uploads", "branches"),
+    os.path.join(STATIC_DIR, "uploads", "products")
+]:
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception:
+        pass
 
 # Mount static files and templates using absolute paths
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
