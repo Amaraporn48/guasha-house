@@ -436,29 +436,69 @@
                     </div>
                 </div>
 
-                <!-- 2. Expenses & Net Profit Breakdown Grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Expense Breakdown Card -->
-                    <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm space-y-4">
-                        <h4 class="text-xs font-bold tracking-wider text-gray-400 uppercase">สัดส่วนรายจ่ายตามหมวดหมู่ / Expense Breakdown</h4>
-                        
-                        <div class="space-y-3 max-h-[220px] overflow-y-auto pr-1">
-                            <template x-for="exp in reportData.expenses_breakdown" :key="exp.category">
-                                <div class="p-3 border border-beige rounded-xl bg-red-50/10 hover:bg-red-50/20 transition">
+                <!-- 2. Financial Breakdown Trio (Payment Methods, Expenses, P&L) -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Card 1: Payment Method Breakdown -->
+                    <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-4">
+                        <div class="space-y-4">
+                            <h4 class="text-xs font-bold tracking-wider text-gray-400 uppercase">💳 สัดส่วนวิธีการชำระเงิน / Payment Breakdown</h4>
+                            
+                            <div class="space-y-3">
+                                <!-- Cash -->
+                                <div class="p-3.5 border border-beige rounded-xl bg-emerald-50/20 hover:bg-emerald-50/30 transition">
                                     <div class="flex justify-between items-center text-xs">
-                                        <span class="font-bold text-red-700" x-text="exp.category"></span>
-                                        <span class="font-bold text-gray-700 font-mono" x-text="formatCurrency(exp.amount)"></span>
+                                        <span class="font-bold text-emerald-700">💵 เงินสด / CASH</span>
+                                        <span class="font-bold text-charcoal font-mono" x-text="formatCurrency(reportData.cash_sales || 0)"></span>
                                     </div>
-                                    <div class="w-full bg-gray-100 h-2 rounded-full mt-2 overflow-hidden">
-                                        <div class="bg-red-500 h-full" :style="`width: ${reportData.total_expenses > 0 ? (exp.amount / reportData.total_expenses)*100 : 0}%`"></div>
+                                    <div class="w-full bg-gray-100 h-2.5 rounded-full mt-2 overflow-hidden">
+                                        <div class="bg-emerald-500 h-full transition-all duration-500" :style="`width: ${reportData.total_sales > 0 ? (reportData.cash_sales / reportData.total_sales)*100 : 0}%`"></div>
                                     </div>
-                                    <div class="text-right text-[8.5px] text-gray-400 font-semibold mt-1" 
-                                         x-text="reportData.total_expenses > 0 ? ((exp.amount / reportData.total_expenses)*100).toFixed(1) + '%' : '0%' "></div>
+                                    <div class="text-right text-[9px] text-emerald-600 font-bold mt-1" x-text="reportData.total_sales > 0 ? ((reportData.cash_sales / reportData.total_sales)*100).toFixed(1) + '%' : '0%' "></div>
                                 </div>
-                            </template>
-                            <div x-show="!reportData.expenses_breakdown || reportData.expenses_breakdown.length === 0" 
-                                 class="text-center py-12 text-xs text-gray-400">
-                                ยังไม่มีข้อมูลบันทึกรายจ่ายในปีนี้
+
+                                <!-- Cheque -->
+                                <div class="p-3.5 border border-beige rounded-xl bg-blue-50/20 hover:bg-blue-50/30 transition">
+                                    <div class="flex justify-between items-center text-xs">
+                                        <span class="font-bold text-blue-700">🏦 เช็คธนาคาร / CHEQUE</span>
+                                        <span class="font-bold text-charcoal font-mono" x-text="formatCurrency(reportData.cheque_sales || 0)"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 h-2.5 rounded-full mt-2 overflow-hidden">
+                                        <div class="bg-blue-500 h-full transition-all duration-500" :style="`width: ${reportData.total_sales > 0 ? (reportData.cheque_sales / reportData.total_sales)*100 : 0}%`"></div>
+                                    </div>
+                                    <div class="text-right text-[9px] text-blue-600 font-bold mt-1" x-text="reportData.total_sales > 0 ? ((reportData.cheque_sales / reportData.total_sales)*100).toFixed(1) + '%' : '0%' "></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-beige pt-3 flex justify-between items-center text-xs">
+                            <span class="text-gray-400 font-semibold">ยอดขายสะสมรวม</span>
+                            <span class="text-sm font-bold text-charcoal font-mono" x-text="formatCurrency(reportData.total_sales || 0)"></span>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Expense Breakdown Card -->
+                    <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm space-y-4 flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <h4 class="text-xs font-bold tracking-wider text-gray-400 uppercase">💸 สัดส่วนรายจ่ายตามหมวดหมู่ / Expense Breakdown</h4>
+                            
+                            <div class="space-y-3 max-h-[200px] overflow-y-auto pr-1">
+                                <template x-for="exp in reportData.expenses_breakdown" :key="exp.category">
+                                    <div class="p-3 border border-beige rounded-xl bg-red-50/10 hover:bg-red-50/20 transition">
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="font-bold text-red-700" x-text="exp.category"></span>
+                                            <span class="font-bold text-gray-700 font-mono" x-text="formatCurrency(exp.amount)"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-100 h-2 rounded-full mt-2 overflow-hidden">
+                                            <div class="bg-red-500 h-full" :style="`width: ${reportData.total_expenses > 0 ? (exp.amount / reportData.total_expenses)*100 : 0}%`"></div>
+                                        </div>
+                                        <div class="text-right text-[8.5px] text-gray-400 font-semibold mt-1" 
+                                             x-text="reportData.total_expenses > 0 ? ((exp.amount / reportData.total_expenses)*100).toFixed(1) + '%' : '0%' "></div>
+                                    </div>
+                                </template>
+                                <div x-show="!reportData.expenses_breakdown || reportData.expenses_breakdown.length === 0" 
+                                     class="text-center py-10 text-xs text-gray-400">
+                                    ยังไม่มีข้อมูลบันทึกรายจ่ายในปีนี้
+                                </div>
                             </div>
                         </div>
                         
@@ -468,10 +508,10 @@
                         </div>
                     </div>
 
-                    <!-- Profit & Loss Summary Card -->
+                    <!-- Card 3: Profit & Loss Summary Card -->
                     <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm flex flex-col justify-between">
                         <div class="space-y-4">
-                            <h4 class="text-xs font-bold tracking-wider text-gray-400 uppercase">สรุปงบกำไร-ขาดทุน / Profit & Loss Statement</h4>
+                            <h4 class="text-xs font-bold tracking-wider text-gray-400 uppercase">📈 สรุปงบกำไร-ขาดทุน / Profit & Loss Statement</h4>
                             
                             <div class="divide-y divide-beige text-xs">
                                 <div class="flex justify-between py-2.5">
@@ -485,7 +525,7 @@
                             </div>
                         </div>
                         
-                        <div class="border-t border-beige pt-6 mt-6">
+                        <div class="border-t border-beige pt-4 mt-4">
                             <span class="text-xs text-gray-400 font-bold block mb-1">กำไรสุทธิสะสม / Net Profit</span>
                             <div class="text-3xl font-extrabold font-mono tracking-tight"
                                  :class="(reportData.total_sales - (reportData.total_expenses || 0)) >= 0 ? 'text-green-600' : 'text-red-600'"
