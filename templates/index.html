@@ -3769,6 +3769,7 @@
                         this.productModal.unit_price = prod.unit_price;
                         this.productModal.stock_quantity = prod.stock_quantity || 0;
                         this.productModal.is_service = prod.is_service || false;
+                        this.productModal.image_url = prod.image_url || '';
                     } else {
                         this.productModal.id = null;
                         this.productModal.code = '';
@@ -3777,6 +3778,7 @@
                         this.productModal.unit_price = 0;
                         this.productModal.stock_quantity = 0;
                         this.productModal.is_service = false;
+                        this.productModal.image_url = '';
                     }
                     this.productModal.open = true;
                 },
@@ -3788,7 +3790,8 @@
                         description: this.productModal.description,
                         unit_price: parseFloat(this.productModal.unit_price) || 0,
                         stock_quantity: parseInt(this.productModal.stock_quantity) || 0,
-                        is_service: this.productModal.is_service === true || this.productModal.is_service === 'true'
+                        is_service: this.productModal.is_service === true || this.productModal.is_service === 'true',
+                        image_url: this.productModal.image_url || ''
                     };
 
                     const url = this.productModal.id ? `/api/products/${this.productModal.id}` : '/api/products';
