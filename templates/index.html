@@ -2241,53 +2241,73 @@
                             <span class="text-[10px] bg-gold/20 text-gold-dark px-2 py-0.5 rounded font-bold uppercase">A4 Format</span>
                         </div>
                         
-                        <!-- Simulated Payment Voucher Sheet -->
-                        <div class="bg-white border border-gray-300 rounded-xl p-4 text-[11px] shadow-sm space-y-3 font-sans flex-1 overflow-y-auto max-h-[380px]">
+                        <!-- Simulated Payment Voucher Sheet (Matching Tax Invoice Executive Styling) -->
+                        <div class="bg-white border border-gray-300 rounded-xl p-4 text-[10px] shadow-sm space-y-3 font-sans flex-1 overflow-y-auto max-h-[400px]">
                             <!-- Company Logo & Header -->
-                            <div class="flex justify-between items-start border-b border-gray-300 pb-2">
-                                <div>
-                                    <div class="font-bold text-gray-900 text-xs">บริษัท กัวซา เฮ้าส์ จำกัด</div>
-                                    <div class="text-[9px] text-gray-400">GUASHA HOUSE CO., LTD.</div>
+                            <div class="flex justify-between items-start border-b-2 border-gray-300 pb-2.5">
+                                <div class="flex items-start gap-2.5">
+                                    <img src="/static/logo.png" alt="Guasha House Logo" class="h-10 w-10 object-contain flex-shrink-0">
+                                    <div>
+                                        <div class="font-bold text-gray-900 text-[11px] uppercase leading-tight font-serif">บริษัท กัวซา เฮ้าส์ จำกัด</div>
+                                        <div class="text-[8px] font-semibold text-gray-500 uppercase tracking-widest">GUASHA HOUSE CO., LTD.</div>
+                                        <div class="text-[7.5px] text-gray-500 leading-tight mt-0.5">
+                                            199/4 ถ.กรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กทม. 10240<br>
+                                            โทร. 061-496-6361 | เลขผู้เสียภาษี: 0105565028948
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="text-right">
-                                    <div class="font-bold text-gray-900 text-xs uppercase">ใบสำคัญจ่าย</div>
-                                    <div class="font-mono text-[10px] text-gold-dark font-bold" x-text="expenseModal.voucher_number || 'PV-XXXX'"></div>
+                                <div class="text-right border-l-2 border-gold pl-2.5 min-w-[110px]">
+                                    <div class="font-bold text-gray-900 text-xs uppercase leading-tight">ใบสำคัญจ่าย</div>
+                                    <div class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1">PAYMENT VOUCHER</div>
+                                    <div class="text-[8.5px] space-y-0.5 text-gray-600">
+                                        <div><span class="font-bold">เลขที่:</span> <span class="font-mono font-bold text-gold-dark" x-text="expenseModal.voucher_number || 'PV-XXXX'"></span></div>
+                                        <div><span class="font-bold">วันที่:</span> <span class="font-medium" x-text="formatThaiDate(expenseModal.date)"></span></div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Payee Info -->
-                            <div class="bg-gray-50 p-2 rounded border border-gray-200 space-y-0.5 text-[10px]">
-                                <div><span class="font-bold text-gray-600">จ่ายให้แก่:</span> <span class="font-bold text-gray-900" x-text="expenseModal.pay_to || 'ระบุชื่อผู้รับเงิน'"></span></div>
-                                <div><span class="font-bold text-gray-600">ที่อยู่:</span> <span class="text-gray-700" x-text="expenseModal.address || '-'"></span></div>
+                            <!-- Payee Info Box -->
+                            <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-200 space-y-0.5 text-[9.5px]">
+                                <div class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">ข้อมูลผู้รับเงิน / PAYEE INFORMATION</div>
+                                <div><span class="font-bold text-gray-700">จ่ายให้แก่:</span> <span class="font-bold text-gray-900 text-[10px]" x-text="expenseModal.pay_to || 'ระบุชื่อผู้รับเงิน'"></span></div>
+                                <div><span class="font-bold text-gray-700">ที่อยู่:</span> <span class="text-gray-700" x-text="expenseModal.address || '-'"></span></div>
+                                <div x-show="expenseModal.tax_id"><span class="font-bold text-gray-700">เลขผู้เสียภาษี:</span> <span class="font-mono text-gray-800" x-text="expenseModal.tax_id"></span></div>
                             </div>
 
                             <!-- Table Items -->
-                            <table class="w-full border-collapse border border-gray-300 text-[10px]">
-                                <thead class="bg-gray-100 font-bold text-gray-700">
+                            <table class="w-full border-collapse border border-gray-300 text-[9.5px]">
+                                <thead class="bg-gray-100 font-bold text-gray-800 border-b border-gray-300">
                                     <tr>
-                                        <th class="border border-gray-300 px-1 py-0.5 text-center">ลำดับ</th>
-                                        <th class="border border-gray-300 px-1 py-0.5 text-left">รายการ</th>
-                                        <th class="border border-gray-300 px-1 py-0.5 text-center">จำนวน</th>
-                                        <th class="border border-gray-300 px-1 py-0.5 text-right">จำนวนเงิน</th>
+                                        <th class="border-r border-gray-300 px-1 py-1 text-center w-8">ลำดับ</th>
+                                        <th class="border-r border-gray-300 px-1.5 py-1 text-left">รายการค่าใช้จ่าย</th>
+                                        <th class="border-r border-gray-300 px-1 py-1 text-center w-12">จำนวน</th>
+                                        <th class="px-1.5 py-1 text-right w-20">จำนวนเงิน</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="divide-y divide-gray-200">
                                     <template x-for="(item, i) in expenseModal.items" :key="i">
                                         <tr>
-                                            <td class="border border-gray-300 px-1 py-0.5 text-center font-mono" x-text="i + 1"></td>
-                                            <td class="border border-gray-300 px-1 py-0.5" x-text="item.description || 'รายการค่าใช้จ่าย'"></td>
-                                            <td class="border border-gray-300 px-1 py-0.5 text-center font-mono" x-text="item.quantity"></td>
-                                            <td class="border border-gray-300 px-1 py-0.5 text-right font-mono font-bold" x-text="formatCurrency(item.amount || 0)"></td>
+                                            <td class="border-r border-gray-200 px-1 py-1 text-center font-mono text-gray-500" x-text="i + 1"></td>
+                                            <td class="border-r border-gray-200 px-1.5 py-1 font-medium text-gray-900" x-text="item.description || 'รายการค่าใช้จ่าย'"></td>
+                                            <td class="border-r border-gray-200 px-1 py-1 text-center font-mono" x-text="item.quantity"></td>
+                                            <td class="px-1.5 py-1 text-right font-mono font-bold text-gray-900" x-text="formatCurrency(item.amount || 0)"></td>
                                         </tr>
                                     </template>
                                 </tbody>
                             </table>
 
                             <!-- Total calculations -->
-                            <div class="space-y-0.5 text-right text-[10px] pt-1">
-                                <div><span class="text-gray-500">รวมก่อนภาษี:</span> <span class="font-mono font-bold" x-text="formatCurrency(expenseModal.subtotal || 0)"></span></div>
+                            <div class="space-y-0.5 text-right text-[9.5px] pt-1">
+                                <div><span class="text-gray-500 font-medium">รวมก่อนภาษี:</span> <span class="font-mono font-bold text-gray-800" x-text="formatCurrency(expenseModal.subtotal || 0)"></span></div>
                                 <div x-show="expenseModal.has_withholding_tax" class="text-red-600"><span class="text-gray-500">หัก ณ ที่จ่าย 3%:</span> <span class="font-mono font-bold" x-text="'- ' + formatCurrency(expenseModal.withholding_tax_amount || 0)"></span></div>
-                                <div class="text-xs font-bold text-gray-900 border-t border-gray-300 pt-1"><span>คงเหลือสุทธิ:</span> <span class="font-mono text-red-600" x-text="formatCurrency(expenseModal.amount || 0)"></span></div>
+                                <div class="text-xs font-bold text-gray-900 border-t border-gray-300 pt-1"><span>คงเหลือสุทธิ:</span> <span class="font-mono text-red-600 font-bold" x-text="formatCurrency(expenseModal.amount || 0)"></span></div>
+                            </div>
+
+                            <!-- Signatures Block Preview -->
+                            <div class="grid grid-cols-3 gap-2 text-center text-[8px] border-t border-gray-200 pt-3 mt-3">
+                                <div class="border-t border-gray-300 pt-1 text-gray-600 font-semibold">ผู้รับเงิน / Payee</div>
+                                <div class="border-t border-gray-300 pt-1 text-gray-600 font-semibold">ผู้จ่ายเงิน / Paid By</div>
+                                <div class="border-t border-gray-300 pt-1 text-gray-600 font-semibold">ผู้อนุมัติ / Approved By</div>
                             </div>
                         </div>
 
