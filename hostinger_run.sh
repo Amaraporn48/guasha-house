@@ -1,11 +1,16 @@
 #!/bin/bash
 set -e
 
+cd "$(dirname "$0")"
+
+# Fast check: If already running and called with keepalive, exit immediately
+if [ "$1" == "--keepalive" ] && pgrep -f "uvicorn main:app" > /dev/null; then
+    exit 0
+fi
+
 echo "=================================================="
 echo "🌿 Starting Guasha House on Hostinger Web Server"
 echo "=================================================="
-
-cd "$(dirname "$0")"
 
 # 1. Setup CA certificates path for Linux
 for cert in /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt /etc/ssl/ca-bundle.pem; do
@@ -31,22 +36,19 @@ if [ -f "$HOME/python/bin/python3" ]; then
 fi
 
 PYTHON_BIN="$(which python3 || echo "$HOME/python/bin/python3")"
-echo "🐍 Python Version: $($PYTHON_BIN --version)"
 
 # 3. Setup clean Virtual Environment
 if [ ! -f "venv/bin/python" ]; then
     echo "📦 Creating clean Virtual Environment..."
     rm -rf venv
     "$PYTHON_BIN" -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
+else
+    source venv/bin/activate
 fi
 
-source venv/bin/activate
-
-# 4. Install requirements with trusted hosts and system certs
-echo "📦 Installing application dependencies (FastAPI, Uvicorn, SQLAlchemy)..."
-pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host pypi.python.org
-
-# 5. Setup .env configuration
+# 4. Setup .env configuration
 if [ ! -f ".env" ]; then
     echo "⚙️ Setting up .env configuration..."
     RANDOM_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
@@ -61,22 +63,25 @@ fi
 # Run DB initialization and seed users
 python3 -c "from database import init_db; init_db()"
 
-# 7. Stop existing background instances
-pkill -f "uvicorn main:app" 2>/dev/null || true
-sleep 1
+# 5. Stop existing instances if force restarting
+if [ "$1" != "--keepalive" ]; then
+    pkill -f "uvicorn main:app" 2>/dev/null || true
+    sleep 1
+fi
 
-# 7. Start Uvicorn background server with auto-reload on file changes
-echo "🚀 Starting Guasha House server on Hostinger..."
-nohup python3 -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload --proxy-headers --forwarded-allow-ips "*" > uvicorn.log 2>&1 &
+# 6. Start Uvicorn background server if not already running
+if ! pgrep -f "uvicorn main:app" > /dev/null; then
+    echo "🚀 Starting Guasha House server on Hostinger..."
+    nohup python3 -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload --proxy-headers --forwarded-allow-ips "*" > uvicorn.log 2>&1 &
+    sleep 2
+fi
 
-sleep 3
-
-# 8. Verify status
+# 7. Verify status
 if pgrep -f "uvicorn main:app" > /dev/null; then
     echo "=================================================="
     echo "🎉 SUCCESS! Guasha House is running on Hostinger!"
     echo "🌐 Process PID: $(pgrep -f 'uvicorn main:app')"
-    echo "⚡ Speed: Running 100% on your Hostinger Server"
+    echo "⚡ Status: Active 24/7"
     echo "=================================================="
 else
     echo "❌ Startup failed. Log contents:"
