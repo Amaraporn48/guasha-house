@@ -1633,6 +1633,113 @@ def print_documents_summary_list(
         print(f"Error rendering print_documents_list: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/print/expenses/summary/list", response_class=HTMLResponse)
+def print_expenses_summary_list(
+    request: Request,
+    year: Optional[str] = None,
+    month: Optional[str] = None,
+    category: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    try:
+        from database import Expense
+        stmt = db.query(Expense)
+        
+        if year and year.strip() and year != "ALL":
+            if month and month.strip() and month != "ALL":
+                try:
+                    pattern = f"{year.strip()}-{int(month.strip()):02d}-%"
+                except ValueError:
+                    pattern = f"{year.strip()}-%"
+            else:
+                pattern = f"{year.strip()}-%"
+            stmt = stmt.filter(Expense.date.like(pattern))
+        elif month and month.strip() and month != "ALL":
+            try:
+                pattern = f"%-{int(month.strip()):02d}-%"
+                stmt = stmt.filter(Expense.date.like(pattern))
+            except ValueError:
+                pass
+                
+        if category and category.strip() and category != "ALL":
+            stmt = stmt.filter(Expense.category == category.strip())
+            
+        raw_expenses = stmt.order_by(Expense.date.desc(), Expense.id.desc()).all()
+        
+        months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+        exp_list = []
+        total_sum = 0.0
+
+        for exp in raw_expenses:
+            amt = float(exp.net_amount or exp.amount or 0.0)
+            total_sum += amt
+            
+            formatted_date = "-"
+            if exp.date:
+                try:
+                    parts = str(exp.date).split('T')[0].split('-')
+                    if len(parts) == 3:
+                        y = int(parts[0]) + 543
+                        m = int(parts[1])
+                        d = int(parts[2])
+                        if 1 <= m <= 12:
+                            formatted_date = f"{d} {months_th[m-1]} {y}"
+                        else:
+                            formatted_date = str(exp.date)
+                    else:
+                        formatted_date = str(exp.date)
+                except Exception:
+                    formatted_date = str(exp.date)
+
+            exp_list.append({
+                "voucher_number": exp.voucher_number or f"PV-{str(exp.id).zfill(4)}",
+                "formatted_date": formatted_date,
+                "category": exp.category or "ทั่วไป",
+                "pay_to": exp.pay_to or "-",
+                "description": exp.description or exp.pay_to or "-",
+                "amount": amt
+            })
+
+        # Thai Date Today
+        today = datetime.date.today()
+        print_date = f"{today.day} {months_th[today.month - 1]} {today.year + 543}"
+        
+        filter_parts = []
+        if year and year.strip() and year != "ALL":
+            try:
+                th_year = int(year.strip()) + 543
+                filter_parts.append(f"ปี {th_year} ({year.strip()})")
+            except ValueError:
+                filter_parts.append(f"ปี {year.strip()}")
+        if month and month.strip() and month != "ALL":
+            try:
+                m_int = int(month.strip())
+                if 1 <= m_int <= 12:
+                    months_full = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
+                    filter_parts.append(f"เดือน {months_full[m_int-1]}")
+                else:
+                    filter_parts.append(f"เดือน {month.strip()}")
+            except ValueError:
+                filter_parts.append(f"เดือน {month.strip()}")
+        if category and category.strip() and category != "ALL":
+            filter_parts.append(f"หมวดหมู่: {category.strip()}")
+            
+        filter_desc = " | ".join(filter_parts) if filter_parts else "ทั้งหมด (ALL)"
+
+        return templates.TemplateResponse(
+            request=request,
+            name="print_expenses_list.html",
+            context={
+                "expenses": exp_list,
+                "total_amount_sum": total_sum,
+                "print_date": print_date,
+                "filter_desc": filter_desc
+            }
+        )
+    except Exception as e:
+        print(f"Error rendering print_expenses_list: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/print/monthly-account", response_class=HTMLResponse)
 @app.get("/api/reports/print-summary", response_class=HTMLResponse)
 def print_monthly_account_summary(

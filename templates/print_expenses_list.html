@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานสรุปตารางรายการรายจ่าย - บริษัท กัวซา เฮ้าส์ จำกัด</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Sarabun', 'TH Sarabun New', 'Angsana New', sans-serif;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .summary-page {
+            background-color: #ffffff;
+            box-sizing: border-box;
+            margin: 0 auto;
+        }
+
+        @media screen {
+            body {
+                background-color: #4a4d50;
+                padding: 24px 0;
+            }
+            .summary-page {
+                width: 210mm;
+                height: 297mm;
+                padding: 12mm 15mm;
+                box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+                border-radius: 4px;
+                overflow: hidden;
+            }
+        }
+
+        @media print {
+            html, body {
+                background-color: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                overflow: hidden !important;
+            }
+            .summary-page {
+                box-shadow: none !important;
+                border: none !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                max-height: 297mm !important;
+                padding: 12mm 15mm !important;
+                margin: 0 !important;
+                overflow: hidden !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        .table-container {
+            width: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .report-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-top: 10px;
+            page-break-inside: avoid;
+        }
+
+        .report-table th {
+            background-color: #1a1a1a !important;
+            color: #c5a880 !important;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 8px 6px;
+            border: 1px solid #1a1a1a;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .report-table td {
+            font-size: 12px;
+            font-weight: 500;
+            color: #1a1a1a;
+            padding: 6px 8px;
+            border-bottom: 1px solid #e2ddd5;
+            border-left: 1px solid #f0eae1;
+            border-right: 1px solid #f0eae1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .report-table tr:nth-child(even) td {
+            background-color: #faf8f5 !important;
+        }
+
+        .nowrap {
+            white-space: nowrap !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Screen Top Control Bar -->
+    <div class="no-print bg-[#1a1a1a] text-white p-3.5 sticky top-0 z-50 shadow-lg border-b border-[#c5a880]/30">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="/static/logo.png" alt="Logo" class="h-9 w-9 object-contain bg-white rounded-lg p-0.5 shadow">
+                <div>
+                    <h1 class="text-sm font-bold text-[#c5a880]">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
+                    <p class="text-[11px] text-gray-300">รายงานตารางรายการรายจ่าย (Expenses Summary Report A4)</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="window.print()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    <span>🖨️ สั่งพิมพ์เอกสาร A4</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Printable Formal A4 Summary Page -->
+    <div id="pdf-content" class="summary-page flex flex-col justify-between">
+        
+        <div>
+            <!-- Header Section -->
+            <div class="flex justify-between items-start border-b-2 border-[#c5a880] pb-4 mb-4">
+                <div class="flex items-center gap-4">
+                    <img src="/static/logo.png" alt="Logo" class="h-16 w-16 object-contain p-1 border border-[#c5a880] rounded-xl bg-white shadow-sm">
+                    <div>
+                        <h1 class="text-lg font-bold text-[#1a1a1a] uppercase">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
+                        <h2 class="text-xs font-bold text-gray-500 uppercase mt-0.5">GUASHA HOUSE CO., LTD.</h2>
+                        <h3 class="text-sm font-bold text-[#b39268] mt-1 uppercase">รายงานตารางรายการรายจ่าย (EXPENSES LIST REPORT)</h3>
+                    </div>
+                </div>
+                <div class="text-right text-xs text-gray-600 space-y-1">
+                    <div class="bg-[#f5f2eb] px-3.5 py-1.5 rounded-lg border border-[#e5e0d8]">
+                        <span class="font-bold text-gray-700 text-xs block mb-0.5">วันที่พิมพ์รายงาน / PRINT DATE</span>
+                        <span class="font-bold text-[#1a1a1a] text-xs font-mono block">{{ print_date }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Metric Cards -->
+            <div class="grid grid-cols-3 gap-3.5 mb-3.5">
+                <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3 text-center">
+                    <span class="text-xs font-bold text-gray-500 uppercase block">จำนวนรายการรวม / Total Items</span>
+                    <span class="text-base font-bold text-[#1a1a1a]">{{ expenses|length }} <span class="text-xs font-normal text-gray-500">รายการ</span></span>
+                </div>
+                <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3 text-center">
+                    <span class="text-xs font-bold text-gray-500 uppercase block">ยอดรายจ่ายรวมสุทธิ / Grand Total</span>
+                    <span class="text-base font-bold text-red-600">฿{{ "{:,.2f}".format(total_amount_sum) }}</span>
+                </div>
+                <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3 text-center">
+                    <span class="text-xs font-bold text-gray-500 uppercase block">เงื่อนไขการกรอง / Filter Applied</span>
+                    <span class="text-xs font-semibold text-gray-700 truncate block mt-0.5">{{ filter_desc }}</span>
+                </div>
+            </div>
+
+            <!-- Expenses Table (100% Width, Table Layout Fixed) -->
+            <div class="table-container">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th class="text-center w-[7%]">ลำดับ</th>
+                            <th class="text-left w-[18%]">เลขที่ PV</th>
+                            <th class="text-center w-[14%]">วันที่</th>
+                            <th class="text-left w-[20%]">หมวดหมู่รายจ่าย</th>
+                            <th class="text-left w-[25%]">จ่ายให้ / รายละเอียด</th>
+                            <th class="text-right w-[16%]">จำนวนเงิน (บาท)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exp in expenses %}
+                        <tr>
+                            <td class="text-center font-semibold text-gray-500 text-xs">{{ loop.index }}</td>
+                            <td class="font-bold text-[#1a1a1a] nowrap">{{ exp.voucher_number }}</td>
+                            <td class="text-center font-medium text-gray-600 nowrap">{{ exp.formatted_date }}</td>
+                            <td class="font-semibold text-gray-800 truncate">
+                                <span class="inline-block bg-[#f5f2eb] text-[#b39268] border border-[#e5e0d8] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    {{ exp.category }}
+                                </span>
+                            </td>
+                            <td class="text-gray-800 truncate text-xs">{{ exp.description }}</td>
+                            <td class="text-right font-bold text-xs text-red-600 nowrap">฿{{ "{:,.2f}".format(exp.amount) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-12 text-gray-400 font-medium">ไม่พบรายการรายจ่ายตรงตามเงื่อนไขที่เลือก</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer Grand Total & Signatures Box -->
+        <div class="mt-5 pt-4 border-t-2 border-[#1a1a1a] space-y-5">
+            
+            <!-- Summary Bar -->
+            <div class="flex justify-between items-center bg-[#1a1a1a] text-white p-3.5 rounded-xl shadow-sm">
+                <div>
+                    <span class="text-[9.5px] font-bold text-[#c5a880] uppercase tracking-wider block">สรุปยอดรวมรายการรายจ่ายทั้งหมด</span>
+                    <span class="text-xs font-semibold text-gray-200">จำนวนรายการรวมทั้งสิ้น: {{ expenses|length }} รายการ</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[9.5px] font-bold text-[#c5a880] uppercase tracking-wider block">ยอดเงินรวมสุทธิ (GRAND TOTAL)</span>
+                    <span class="text-base font-bold font-mono text-red-400">฿{{ "{:,.2f}".format(total_amount_sum) }}</span>
+                </div>
+            </div>
+
+            <!-- Signatures Section -->
+            <div class="grid grid-cols-2 gap-12 text-center text-xs pt-2">
+                <div>
+                    <div class="h-12 border-b border-gray-400"></div>
+                    <p class="font-bold text-gray-800 mt-2 text-xs">ผู้จัดทำรายงาน / Prepared By</p>
+                </div>
+                <div>
+                    <div class="h-12 border-b border-gray-400"></div>
+                    <p class="font-bold text-gray-800 mt-2 text-xs">ผู้อนุมัติรายงาน / Approved By</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>
