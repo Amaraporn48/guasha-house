@@ -1626,8 +1626,102 @@ def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(g
     )
 
 @app.get("/print/summary/list", response_class=HTMLResponse)
+def print_documents_summary_list(
+    request: Request,
+    query: Optional[str] = None,
+    year: Optional[str] = None,
+    month: Optional[str] = None,
+    payment_method: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    try:
+        stmt = db.query(Document)
+        
+        if year and year.strip():
+            if month and month.strip() and month != "ALL":
+                try:
+                    pattern = f"{year.strip()}-{int(month.strip()):02d}-%"
+                except ValueError:
+                    pattern = f"{year.strip()}-%"
+            else:
+                pattern = f"{year.strip()}-%"
+            stmt = stmt.filter(Document.date.like(pattern))
+            
+        if payment_method and payment_method.strip():
+            stmt = stmt.filter(Document.payment_method == payment_method.strip())
+            
+        raw_documents = stmt.order_by(Document.date.desc(), Document.id.desc()).all()
+        
+        # Filter by query string if provided
+        if query and query.strip():
+            q_clean = query.strip().lower()
+            raw_documents = [
+                d for d in raw_documents 
+                if q_clean in (d.document_number or "").lower() or q_clean in (d.customer_name or "").lower()
+            ]
+            
+        # Format dates & build safe dictionary list
+        months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+        doc_list = []
+        total_sum = 0.0
+
+        for doc in raw_documents:
+            amt = float(doc.total_amount_after_vat or 0.0)
+            total_sum += amt
+            
+            formatted_date = "-"
+            if doc.date:
+                try:
+                    parts = str(doc.date).split('T')[0].split('-')
+                    if len(parts) == 3:
+                        y = int(parts[0]) + 543
+                        m = int(parts[1])
+                        d = int(parts[2])
+                        if 1 <= m <= 12:
+                            formatted_date = f"{d} {months_th[m-1]} {y}"
+                        else:
+                            formatted_date = str(doc.date)
+                    else:
+                        formatted_date = str(doc.date)
+                except Exception:
+                    formatted_date = str(doc.date)
+
+            doc_list.append({
+                "document_number": doc.document_number or "-",
+                "formatted_date": formatted_date,
+                "customer_name": doc.customer_name or "-",
+                "total_amount_after_vat": amt,
+                "payment_method": doc.payment_method or "CASH"
+            })
+
+        # Thai Date Today
+        today = datetime.date.today()
+        print_date = f"{today.day} {months_th[today.month - 1]} {today.year + 543}"
+        
+        filter_parts = []
+        if year and year.strip(): filter_parts.append(f"ปี {year.strip()}")
+        if month and month.strip(): filter_parts.append(f"เดือน {month.strip()}")
+        if payment_method and payment_method.strip(): filter_parts.append(f"วิธีชำระเงิน: {payment_method.strip()}")
+        if query and query.strip(): filter_parts.append(f"คำค้นหา: '{query.strip()}'")
+        filter_desc = " | ".join(filter_parts) if filter_parts else "ทั้งหมด"
+
+        return templates.TemplateResponse(
+            request=request,
+            name="print_documents_list.html",
+            context={
+                "documents": doc_list,
+                "total_amount_sum": total_sum,
+                "print_date": print_date,
+                "filter_desc": filter_desc
+            }
+        )
+    except Exception as e:
+        print(f"Error rendering print_documents_list: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/print/monthly-account", response_class=HTMLResponse)
 @app.get("/api/reports/print-summary", response_class=HTMLResponse)
-def print_documents_summary(
+def print_monthly_account_summary(
     request: Request,
     year: Optional[str] = None,
     month: Optional[str] = None,
