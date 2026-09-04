@@ -49,13 +49,17 @@ pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pyt
 # 5. Setup .env configuration
 if [ ! -f ".env" ]; then
     echo "⚙️ Setting up .env configuration..."
-    cp .env.example .env
     RANDOM_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
-    sed -i "s/your_secure_random_jwt_secret_key_here_minimum_32_characters/$RANDOM_KEY/g" .env
+    cat << EOF > .env
+ENVIRONMENT=production
+JWT_SECRET_KEY=$RANDOM_KEY
+DATABASE_URL=sqlite:///./guasa_house.db
+PORT=8000
+EOF
 fi
 
-# 6. Make CGI gateway executable
-chmod +x index.cgi 2>/dev/null || true
+# Run DB initialization and seed users
+python3 -c "from database import init_db; init_db()"
 
 # 7. Stop existing background instances
 pkill -f "uvicorn main:app" 2>/dev/null || true

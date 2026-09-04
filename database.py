@@ -157,5 +157,36 @@ class VideoCourse(Base):
 def init_db():
     try:
         Base.metadata.create_all(bind=engine)
-    except Exception:
-        pass
+        # Seed default users if table is empty
+        db = SessionLocal()
+        try:
+            if db.query(User).count() == 0:
+                import bcrypt
+                def hash_pw(pw_str: str) -> str:
+                    return bcrypt.hashpw(pw_str.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                
+                admin_user = User(
+                    username="guasha",
+                    fullname="Guasha Administrator",
+                    role="admin",
+                    hashed_password=hash_pw("123456")
+                )
+                user1 = User(
+                    username="user1",
+                    fullname="Account 1",
+                    role="admin",
+                    hashed_password=hash_pw("123456")
+                )
+                user2 = User(
+                    username="user2",
+                    fullname="Account 2",
+                    role="staff",
+                    hashed_password=hash_pw("123456")
+                )
+                db.add_all([admin_user, user1, user2])
+                db.commit()
+                print("✅ Initial admin users (guasha, user1, user2) seeded successfully.")
+        finally:
+            db.close()
+    except Exception as e:
+        print("init_db note:", e)
