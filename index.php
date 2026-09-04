@@ -1,105 +1,121 @@
 <?php
 /**
- * Hostinger In-Process Python CGI Gateway for Guasha House
- * Runs FastAPI directly per-request without relying on fragile background daemons
+ * Guasha House High-Performance LiteSpeed Proxy
  */
 
-// Disable buffering for instant streaming
-while (ob_get_level()) {
-    ob_end_clean();
+ini_set('display_errors', 0);
+error_reporting(0);
+
+$backend_host = "http://127.0.0.1:8000";
+
+function start_uvicorn_backend() {
+    $dir = __DIR__;
+    $python = file_exists("$dir/venv/bin/python") ? "$dir/venv/bin/python" : (file_exists("/home/u713703050/python/bin/python3") ? "/home/u713703050/python/bin/python3" : "python3");
+    $cmd = "cd $dir && nohup $python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload --proxy-headers --forwarded-allow-ips '*' > uvicorn.log 2>&1 &";
+    @exec($cmd);
+    
+    for ($i = 0; $i < 20; $i++) {
+        usleep(150000);
+        $fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.1);
+        if ($fp) {
+            fclose($fp);
+            return true;
+        }
+    }
+    return false;
 }
 
-$dir = __DIR__;
-$python = file_exists("$dir/venv/bin/python") ? "$dir/venv/bin/python" : (file_exists("/home/u713703050/python/bin/python3") ? "/home/u713703050/python/bin/python3" : "python3");
-
-// Prepare CGI Environment
-$env = $_SERVER;
-
-// Normalize CGI environment variables for WSGI
-$uri = $_SERVER['REQUEST_URI'] ?? '/';
-$parsed = parse_url($uri);
-$env['PATH_INFO'] = $parsed['path'] ?? '/';
-$env['SCRIPT_NAME'] = '';
-$env['QUERY_STRING'] = $parsed['query'] ?? '';
-$env['REQUEST_METHOD'] = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$env['SERVER_NAME'] = $_SERVER['SERVER_NAME'] ?? ($_SERVER['HTTP_HOST'] ?? 'guashahouse.com');
-$env['SERVER_PORT'] = $_SERVER['SERVER_PORT'] ?? '443';
-$env['SERVER_PROTOCOL'] = $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.1';
-$env['wsgi.url_scheme'] = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-
-// Forward HTTP Headers
-$headers = function_exists('getallheaders') ? getallheaders() : [];
-foreach ($headers as $k => $v) {
-    $env_name = 'HTTP_' . strtoupper(str_replace('-', '_', $k));
-    $env[$env_name] = $v;
-}
-if (!empty($_SERVER['HTTP_COOKIE'])) {
-    $env['HTTP_COOKIE'] = $_SERVER['HTTP_COOKIE'];
-}
-if (!empty($_SERVER['CONTENT_TYPE'])) {
-    $env['CONTENT_TYPE'] = $_SERVER['CONTENT_TYPE'];
-}
-if (!empty($_SERVER['CONTENT_LENGTH'])) {
-    $env['CONTENT_LENGTH'] = $_SERVER['CONTENT_LENGTH'];
+// Check backend availability
+$fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.1);
+if (!$fp) {
+    start_uvicorn_backend();
+} else {
+    fclose($fp);
 }
 
-$descriptorspec = [
-    0 => ["pipe", "r"], // stdin
-    1 => ["pipe", "w"], // stdout
-    2 => ["pipe", "w"]  // stderr
-];
+$request_uri = $_SERVER['REQUEST_URI'] ?? '/';
+$target_url = $backend_host . $request_uri;
 
-$cmd = escapeshellcmd($python) . " " . escapeshellarg("$dir/wsgi_runner.py");
-$process = proc_open($cmd, $descriptorspec, $pipes, $dir, $env);
+$ch = curl_init($target_url);
 
-if (!is_resource($process)) {
-    http_response_code(500);
-    echo "<h1>Error: Unable to launch Python runtime</h1>";
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HEADER, true);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+
+// Forward all incoming request headers
+$headers = [];
+$incoming_headers = function_exists('getallheaders') ? getallheaders() : [];
+
+$has_cookie = false;
+foreach ($incoming_headers as $name => $value) {
+    $lower = strtolower($name);
+    if (!in_array($lower, ['host', 'content-length', 'connection'])) {
+        $headers[] = "$name: $value";
+    }
+    if ($lower === 'cookie') {
+        $has_cookie = true;
+    }
+}
+
+if (!$has_cookie && !empty($_SERVER['HTTP_COOKIE'])) {
+    $headers[] = "Cookie: " . $_SERVER['HTTP_COOKIE'];
+}
+
+$headers[] = "Host: " . ($_SERVER['HTTP_HOST'] ?? 'guashahouse.com');
+$headers[] = "X-Real-IP: " . ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+$headers[] = "X-Forwarded-For: " . ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+$headers[] = "X-Forwarded-Proto: " . ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http');
+
+// Forward body
+if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
+    $body = file_get_contents('php://input');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    if (!empty($_SERVER['CONTENT_TYPE'])) {
+        $headers[] = "Content-Type: " . $_SERVER['CONTENT_TYPE'];
+    }
+}
+
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+$response = curl_exec($ch);
+
+if ($response === false) {
+    curl_close($ch);
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Guasha House</title></head>";
+    echo "<body style='font-family:sans-serif;text-align:center;padding:50px;background:#fbfaf7;'>";
+    echo "<h2 style='color:#1a1a1a;'>🌿 กำลังเชื่อมต่อระบบ Guasha House กรุณารอสักครู่...</h2>";
+    echo "<p style='color:#666;'>กำลังโหลดหน้าเว็บใหม่อัตโนมัติ...</p>";
+    echo "<script>setTimeout(function(){ window.location.reload(); }, 2000);</script>";
+    echo "</body></html>";
     exit;
 }
 
-// Write request body to stdin if POST/PUT/PATCH
-if (in_array($env['REQUEST_METHOD'], ['POST', 'PUT', 'PATCH', 'DELETE'])) {
-    $input = file_get_contents('php://input');
-    if ($input) {
-        fwrite($pipes[0], $input);
+$header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+$header_text = substr($response, 0, $header_size);
+$body = substr($response, $header_size);
+
+http_response_code($http_code);
+
+// Forward response headers
+$raw_headers = explode("\r\n", $header_text);
+foreach ($raw_headers as $index => $header_line) {
+    if ($index === 0 || empty(trim($header_line))) {
+        continue;
     }
-}
-fclose($pipes[0]);
-
-// Read headers and body from Python output
-$response_headers_raw = '';
-$headers_done = false;
-
-while (!feof($pipes[1])) {
-    $line = fgets($pipes[1]);
-    if ($line === false) break;
-
-    if (!$headers_done) {
-        if (trim($line) === '') {
-            $headers_done = true;
-            continue;
-        }
-        
-        // Process Header
-        $trimmed = trim($line);
-        if (stripos($trimmed, 'Status:') === 0) {
-            $status_parts = explode(' ', substr($trimmed, 7), 2);
-            http_response_code((int)trim($status_parts[0]));
-        } else {
-            header($trimmed, false);
-        }
-    } else {
-        echo $line;
+    $lower = strtolower($header_line);
+    if (strpos($lower, 'transfer-encoding:') === false && strpos($lower, 'connection:') === false) {
+        header($header_line, false);
     }
 }
 
-fclose($pipes[1]);
-$stderr = stream_get_contents($pipes[2]);
-fclose($pipes[2]);
-proc_close($process);
-
-if (!$headers_done && !empty($stderr)) {
-    http_response_code(500);
-    echo "<pre>Backend Error:\n" . htmlspecialchars($stderr) . "</pre>";
-}
+echo $body;

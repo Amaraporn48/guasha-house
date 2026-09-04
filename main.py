@@ -444,7 +444,7 @@ def login_api(username: str = Form(...), password: str = Form(...), db: Session 
         httponly=True, 
         max_age=7 * 24 * 3600, 
         samesite="lax",
-        secure=IS_PRODUCTION
+        secure=False
     )
     return response
 
