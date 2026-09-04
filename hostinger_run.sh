@@ -54,7 +54,10 @@ if [ ! -f ".env" ]; then
     sed -i "s/your_secure_random_jwt_secret_key_here_minimum_32_characters/$RANDOM_KEY/g" .env
 fi
 
-# 6. Stop existing background instances
+# 6. Make CGI gateway executable
+chmod +x index.cgi 2>/dev/null || true
+
+# 7. Stop existing background instances
 pkill -f "uvicorn main:app" 2>/dev/null || true
 sleep 1
 

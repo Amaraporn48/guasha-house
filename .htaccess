@@ -1,15 +1,17 @@
-# Hostinger LiteSpeed / Apache Routing for FastAPI
-Options -Indexes
+# Hostinger LiteSpeed / Apache Routing for Guasha House
+Options +ExecCGI -Indexes
+AddHandler cgi-script .cgi .py
+DirectoryIndex index.cgi index.html
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
 
-    # Serve existing static files directly
+    # Serve static files directly
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Proxy all traffic to background FastAPI app on port 8000
-    RewriteRule ^(.*)$ http://127.0.0.1:8000/$1 [P,L]
+    # Route all requests to index.cgi
+    RewriteRule ^(.*)$ index.cgi/$1 [QSA,L]
 </IfModule>
