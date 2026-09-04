@@ -1,59 +1,78 @@
 <?php
 /**
- * Hostinger High-Speed PHP Gateway for Guasha House FastAPI
- * Bridges LiteSpeed Web Server directly to the background Uvicorn daemon
+ * Ultra-Fast Production Reverse Proxy for Guasha House FastAPI
  */
 
+// Disable output buffering for instant streaming
+while (ob_get_level()) {
+    ob_end_clean();
+}
+
 $backend_host = "http://127.0.0.1:8000";
-$request_uri = $_SERVER['REQUEST_URI'];
+$request_uri = $_SERVER['REQUEST_URI'] ?? '/';
 $target_url = $backend_host . $request_uri;
 
 $ch = curl_init($target_url);
 
-curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $_SERVER['REQUEST_METHOD']);
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HEADER, true);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
-curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
-// Forward all request headers
+// Build and forward all incoming HTTP headers
 $headers = [];
 $incoming_headers = function_exists('getallheaders') ? getallheaders() : [];
+
+$has_cookie = false;
 foreach ($incoming_headers as $name => $value) {
-    if (strtolower($name) !== 'host' && strtolower($name) !== 'content-length') {
+    $lower = strtolower($name);
+    if (!in_array($lower, ['host', 'content-length', 'connection'])) {
         $headers[] = "$name: $value";
+    }
+    if ($lower === 'cookie') {
+        $has_cookie = true;
     }
 }
 
-$headers[] = "Host: " . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'guashahouse.com');
-$headers[] = "X-Real-IP: " . $_SERVER['REMOTE_ADDR'];
-$headers[] = "X-Forwarded-For: " . $_SERVER['REMOTE_ADDR'];
-$headers[] = "X-Forwarded-Proto: " . (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
+// Guarantee Cookie forwarding
+if (!$has_cookie && !empty($_SERVER['HTTP_COOKIE'])) {
+    $headers[] = "Cookie: " . $_SERVER['HTTP_COOKIE'];
+}
 
-// Forward request body
-$method = $_SERVER['REQUEST_METHOD'];
+// Client IP & Proto headers
+$headers[] = "Host: " . ($_SERVER['HTTP_HOST'] ?? 'guashahouse.com');
+$headers[] = "X-Real-IP: " . ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+$headers[] = "X-Forwarded-For: " . ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+$headers[] = "X-Forwarded-Proto: " . ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http');
+
+// Forward payload body
 if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
-    $input = file_get_contents('php://input');
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $input);
-    if (isset($_SERVER['CONTENT_TYPE'])) {
+    $body = file_get_contents('php://input');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    if (!empty($_SERVER['CONTENT_TYPE'])) {
         $headers[] = "Content-Type: " . $_SERVER['CONTENT_TYPE'];
     }
 }
 
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-$response = curl_exec($ch);
+$raw_response = curl_exec($ch);
 
-if ($response === false) {
+if ($raw_response === false) {
     $error = curl_error($ch);
     curl_close($ch);
     
-    // Server starting up or temporary unavailable
-    http_response_code(503);
+    http_response_code(502);
     header('Content-Type: text/html; charset=utf-8');
-    echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Guasha House - กำลังเริ่มต้นระบบ</title>";
-    echo "<style>body{font-family:sans-serif;text-align:center;padding:50px;background:#f8fafc;}h1{color:#1e293b;}</style></head>";
-    echo "<body><h1>🌿 ระบบ Guasha House กำลังเริ่มต้น...</h1><p>กรุณารอประมาณ 5 วินาทีแล้วกดรีเฟรชหน้าใหม่อีกครั้ง</p></body></html>";
+    echo "<!DOCTYPE html><html><body style='font-family:sans-serif;text-align:center;padding:50px;background:#f8fafc;'>";
+    echo "<h2>🌿 ระบบ Guasha House กำลังเริ่มต้น กรุณารอสักครู่...</h2>";
+    echo "<p><small>กำลังเชื่อมต่อ Uvicorn Backend...</small></p>";
+    echo "<script>setTimeout(function(){ location.reload(); }, 2000);</script>";
+    echo "</body></html>";
     exit;
 }
 
@@ -61,18 +80,22 @@ $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-$header_text = substr($response, 0, $header_size);
-$body = substr($response, $header_size);
+$header_text = substr($raw_response, 0, $header_size);
+$body = substr($raw_response, $header_size);
 
 http_response_code($http_code);
 
-// Forward response headers
-$header_lines = explode("\r\n", $header_text);
-foreach ($header_lines as $index => $line) {
-    if ($index > 0 && !empty($line)) {
-        if (stripos($line, 'Transfer-Encoding:') === false) {
-            header($line, false);
-        }
+// Forward response headers accurately
+$raw_headers = explode("\r\n", $header_text);
+foreach ($raw_headers as $index => $header_line) {
+    if ($index === 0 || empty(trim($header_line))) {
+        continue;
+    }
+    
+    $lower = strtolower($header_line);
+    if (strpos($lower, 'transfer-encoding:') === false && strpos($lower, 'connection:') === false) {
+        // false as second parameter allows multiple headers of same name (e.g. Set-Cookie)
+        header($header_line, false);
     }
 }
 
