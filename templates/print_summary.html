@@ -73,6 +73,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 14px;
+            margin-bottom: 14px;
         }
 
         .report-table th {
@@ -80,7 +81,7 @@
             color: #c5a880 !important;
             font-size: 12.5px;
             font-weight: 700;
-            padding: 9px 12px;
+            padding: 9.5px 12px;
             border: 1px solid #1a1a1a;
             white-space: nowrap;
             letter-spacing: 0.4px;
@@ -90,7 +91,7 @@
             font-size: 12.5px;
             font-weight: 500;
             color: #1a1a1a;
-            padding: 7px 12px;
+            padding: 7.5px 12px;
             border-bottom: 1px solid #e5e0d8;
             border-left: 1px solid #f0eae1;
             border-right: 1px solid #f0eae1;
@@ -150,16 +151,16 @@
             </div>
 
             <!-- KPI Metric Cards -->
-            <div class="grid grid-cols-3 gap-3.5 mb-3.5">
-                <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3 text-center">
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3.5 text-center">
                     <span class="text-[9.5px] font-bold text-gray-400 uppercase tracking-wider block">จำนวนใบสำคัญรวม / Total Documents</span>
                     <span class="text-base font-bold text-[#1a1a1a] font-mono">{{ total_docs_count }} <span class="text-xs font-normal text-gray-500">ใบ</span></span>
                 </div>
-                <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3 text-center">
+                <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3.5 text-center">
                     <span class="text-[9.5px] font-bold text-gray-400 uppercase tracking-wider block">ภาษีขายสะสมรวม / Total VAT 7%</span>
                     <span class="text-base font-bold text-amber-700 font-mono">฿{{ "{:,.2f}".format(total_vat_sum or 0) }}</span>
                 </div>
-                <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3 text-center">
+                <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3.5 text-center">
                     <span class="text-[9.5px] font-bold text-gray-400 uppercase tracking-wider block">ยอดขายสะสมรวม / Gross Revenue</span>
                     <span class="text-base font-bold text-[#b39268] font-mono">฿{{ "{:,.2f}".format(total_sales_sum or 0) }}</span>
                 </div>
@@ -198,10 +199,10 @@
         </div>
 
         <!-- Financial Summary Box & Signatures -->
-        <div class="mt-5 pt-4 border-t-2 border-[#1a1a1a] space-y-5">
+        <div class="mt-6 pt-4 border-t-2 border-[#1a1a1a] space-y-6">
             
             <!-- Financial Statement Bar -->
-            <div class="grid grid-cols-3 gap-3.5 bg-[#f8f6f0] p-3.5 rounded-xl border border-[#e5e0d8]">
+            <div class="grid grid-cols-3 gap-4 bg-[#f8f6f0] p-4 rounded-xl border border-[#e5e0d8]">
                 <div class="text-center border-r border-[#e5e0d8] pr-2">
                     <span class="text-[9.5px] font-bold text-emerald-700 uppercase tracking-wider block">รายรับรวมทั้งหมด / TOTAL REVENUE</span>
                     <span class="text-base font-bold text-emerald-800 font-mono mt-0.5 block">฿{{ "{:,.2f}".format(total_sales_sum or 0) }}</span>
@@ -219,14 +220,14 @@
             <!-- Signatures Section -->
             <div class="grid grid-cols-2 gap-12 text-center text-xs pt-2">
                 <div>
-                    <div class="h-14 flex items-end justify-center border-b border-gray-400 pb-1">
+                    <div class="h-16 flex items-end justify-center border-b border-gray-400 pb-1">
                         <span class="text-gray-300 text-[10px]">(ลายเซ็น / Signature)</span>
                     </div>
                     <p class="font-bold text-gray-800 mt-2 text-xs">ผู้จัดทำรายงาน / Prepared By</p>
                     <p class="text-[10px] text-gray-500 mt-0.5">วันที่ / Date ......... / ......... / .............</p>
                 </div>
                 <div>
-                    <div class="h-14 flex items-end justify-center border-b border-gray-400 pb-1">
+                    <div class="h-16 flex items-end justify-center border-b border-gray-400 pb-1">
                         <span class="text-gray-300 text-[10px]">(ลายเซ็น / Signature)</span>
                     </div>
                     <p class="font-bold text-gray-800 mt-2 text-xs">ผู้อนุมัติรายงาน / Approved By</p>
@@ -246,7 +247,7 @@
         function downloadPDF() {
             const element = document.getElementById('pdf-content');
             const opt = {
-                margin:       [10, 10, 10, 10],
+                margin:       0,
                 filename:     'Monthly_Account_Summary_{{ target_year }}.pdf',
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
