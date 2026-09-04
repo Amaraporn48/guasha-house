@@ -1,25 +1,25 @@
 <?php
 /**
- * Guasha House Dual-Mode Gateway
- * Mode 1: High-Speed Reverse Proxy (if uvicorn daemon is running)
- * Mode 2: In-Process WSGI CGI (Instant execution without daemon requirement)
+ * Guasha House Zero-Hang Gateway
+ * Direct Execution with Real-Time Diagnostics
  */
 
-ini_set('display_errors', 0);
-error_reporting(0);
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
 $dir = __DIR__;
-$backend_host = "http://127.0.0.1:8000";
 
-// Step 1: Check if persistent Uvicorn daemon is listening
-$fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.05);
+// 1. First check if persistent daemon is running on 8000 with ultra-short timeout (0.01s)
+$is_daemon_up = false;
+$s = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.01);
+if ($s) {
+    fclose($s);
+    $is_daemon_up = true;
+}
 
-if ($fp) {
-    fclose($fp);
-    
-    // --- MODE 1: Fast Proxy to Uvicorn ---
+if ($is_daemon_up) {
     $request_uri = $_SERVER['REQUEST_URI'] ?? '/';
-    $target_url = $backend_host . $request_uri;
+    $target_url = "http://127.0.0.1:8000" . $request_uri;
 
     $ch = curl_init($target_url);
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -27,21 +27,19 @@ if ($fp) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
     curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
     $headers = [];
-    $incoming_headers = function_exists('getallheaders') ? getallheaders() : [];
+    $incoming = function_exists('getallheaders') ? getallheaders() : [];
     $has_cookie = false;
-    foreach ($incoming_headers as $name => $value) {
+    foreach ($incoming as $name => $value) {
         $lower = strtolower($name);
         if (!in_array($lower, ['host', 'content-length', 'connection'])) {
             $headers[] = "$name: $value";
         }
-        if ($lower === 'cookie') {
-            $has_cookie = true;
-        }
+        if ($lower === 'cookie') $has_cookie = true;
     }
     if (!$has_cookie && !empty($_SERVER['HTTP_COOKIE'])) {
         $headers[] = "Cookie: " . $_SERVER['HTTP_COOKIE'];
@@ -84,7 +82,7 @@ if ($fp) {
     curl_close($ch);
 }
 
-// --- MODE 2: In-Process WSGI CGI Execution ---
+// 2. Try In-Process WSGI Execution
 $pythons = [
     "$dir/venv/bin/python",
     "$dir/venv/bin/python3",
@@ -103,9 +101,9 @@ foreach ($pythons as $p) {
 }
 
 $descriptorspec = [
-    0 => ["pipe", "r"], // STDIN
-    1 => ["pipe", "w"], // STDOUT
-    2 => ["pipe", "w"]  // STDERR
+    0 => ["pipe", "r"],
+    1 => ["pipe", "w"],
+    2 => ["pipe", "w"]
 ];
 
 $env = $_SERVER;
@@ -121,6 +119,8 @@ $env['SERVER_PROTOCOL'] = $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.1';
 $env['REQUEST_METHOD'] = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $process = @proc_open("$python_bin $dir/wsgi_runner.py", $descriptorspec, $pipes, $dir, $env);
+$output = "";
+$errors = "";
 
 if (is_resource($process)) {
     $input = file_get_contents('php://input');
@@ -158,13 +158,39 @@ if (is_resource($process)) {
     }
 }
 
-// Fallback Diagnostic screen
-http_response_code(503);
+// 3. Transparent Diagnostic Output (NO INFINITE RELOAD)
 header('Content-Type: text/html; charset=utf-8');
-echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Guasha House</title></head>";
-echo "<body style='font-family:-apple-system,sans-serif;text-align:center;padding:50px;background:#fbfaf7;'>";
-echo "<div style='max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.05);'>";
-echo "<h2 style='color:#1a1a1a;'>🌿 กำลังเชื่อมต่อระบบ Guasha House</h2>";
-echo "<p style='color:#666;'>กำลังรีสตาร์ทระบบอัตโนมัติ กรุณารอสักครู่...</p>";
-echo "<script>setTimeout(function(){ window.location.reload(); }, 2000);</script>";
-echo "</div></body></html>";
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>🌿 Guasha House - Status Dashboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fbfaf7; color: #2d3748; padding: 40px 20px; }
+        .container { max-width: 650px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #ede8e1; }
+        h2 { margin-top: 0; color: #1a202c; font-size: 22px; }
+        .box { background: #1a202c; color: #68d391; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 13px; overflow-x: auto; white-space: pre-wrap; margin-top: 15px; max-height: 250px; }
+        .btn { display: inline-block; background: #c5a880; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-warn { background: #feebc8; color: #c05621; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div style="font-size: 40px; margin-bottom: 10px;">🌿</div>
+    <h2>ระบบ Guasha House</h2>
+    <p><span class="badge badge-warn">Backend Offline</span> เซิร์ฟเวอร์ Python กำลังรอการสั่งรันครั้งแรก</p>
+    
+    <?php if (!empty($errors)): ?>
+        <p><strong>Python Error Output:</strong></p>
+        <div class="box"><?php echo htmlspecialchars($errors); ?></div>
+    <?php endif; ?>
+
+    <p style="margin-top: 20px; color: #4a5568; font-size: 14px;">
+        📌 <strong>คำสั่งเปิดใช้งานบน Hostinger:</strong><br>
+        เปิด SSH แล้วรันคำสั่ง: <code>bash hostinger_run.sh</code>
+    </p>
+</div>
+</body>
+</html>
