@@ -1667,14 +1667,50 @@
 
             <!-- 9. EXPENSES VIEW -->
             <div x-show="activeView === 'expenses'" class="space-y-6">
-                <div class="flex justify-between items-center bg-white p-6 border border-beige rounded-2xl shadow-sm">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 border border-beige rounded-2xl shadow-sm">
                     <div>
                         <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase">บันทึกรายจ่าย / Expense Management</h3>
                         <p class="text-xs text-gray-400 mt-1">บันทึกค่าใช้จ่ายต่างๆ เช่น ค่าน้ำ ค่านำส่งของ ค่าโฆษณา หรือซื้อสินค้าเข้าร้าน</p>
                     </div>
-                    <button @click="openExpenseModal()" class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3 rounded-xl transition uppercase tracking-widest">
-                        + บันทึกรายจ่ายใหม่ / Add Expense
-                    </button>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Dropdown Year -->
+                        <div class="flex items-center gap-1.5">
+                            <label class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">ปี:</label>
+                            <select x-model="expenseFilterYear"
+                                    class="bg-cream border border-beige rounded-xl px-3 py-2 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
+                                <option value="ALL">ทุกปี (ALL)</option>
+                                <option value="2027">2570 (2027)</option>
+                                <option value="2026">2569 (2026)</option>
+                                <option value="2025">2568 (2025)</option>
+                                <option value="2024">2567 (2024)</option>
+                            </select>
+                        </div>
+
+                        <!-- Dropdown Month -->
+                        <div class="flex items-center gap-1.5">
+                            <label class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">เดือน:</label>
+                            <select x-model="expenseFilterMonth"
+                                    class="bg-cream border border-beige rounded-xl px-3 py-2 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
+                                <option value="ALL">ทุกเดือน (ALL)</option>
+                                <option value="01">01 มกราคม (ม.ค.)</option>
+                                <option value="02">02 กุมภาพันธ์ (ก.พ.)</option>
+                                <option value="03">03 มีนาคม (มี.ค.)</option>
+                                <option value="04">04 เมษายน (เม.ย.)</option>
+                                <option value="05">05 พฤษภาคม (พ.ค.)</option>
+                                <option value="06">06 มิถุนายน (มิ.ย.)</option>
+                                <option value="07">07 กรกฎาคม (ก.ค.)</option>
+                                <option value="08">08 สิงหาคม (ส.ค.)</option>
+                                <option value="09">09 กันยายน (ก.ย.)</option>
+                                <option value="10">10 ตุลาคม (ต.ค.)</option>
+                                <option value="11">11 พฤศจิกายน (พ.ย.)</option>
+                                <option value="12">12 ธันวาคม (ธ.ค.)</option>
+                            </select>
+                        </div>
+
+                        <button @click="openExpenseModal()" class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                            <span>+</span> บันทึกรายจ่ายใหม่
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1690,7 +1726,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-for="exp in expenses" :key="exp.id">
+                                <template x-for="exp in filteredExpenses()" :key="exp.id">
                                     <tr class="border-b border-beige hover:bg-cream/40">
                                         <td class="px-4 py-3.5">
                                             <div class="font-bold font-mono text-charcoal text-xs" x-text="exp.voucher_number || ('PV-' + String(exp.id).padStart(4, '0'))"></div>
@@ -1716,8 +1752,8 @@
                                         </td>
                                     </tr>
                                 </template>
-                                <tr x-show="expenses.length === 0">
-                                    <td colspan="4" class="text-center py-8 text-xs text-gray-400">ยังไม่มีประวัติการบันทึกใบสำคัญจ่าย</td>
+                                <tr x-show="filteredExpenses().length === 0">
+                                    <td colspan="4" class="text-center py-8 text-xs text-gray-400">ยังไม่มีประวัติการบันทึกใบสำคัญจ่าย หรือไม่พบข้อมูลตามตัวกรอง</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2925,6 +2961,8 @@
                 // Queries and filters
                 customerQuery: '',
                 productQuery: '',
+                expenseFilterYear: 'ALL',
+                expenseFilterMonth: 'ALL',
                 docFilter: {
                     query: '',
                     year: '',
@@ -3565,10 +3603,30 @@
                         .then(res => res.json())
                         .then(data => this.expenseCategories = data);
                 },
+                filteredExpenses() {
+                    if (!this.expenses) return [];
+                    return this.expenses.filter(exp => {
+                        if (!exp.date) return true;
+                        const dateStr = String(exp.date); // e.g. "2026-09-04"
+                        const parts = dateStr.split('-');
+                        const expYear = parts[0];
+                        const expMonth = parts.length > 1 ? parts[1] : '';
+
+                        if (this.expenseFilterYear && this.expenseFilterYear !== 'ALL') {
+                            if (expYear !== this.expenseFilterYear) return false;
+                        }
+                        if (this.expenseFilterMonth && this.expenseFilterMonth !== 'ALL') {
+                            const padMonth = String(this.expenseFilterMonth).padStart(2, '0');
+                            if (expMonth !== padMonth) return false;
+                        }
+                        return true;
+                    });
+                },
                 getExpensesByCategory() {
                     const grouped = {};
                     let total = 0;
-                    this.expenses.forEach(e => {
+                    const items = this.filteredExpenses();
+                    items.forEach(e => {
                         const amt = parseFloat(e.amount) || 0;
                         grouped[e.category] = (grouped[e.category] || 0) + amt;
                         total += amt;
