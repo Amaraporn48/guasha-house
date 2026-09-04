@@ -1991,7 +1991,9 @@
 
                 <div class="flex justify-end gap-3 pt-4 border-t border-beige">
                     <button type="button" @click="videoModal.open = false" class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-3 rounded-xl border border-beige transition">ยกเลิก / Cancel</button>
-                    <button type="submit" class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3 rounded-xl transition tracking-widest uppercase shadow">บันทึกข้อมูล / Save</button>
+                    <button type="submit" :disabled="savingVideo" :class="savingVideo ? 'opacity-50 cursor-not-allowed' : ''" class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3 rounded-xl transition tracking-widest uppercase shadow">
+                        <span x-text="savingVideo ? 'กำลังบันทึก...' : 'บันทึกข้อมูล / Save'"></span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -2081,8 +2083,10 @@
                 <div class="flex justify-end gap-3 pt-4 border-t border-beige">
                     <button type="button" @click="customerModal.open = false" 
                             class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-3.5 rounded-xl border border-beige transition">ยกเลิก / Cancel</button>
-                    <button type="submit" 
-                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase">บันทึกข้อมูล / Save</button>
+                    <button type="submit" :disabled="savingCustomer" :class="savingCustomer ? 'opacity-50 cursor-not-allowed' : ''"
+                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase">
+                        <span x-text="savingCustomer ? 'กำลังบันทึก...' : 'บันทึกข้อมูล / Save'"></span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -2170,8 +2174,10 @@
                 <div class="flex justify-end gap-3 pt-4 border-t border-beige">
                     <button type="button" @click="productModal.open = false" 
                             class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-3.5 rounded-xl border border-beige transition">ยกเลิก / Cancel</button>
-                    <button type="submit" 
-                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase">บันทึกข้อมูล / Save</button>
+                    <button type="submit" :disabled="savingProduct" :class="savingProduct ? 'opacity-50 cursor-not-allowed' : ''"
+                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase">
+                        <span x-text="savingProduct ? 'กำลังบันทึก...' : 'บันทึกข้อมูล / Save'"></span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -2447,8 +2453,10 @@
                 <div class="flex justify-end gap-3 pt-4 border-t border-beige">
                     <button type="button" @click="branchModal.open = false" 
                             class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-3.5 rounded-xl border border-beige transition">ยกเลิก</button>
-                    <button type="submit" 
-                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase">บันทึกสาขา</button>
+                    <button type="submit" :disabled="savingBranch" :class="savingBranch ? 'opacity-50 cursor-not-allowed' : ''"
+                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase">
+                        <span x-text="savingBranch ? 'กำลังบันทึก...' : 'บันทึกสาขา'"></span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -2507,8 +2515,10 @@
                 <div class="flex justify-end gap-3 pt-4 border-t border-beige">
                     <button type="button" @click="userModal.open = false" 
                             class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-3.5 rounded-xl border border-beige transition">ยกเลิก</button>
-                    <button type="submit" 
-                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase font-bold">บันทึกผู้ใช้</button>
+                    <button type="submit" :disabled="savingUser" :class="savingUser ? 'opacity-50 cursor-not-allowed' : ''"
+                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase font-bold">
+                        <span x-text="savingUser ? 'กำลังบันทึก...' : 'บันทึกผู้ใช้'"></span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -2759,9 +2769,9 @@
                 <div class="flex justify-end gap-3 pt-4 border-t border-beige flex-shrink-0">
                     <button type="button" @click="expenseModal.open = false" 
                             class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-6 py-3.5 rounded-xl border border-beige transition">ยกเลิก / Cancel</button>
-                    <button type="submit" 
+                    <button type="submit" :disabled="savingExpense" :class="savingExpense ? 'opacity-50 cursor-not-allowed' : ''"
                             class="bg-charcoal hover:bg-gold-dark text-white text-xs font-bold px-7 py-3.5 rounded-xl transition tracking-wider uppercase shadow-md flex items-center gap-2">
-                        <span>💾 บันทึกใบสำคัญจ่าย / Save Voucher</span>
+                        <span x-text="savingExpense ? 'กำลังบันทึก...' : '💾 บันทึกใบสำคัญจ่าย / Save Voucher'"></span>
                     </button>
                 </div>
             </form>
@@ -2903,8 +2913,10 @@
                 <div class="flex justify-end gap-3 pt-4 border-t border-beige">
                     <button type="button" @click="restockModal.open = false" 
                             class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-3.5 rounded-xl border border-beige transition">ยกเลิก</button>
-                    <button type="submit" 
-                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase font-bold">ยืนยันการเติมสต็อก</button>
+                    <button type="submit" :disabled="savingRestock" :class="savingRestock ? 'opacity-50 cursor-not-allowed' : ''"
+                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase font-bold">
+                        <span x-text="savingRestock ? 'กำลังบันทึก...' : 'ยืนยันการเติมสต็อก'"></span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -2953,6 +2965,13 @@
                 },
                 editingDocId: null,
                 saving: false,
+                savingCustomer: false,
+                savingProduct: false,
+                savingBranch: false,
+                savingUser: false,
+                savingExpense: false,
+                savingRestock: false,
+                savingVideo: false,
 
                 // Databases lists
                 customers: [],
@@ -3339,6 +3358,7 @@
                 },
 
                 saveUserFromModal() {
+                    if (this.savingUser) return;
                     if (!this.userModal.username || !this.userModal.fullname) {
                         alert('กรุณากรอกข้อมูลให้ครบถ้วน');
                         return;
@@ -3348,6 +3368,7 @@
                         return;
                     }
 
+                    this.savingUser = true;
                     const url = this.userModal.id ? `/api/users/${this.userModal.id}` : '/api/users';
                     const method = this.userModal.id ? 'PUT' : 'POST';
 
@@ -3372,6 +3393,9 @@
                     })
                     .catch(err => {
                         alert(err.message || 'เกิดข้อผิดพลาดในการบันทึกผู้ใช้');
+                    })
+                    .finally(() => {
+                        this.savingUser = false;
                     });
                 },
 
@@ -3422,6 +3446,8 @@
                     }
                 },
                 saveBranchFromModal() {
+                    if (this.savingBranch) return;
+                    this.savingBranch = true;
                     const method = this.branchModal.id ? 'PUT' : 'POST';
                     const url = this.branchModal.id ? `/api/branches/${this.branchModal.id}` : '/api/branches';
                     fetch(url, {
@@ -3445,6 +3471,12 @@
                         } else {
                             alert(data.detail || 'เกิดข้อผิดพลาด');
                         }
+                    })
+                    .catch(err => {
+                        alert(err.message || 'เกิดข้อผิดพลาด');
+                    })
+                    .finally(() => {
+                        this.savingBranch = false;
                     });
                 },
                 deleteBranch(id) {
@@ -3533,12 +3565,14 @@
                 },
 
                 saveExpenseFromModal() {
+                    if (this.savingExpense) return;
                     if (!this.expenseModal.category) {
                         alert('กรุณาระบุหมวดหมู่รายจ่าย');
                         return;
                     }
                     
                     this.calculateExpenseTotals();
+                    this.savingExpense = true;
                     
                     const payload = {
                         voucher_number: this.expenseModal.voucher_number || '',
@@ -3582,6 +3616,9 @@
                     })
                     .catch(err => {
                         alert('เกิดข้อผิดพลาดในการส่งข้อมูล: ' + err);
+                    })
+                    .finally(() => {
+                        this.savingExpense = false;
                     });
                 },
 
@@ -3730,6 +3767,8 @@
                     };
                 },
                 saveRestock() {
+                    if (this.savingRestock) return;
+                    this.savingRestock = true;
                     fetch('/api/products/restock', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3752,6 +3791,12 @@
                         } else {
                             alert(data.detail || 'เกิดข้อผิดพลาด');
                         }
+                    })
+                    .catch(err => {
+                        alert('เกิดข้อผิดพลาดในการเติมสต็อก: ' + err);
+                    })
+                    .finally(() => {
+                        this.savingRestock = false;
                     });
                 },
 
@@ -3907,6 +3952,8 @@
                     this.videoModal = { open: true, id: v.id, title: v.title, category: v.category, video_url: v.video_url, description: v.description || '', instructor: v.instructor || 'อ.กัวซา เฮ้าส์', duration: v.duration || '' };
                 },
                 saveVideoFromModal() {
+                    if (this.savingVideo) return;
+                    this.savingVideo = true;
                     const isEdit = !!this.videoModal.id;
                     const url = isEdit ? `/api/videos/${this.videoModal.id}` : '/api/videos';
                     const method = isEdit ? 'PUT' : 'POST';
@@ -3925,7 +3972,10 @@
                             alert(data.detail || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
                         }
                     })
-                    .catch(err => alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล'));
+                    .catch(err => alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล'))
+                    .finally(() => {
+                        this.savingVideo = false;
+                    });
                 },
                 deleteVideo(v) {
                     if (!confirm(`คุณต้องการลบคลิปการสอน "${v.title}" ใช่หรือไม่?`)) return;
@@ -3948,6 +3998,8 @@
                 },
 
                 saveCustomerFromModal() {
+                    if (this.savingCustomer) return;
+                    this.savingCustomer = true;
                     const data = {
                         name: this.customerModal.name,
                         address: this.customerModal.address,
@@ -3984,7 +4036,10 @@
                             this.docForm.customer_email = newCust.email;
                         }
                     })
-                    .catch(err => this.showToast(err.message, 'error'));
+                    .catch(err => this.showToast(err.message, 'error'))
+                    .finally(() => {
+                        this.savingCustomer = false;
+                    });
                 },
 
                 deleteCustomer(id) {
@@ -4023,6 +4078,8 @@
                 },
 
                 saveProductFromModal() {
+                    if (this.savingProduct) return;
+                    this.savingProduct = true;
                     const data = {
                         code: this.productModal.code || null,
                         name: this.productModal.name,
@@ -4050,7 +4107,10 @@
                         this.fetchProducts();
                         this.productModal.open = false;
                     })
-                    .catch(err => this.showToast(err.message, 'error'));
+                    .catch(err => this.showToast(err.message, 'error'))
+                    .finally(() => {
+                        this.savingProduct = false;
+                    });
                 },
 
                 deleteProduct(id) {
@@ -4205,11 +4265,16 @@
                 },
 
                 saveInvoice() {
+                    if (this.saving) return;
                     if (!this.docForm.customer_name) {
                         this.showToast('กรุณากรอกชื่อลูกค้า', 'error');
                         return;
                     }
-                    if (this.docForm.items.some(item => !item.description)) {
+                    if (!this.docForm.items || this.docForm.items.length === 0) {
+                        this.showToast('กรุณาระบุรายการสินค้าอย่างน้อย 1 รายการ', 'error');
+                        return;
+                    }
+                    if (this.docForm.items.some(item => !item.description || !item.description.trim())) {
                         this.showToast('กรุณากรอกรายละเอียดรายการสินค้าให้ครบถ้วน', 'error');
                         return;
                     }

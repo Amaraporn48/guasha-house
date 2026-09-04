@@ -40,11 +40,12 @@
             }
             .summary-page {
                 width: 210mm;
-                height: 297mm;
+                min-height: 297mm;
+                height: auto;
                 padding: 12mm 15mm;
                 box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
                 border-radius: 4px;
-                overflow: hidden;
+                overflow: visible;
             }
         }
 
@@ -54,20 +55,19 @@
                 margin: 0 !important;
                 padding: 0 !important;
                 width: 210mm !important;
-                height: 297mm !important;
-                overflow: hidden !important;
+                height: auto !important;
+                overflow: visible !important;
             }
             .summary-page {
                 box-shadow: none !important;
                 border: none !important;
                 width: 210mm !important;
-                height: 297mm !important;
-                max-height: 297mm !important;
+                min-height: 297mm !important;
+                height: auto !important;
+                max-height: none !important;
                 padding: 12mm 15mm !important;
                 margin: 0 !important;
-                overflow: hidden !important;
-                page-break-after: avoid !important;
-                page-break-inside: avoid !important;
+                overflow: visible !important;
             }
             .no-print {
                 display: none !important;

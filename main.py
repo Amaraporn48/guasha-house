@@ -21,7 +21,16 @@ except Exception:
     pass
 
 # Secret configurations for JWT
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "guasa_house_secret_key_2026_luxury_corp")
+IS_PRODUCTION = bool(os.getenv("VERCEL") or os.getenv("ENVIRONMENT") == "production")
+JWT_SECRET_ENV = os.getenv("JWT_SECRET_KEY")
+
+if IS_PRODUCTION and not JWT_SECRET_ENV:
+    import secrets
+    SECRET_KEY = secrets.token_urlsafe(32)
+    print("WARNING: JWT_SECRET_KEY environment variable is not set in production. Generated temporary runtime secret.")
+else:
+    SECRET_KEY = JWT_SECRET_ENV or "guasa_house_dev_secret_key_2026_local_only"
+
 ALGORITHM = "HS256"
 
 app = FastAPI(title="Guasha House Billing System")
@@ -291,43 +300,42 @@ def seed_database():
         db.close()
 
 
+from sqlalchemy import inspect
+
+_migration_done = False
+
 def migrate_database():
+    global _migration_done
+    if _migration_done:
+        return
     db = SessionLocal()
     try:
-        db.execute(text("UPDATE products SET name = REPLACE(name, 'Guasa', 'Guasha')"))
-        db.execute(text("UPDATE products SET description = REPLACE(description, 'Guasa', 'Guasha')"))
+        inspector = inspect(engine)
+        if inspector.has_table("documents"):
+            doc_cols = [c['name'] for c in inspector.get_columns("documents")]
+            for col in ["received_by", "received_date", "shipping_name", "shipping_address", "payment_slip"]:
+                if col not in doc_cols:
+                    db.execute(text(f"ALTER TABLE documents ADD COLUMN {col} VARCHAR"))
         
-        # New Document columns
-        for col in ["received_by", "received_date", "shipping_name", "shipping_address", "payment_slip"]:
-            try:
-                db.execute(text(f"ALTER TABLE documents ADD COLUMN {col} VARCHAR"))
-            except Exception:
-                pass
-                
-        # New Product columns
-        try:
-            db.execute(text("ALTER TABLE products ADD COLUMN stock_quantity INTEGER DEFAULT 0"))
-        except Exception:
-            pass
-        try:
-            db.execute(text("ALTER TABLE products ADD COLUMN is_service BOOLEAN DEFAULT 0"))
-        except Exception:
-            pass
-        try:
-            db.execute(text("ALTER TABLE products ADD COLUMN image_url VARCHAR"))
-        except Exception:
-            pass
-            
-        # New Branch columns
-        try:
-            db.execute(text("ALTER TABLE branches ADD COLUMN image_url VARCHAR"))
-        except Exception:
-            pass
+        if inspector.has_table("products"):
+            prod_cols = [c['name'] for c in inspector.get_columns("products")]
+            if "stock_quantity" not in prod_cols:
+                db.execute(text("ALTER TABLE products ADD COLUMN stock_quantity INTEGER DEFAULT 0"))
+            if "is_service" not in prod_cols:
+                db.execute(text("ALTER TABLE products ADD COLUMN is_service BOOLEAN DEFAULT 0"))
+            if "image_url" not in prod_cols:
+                db.execute(text("ALTER TABLE products ADD COLUMN image_url VARCHAR"))
+
+        if inspector.has_table("branches"):
+            branch_cols = [c['name'] for c in inspector.get_columns("branches")]
+            if "image_url" not in branch_cols:
+                db.execute(text("ALTER TABLE branches ADD COLUMN image_url VARCHAR"))
             
         db.commit()
+        _migration_done = True
     except Exception as e:
         db.rollback()
-        print(f"Error migrating database: {e}")
+        print(f"Database migration notice: {e}")
     finally:
         db.close()
 
@@ -339,21 +347,41 @@ def get_current_user(access_token: Optional[str] = Cookie(None), db: Session = D
     if not access_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
+            detail="กรุณาเข้าสู่ระบบก่อนทำรายการ",
             headers={"WWW-Authenticate": "Bearer"},
         )
     try:
         payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token claims")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ข้อมูลสิทธิ์การเข้าใช้งานไม่ถูกต้อง")
     except jwt.PyJWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session หมดอายุ กรุณาเข้าสู่ระบบใหม่")
     
     user = db.query(User).filter(User.username == username).first()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ไม่พบบัญชีผู้ใช้งานในระบบ")
     return user
+
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่มีสิทธิ์ดำเนินการในส่วนนี้"
+        )
+    return current_user
+
+def get_current_user_from_cookie(access_token: Optional[str] = Cookie(None), db: Session = Depends(get_db)) -> Optional[User]:
+    if not access_token:
+        return None
+    try:
+        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if not username:
+            return None
+        return db.query(User).filter(User.username == username).first()
+    except jwt.PyJWTError:
+        return None
 
 # UI Routing endpoints
 @app.get("/", response_class=HTMLResponse)
@@ -413,7 +441,7 @@ def login_api(username: str = Form(...), password: str = Form(...), db: Session 
         httponly=True, 
         max_age=7 * 24 * 3600, 
         samesite="lax",
-        secure=False # Set to True in production with HTTPS
+        secure=IS_PRODUCTION
     )
     return response
 
@@ -432,7 +460,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         "role": current_user.role
     }
 
-# ----------------- USER MANAGEMENT API -----------------
+# ----------------- USER MANAGEMENT API (Admin Only) -----------------
 class UserCreateSchema(BaseModel):
     username: str
     fullname: str
@@ -446,7 +474,7 @@ class UserUpdateSchema(BaseModel):
     role: Optional[str] = "staff"
 
 @app.get("/api/users")
-def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     users = db.query(User).order_by(User.id.asc()).all()
     return [
         {
@@ -460,7 +488,7 @@ def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_c
     ]
 
 @app.post("/api/users")
-def create_user(user: UserCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_user(user: UserCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     if not user.username or not user.password or not user.fullname:
         raise HTTPException(status_code=400, detail="กรุณากรอกข้อมูลให้ครบถ้วน")
         
@@ -468,11 +496,12 @@ def create_user(user: UserCreateSchema, db: Session = Depends(get_db), current_u
     if existing:
         raise HTTPException(status_code=400, detail="ชื่อผู้ใช้งาน (Username) นี้ถูกใช้งานแล้ว")
         
+    role_val = user.role if user.role in ["admin", "staff"] else "staff"
     new_user = User(
         username=user.username.strip(),
         fullname=user.fullname.strip(),
         hashed_password=hash_password(user.password),
-        role=user.role or "staff"
+        role=role_val
     )
     db.add(new_user)
     db.commit()
@@ -480,7 +509,7 @@ def create_user(user: UserCreateSchema, db: Session = Depends(get_db), current_u
     return {"success": True, "message": "เพิ่มผู้ใช้งานสำเร็จ", "id": new_user.id}
 
 @app.put("/api/users/{user_id}")
-def update_user(user_id: int, user: UserUpdateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_user(user_id: int, user: UserUpdateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     u = db.query(User).filter(User.id == user_id).first()
     if not u:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลผู้ใช้งาน")
@@ -492,7 +521,8 @@ def update_user(user_id: int, user: UserUpdateSchema, db: Session = Depends(get_
             
     u.username = user.username.strip()
     u.fullname = user.fullname.strip()
-    u.role = user.role or "staff"
+    if user.role in ["admin", "staff"]:
+        u.role = user.role
     
     if user.password and user.password.strip():
         u.hashed_password = hash_password(user.password.strip())
@@ -501,7 +531,7 @@ def update_user(user_id: int, user: UserUpdateSchema, db: Session = Depends(get_
     return {"success": True, "message": "แก้ไขข้อมูลผู้ใช้งานสำเร็จ"}
 
 @app.delete("/api/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="ไม่สามารถลบบัญชีผู้ใช้ที่กำลังเข้าสู่ระบบอยู่ได้")
         
@@ -509,9 +539,22 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User 
     if not u:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลผู้ใช้งาน")
         
-    db.delete(u)
-    db.commit()
-    return {"success": True, "message": "ลบผู้ใช้งานสำเร็จ"}
+    # Check if user has created documents (protect data integrity)
+    has_docs = db.query(Document).filter(Document.created_by_user_id == user_id).count() > 0
+    if has_docs:
+        raise HTTPException(
+            status_code=400,
+            detail="ไม่สามารถลบผู้ใช้งานนี้ได้ เนื่องจากมีประวัติการสร้างเอกสารในระบบ"
+        )
+        
+    try:
+        db.delete(u)
+        db.commit()
+        return {"success": True, "message": "ลบผู้ใช้งานสำเร็จ"}
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting user: {e}")
+        raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการลบผู้ใช้งาน กรุณาลองใหม่อีกครั้ง")
 
 # ----------------- CUSTOMER API -----------------
 class CustomerSchema(BaseModel):
@@ -529,14 +572,14 @@ def list_customers(db: Session = Depends(get_db), current_user: User = Depends(g
 @app.post("/api/customers")
 def create_customer(customer: CustomerSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Check if duplicate name
-    existing = db.query(Customer).filter(Customer.name == customer.name).first()
+    existing = db.query(Customer).filter(Customer.name == customer.name.strip()).first()
     if existing:
         raise HTTPException(status_code=400, detail="มีลูกค้าชื่อนี้อยู่ในระบบแล้ว")
     
     new_cust = Customer(
-        name=customer.name,
-        address=customer.address,
-        tax_id=customer.tax_id,
+        name=customer.name.strip(),
+        address=customer.address.strip(),
+        tax_id=customer.tax_id.strip(),
         phone=customer.phone,
         email=customer.email,
         notes=customer.notes
@@ -552,9 +595,9 @@ def update_customer(customer_id: int, customer: CustomerSchema, db: Session = De
     if not cust:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลลูกค้า")
         
-    cust.name = customer.name
-    cust.address = customer.address
-    cust.tax_id = customer.tax_id
+    cust.name = customer.name.strip()
+    cust.address = customer.address.strip()
+    cust.tax_id = customer.tax_id.strip()
     cust.phone = customer.phone
     cust.email = customer.email
     cust.notes = customer.notes
@@ -567,8 +610,23 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db), current_use
     cust = db.query(Customer).filter(Customer.id == customer_id).first()
     if not cust:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลลูกค้า")
-    db.delete(cust)
-    db.commit()
+        
+    # Check if customer has documents (protect data integrity)
+    has_docs = db.query(Document).filter(Document.customer_id == customer_id).count() > 0
+    if has_docs:
+        raise HTTPException(
+            status_code=400,
+            detail="ไม่สามารถลบลูกค้ารายนี้ได้ เนื่องจากมีประวัติเอกสารใบกำกับภาษีในระบบ"
+        )
+        
+    try:
+        db.delete(cust)
+        db.commit()
+        return {"success": True, "message": "ลบข้อมูลลูกค้าสำเร็จ"}
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting customer: {e}")
+        raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการลบข้อมูลลูกค้า")
     return {"success": True, "message": "ลบข้อมูลลูกค้าสำเร็จ"}
 
 # ----------------- PRODUCT API -----------------
@@ -689,37 +747,66 @@ def generate_invoice_number(db: Session, year: str) -> str:
 
 @app.post("/api/documents")
 def create_document(doc_data: DocumentCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # 1. Validation for empty items or missing fields
+    if not doc_data.items or len(doc_data.items) == 0:
+        raise HTTPException(status_code=400, detail="กรุณาระบุรายการสินค้าอย่างน้อย 1 รายการ")
+    
+    # 2. Re-calculate all amounts on Backend (Never trust client calculations directly)
+    validated_items = []
+    subtotal = 0.0
+    for idx, item in enumerate(doc_data.items, 1):
+        desc = (item.description or "").strip()
+        if not desc:
+            raise HTTPException(status_code=400, detail=f"กรุณาระบุชื่อรายการสินค้าลำดับที่ {idx}")
+        qty = float(item.quantity)
+        if qty <= 0:
+            raise HTTPException(status_code=400, detail=f"จำนวนสินค้าในรายการลำดับที่ {idx} ต้องมากกว่า 0")
+        price = float(item.unit_price)
+        if price < 0:
+            raise HTTPException(status_code=400, detail=f"ราคาสินค้าในรายการลำดับที่ {idx} ต้องไม่ติดลบ")
+        
+        item_amt = round(qty * price, 2)
+        subtotal += item_amt
+        validated_items.append({
+            "item_index": idx,
+            "description": desc,
+            "quantity": qty,
+            "unit_price": price,
+            "amount": item_amt
+        })
+
+    subtotal = round(subtotal, 2)
+    vat_amount = round(subtotal * 0.07, 2)
+    total_after_vat = round(subtotal + vat_amount, 2)
+    total_text = bahttext(total_after_vat)
+
     max_attempts = 10
-    # Extract year from document date
     doc_year = "2026"
     if doc_data.date and len(doc_data.date) >= 4:
         doc_year = doc_data.date[:4]
         
     for attempt in range(max_attempts):
         try:
-            # We use an immediate/nested transaction to ensure safety
             with db.begin_nested():
                 doc_num = generate_invoice_number(db, doc_year)
                 
-                # Check for absolute safety in DB state (prevents duplicate number generation in memory)
                 existing = db.query(Document).filter(Document.document_number == doc_num).first()
                 if existing:
-                    # Let loop retry and fetch new incremented serial
                     raise IntegrityError("Collision detected", params=None, orig=None)
                 
                 new_doc = Document(
                     document_number=doc_num,
                     date=doc_data.date,
                     customer_id=doc_data.customer_id,
-                    customer_name=doc_data.customer_name,
-                    customer_address=doc_data.customer_address,
-                    customer_tax_id=doc_data.customer_tax_id,
+                    customer_name=doc_data.customer_name.strip(),
+                    customer_address=doc_data.customer_address.strip(),
+                    customer_tax_id=doc_data.customer_tax_id.strip(),
                     customer_phone=doc_data.customer_phone,
                     customer_email=doc_data.customer_email,
-                    total_amount_before_vat=doc_data.total_amount_before_vat,
-                    vat_amount=doc_data.vat_amount,
-                    total_amount_after_vat=doc_data.total_amount_after_vat,
-                    total_amount_text=bahttext(doc_data.total_amount_after_vat),
+                    total_amount_before_vat=subtotal,
+                    vat_amount=vat_amount,
+                    total_amount_after_vat=total_after_vat,
+                    total_amount_text=total_text,
                     payment_method=doc_data.payment_method,
                     cheque_bank=doc_data.cheque_bank if doc_data.payment_method == "CHEQUE" else None,
                     cheque_number=doc_data.cheque_number if doc_data.payment_method == "CHEQUE" else None,
@@ -736,23 +823,23 @@ def create_document(doc_data: DocumentCreateSchema, db: Session = Depends(get_db
                 )
                 
                 db.add(new_doc)
-                db.flush() # Forces SQL execution within nesting to trigger unique constraint errors
+                db.flush()
                 
-                for idx, item in enumerate(doc_data.items, 1):
+                for v_item in validated_items:
                     new_item = DocumentItem(
                          document_id=new_doc.id,
-                         item_index=idx,
-                         description=item.description,
-                         quantity=item.quantity,
-                         unit_price=item.unit_price,
-                         amount=item.quantity * item.unit_price
+                         item_index=v_item["item_index"],
+                         description=v_item["description"],
+                         quantity=v_item["quantity"],
+                         unit_price=v_item["unit_price"],
+                         amount=v_item["amount"]
                     )
                     db.add(new_item)
                     
                     # Stock deduction logic
-                    prod = db.query(Product).filter(Product.name == item.description).first()
+                    prod = db.query(Product).filter(Product.name == v_item["description"]).first()
                     if prod and not prod.is_service:
-                        prod.stock_quantity = max(0, prod.stock_quantity - int(item.quantity))
+                        prod.stock_quantity = max(0, (prod.stock_quantity or 0) - int(v_item["quantity"]))
                 
             db.commit()
             return {"success": True, "document_id": new_doc.id, "document_number": doc_num}
@@ -760,8 +847,13 @@ def create_document(doc_data: DocumentCreateSchema, db: Session = Depends(get_db
             db.rollback()
             if attempt == max_attempts - 1:
                 raise HTTPException(status_code=500, detail="ไม่สามารถสร้างเลขที่เอกสารแบบไม่ซ้ำกันได้เนื่องจากการใช้งานที่หนาแน่น กรุณาลองใหม่อีกครั้ง")
-            # Otherwise, loop will rerun transaction block
             continue
+        except HTTPException:
+            raise
+        except Exception as e:
+            db.rollback()
+            print(f"Error creating document: {e}")
+            raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการบันทึกเอกสาร กรุณาลองใหม่อีกครั้ง")
 
 @app.get("/api/documents")
 def list_documents(
@@ -777,7 +869,6 @@ def list_documents(
     q = db.query(Document)
     
     if query:
-        # Search document number or customer name
         search_filter = or_(
             Document.document_number.like(f"%{query}%"),
             Document.customer_name.like(f"%{query}%")
@@ -788,11 +879,9 @@ def list_documents(
         q = q.filter(Document.date == date)
         
     if month:
-        # Match YYYY-MM
         q = q.filter(Document.date.like(f"%-{month}-%"))
         
     if year:
-        # Match YYYY-...
         q = q.filter(Document.date.like(f"{year}-%"))
         
     if customer_id:
@@ -809,7 +898,6 @@ def get_document(doc_id: int, db: Session = Depends(get_db), current_user: User 
     if not doc:
         raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
     
-    # Convert relational list to dict output
     items_out = []
     for item in sorted(doc.items, key=lambda x: x.item_index):
         items_out.append({
@@ -855,21 +943,53 @@ def update_document(doc_id: int, doc_data: DocumentCreateSchema, db: Session = D
     if not doc:
         raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
         
+    if not doc_data.items or len(doc_data.items) == 0:
+        raise HTTPException(status_code=400, detail="กรุณาระบุรายการสินค้าอย่างน้อย 1 รายการ")
+        
+    # Re-calculate on backend
+    validated_items = []
+    subtotal = 0.0
+    for idx, item in enumerate(doc_data.items, 1):
+        desc = (item.description or "").strip()
+        if not desc:
+            raise HTTPException(status_code=400, detail=f"กรุณาระบุชื่อรายการสินค้าลำดับที่ {idx}")
+        qty = float(item.quantity)
+        if qty <= 0:
+            raise HTTPException(status_code=400, detail=f"จำนวนสินค้าในรายการลำดับที่ {idx} ต้องมากกว่า 0")
+        price = float(item.unit_price)
+        if price < 0:
+            raise HTTPException(status_code=400, detail=f"ราคาสินค้าในรายการลำดับที่ {idx} ต้องไม่ติดลบ")
+        
+        item_amt = round(qty * price, 2)
+        subtotal += item_amt
+        validated_items.append({
+            "item_index": idx,
+            "description": desc,
+            "quantity": qty,
+            "unit_price": price,
+            "amount": item_amt
+        })
+
+    subtotal = round(subtotal, 2)
+    vat_amount = round(subtotal * 0.07, 2)
+    total_after_vat = round(subtotal + vat_amount, 2)
+    total_text = bahttext(total_after_vat)
+
     try:
         with db.begin_nested():
-            # Update main record fields (keep document number same)
+            # Update main record fields
             doc.date = doc_data.date
             doc.customer_id = doc_data.customer_id
-            doc.customer_name = doc_data.customer_name
-            doc.customer_address = doc_data.customer_address
-            doc.customer_tax_id = doc_data.customer_tax_id
+            doc.customer_name = doc_data.customer_name.strip()
+            doc.customer_address = doc_data.customer_address.strip()
+            doc.customer_tax_id = doc_data.customer_tax_id.strip()
             doc.customer_phone = doc_data.customer_phone
             doc.customer_email = doc_data.customer_email
             
-            doc.total_amount_before_vat = doc_data.total_amount_before_vat
-            doc.vat_amount = doc_data.vat_amount
-            doc.total_amount_after_vat = doc_data.total_amount_after_vat
-            doc.total_amount_text = bahttext(doc_data.total_amount_after_vat)
+            doc.total_amount_before_vat = subtotal
+            doc.vat_amount = vat_amount
+            doc.total_amount_after_vat = total_after_vat
+            doc.total_amount_text = total_text
             
             doc.payment_method = doc_data.payment_method
             doc.cheque_bank = doc_data.cheque_bank if doc_data.payment_method == "CHEQUE" else None
@@ -879,7 +999,6 @@ def update_document(doc_id: int, doc_data: DocumentCreateSchema, db: Session = D
             
             doc.received_by = doc_data.received_by
             doc.received_date = doc_data.received_date
-            
             doc.shipping_name = doc_data.shipping_name
             doc.shipping_address = doc_data.shipping_address
             doc.payment_slip = doc_data.payment_slip
@@ -887,35 +1006,39 @@ def update_document(doc_id: int, doc_data: DocumentCreateSchema, db: Session = D
             # Restore stock from old items before deleting
             old_items = db.query(DocumentItem).filter(DocumentItem.document_id == doc.id).all()
             for old_item in old_items:
-                prod = db.query(Product).filter(Product.name == old_item.description).first()
-                if prod and not prod.is_service:
-                    prod.stock_quantity = prod.stock_quantity + int(old_item.quantity)
+                if old_item.description:
+                    prod = db.query(Product).filter(Product.name == old_item.description.strip()).first()
+                    if prod and not prod.is_service:
+                        prod.stock_quantity = (prod.stock_quantity or 0) + int(old_item.quantity)
             
             # Clear old items
             db.query(DocumentItem).filter(DocumentItem.document_id == doc.id).delete()
             
             # Add updated items
-            for idx, item in enumerate(doc_data.items, 1):
+            for v_item in validated_items:
                 new_item = DocumentItem(
                     document_id=doc.id,
-                    item_index=idx,
-                    description=item.description,
-                    quantity=item.quantity,
-                    unit_price=item.unit_price,
-                    amount=item.quantity * item.unit_price
+                    item_index=v_item["item_index"],
+                    description=v_item["description"],
+                    quantity=v_item["quantity"],
+                    unit_price=v_item["unit_price"],
+                    amount=v_item["amount"]
                 )
                 db.add(new_item)
                 
                 # Deduct stock for new items
-                prod = db.query(Product).filter(Product.name == item.description).first()
+                prod = db.query(Product).filter(Product.name == v_item["description"]).first()
                 if prod and not prod.is_service:
-                    prod.stock_quantity = max(0, prod.stock_quantity - int(item.quantity))
+                    prod.stock_quantity = max(0, (prod.stock_quantity or 0) - int(v_item["quantity"]))
                 
         db.commit()
         return {"success": True, "document_id": doc.id, "document_number": doc.document_number}
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการแก้ไขเอกสาร: {str(e)}")
+        print(f"Error updating document: {e}")
+        raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการแก้ไขเอกสาร กรุณาลองใหม่อีกครั้ง")
 
 @app.post("/api/documents/{doc_id}/duplicate")
 def duplicate_document(doc_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -923,7 +1046,6 @@ def duplicate_document(doc_id: int, db: Session = Depends(get_db), current_user:
     if not old_doc:
         raise HTTPException(status_code=404, detail="ไม่พบต้นฉบับเอกสาร")
         
-    # Prepare duplicate schema data
     items_list = []
     for item in old_doc.items:
         items_list.append(DocumentItemSchema(
@@ -963,8 +1085,23 @@ def delete_document(doc_id: int, db: Session = Depends(get_db), current_user: Us
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
-    db.delete(doc)
-    db.commit()
+    
+    try:
+        with db.begin_nested():
+            # Restore inventory stock for non-service items
+            for item in doc.items:
+                if item.description:
+                    prod = db.query(Product).filter(Product.name == item.description.strip()).first()
+                    if prod and not prod.is_service:
+                        prod.stock_quantity = (prod.stock_quantity or 0) + int(item.quantity)
+            
+            db.delete(doc)
+        db.commit()
+        return {"success": True, "message": "ลบเอกสารและคืนสต็อกสินค้าสำเร็จ"}
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting document: {e}")
+        raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการลบเอกสาร กรุณาลองใหม่อีกครั้ง")
     return {"success": True, "message": "ลบเอกสารสำเร็จ"}
 
 # ----------------- DASHBOARD API -----------------
@@ -1546,8 +1683,11 @@ def print_documents_summary_list(
     year: Optional[str] = None,
     month: Optional[str] = None,
     payment_method: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_from_cookie)
 ):
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     try:
         stmt = db.query(Document)
         
@@ -1631,7 +1771,7 @@ def print_documents_summary_list(
         )
     except Exception as e:
         print(f"Error rendering print_documents_list: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการโหลดรายงานเอกสาร")
 
 @app.get("/print/expenses/summary/list", response_class=HTMLResponse)
 def print_expenses_summary_list(
@@ -1639,8 +1779,11 @@ def print_expenses_summary_list(
     year: Optional[str] = None,
     month: Optional[str] = None,
     category: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_from_cookie)
 ):
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     try:
         from database import Expense
         stmt = db.query(Expense)
@@ -1738,7 +1881,7 @@ def print_expenses_summary_list(
         )
     except Exception as e:
         print(f"Error rendering print_expenses_list: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการโหลดรายงานรายจ่าย")
 
 @app.get("/print/monthly-account", response_class=HTMLResponse)
 @app.get("/api/reports/print-summary", response_class=HTMLResponse)
@@ -1746,8 +1889,11 @@ def print_monthly_account_summary(
     request: Request,
     year: Optional[str] = None,
     month: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_from_cookie)
 ):
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     try:
         now = datetime.date.today()
         target_year = year.strip() if (year and year.strip()) else str(now.year)
@@ -1833,11 +1979,12 @@ def print_monthly_account_summary(
         )
     except Exception as e:
         print(f"Error rendering print_summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการโหลดรายงานประจำปี")
 
 @app.get("/print/{doc_id}", response_class=HTMLResponse)
-def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
-    # Load document without strict user context for easy print popup
+def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_from_cookie)):
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="ไม่พบเอกสารที่ต้องการพิมพ์")
@@ -1845,7 +1992,7 @@ def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
     # Sort items
     items = sorted(doc.items, key=lambda x: x.item_index)
     
-    # Pad items to at least 5 rows for standard invoice look
+    # Pad items to at least 8 rows for standard invoice look
     display_items = []
     for item in items:
         display_items.append(item)
@@ -1865,7 +2012,9 @@ def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
     )
 
 @app.get("/print/shipping/{doc_id}", response_class=HTMLResponse)
-def print_shipping_label(doc_id: int, request: Request, db: Session = Depends(get_db)):
+def print_shipping_label(doc_id: int, request: Request, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_from_cookie)):
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
@@ -1878,7 +2027,9 @@ def print_shipping_label(doc_id: int, request: Request, db: Session = Depends(ge
     )
 
 @app.get("/print/expense/{exp_id}", response_class=HTMLResponse)
-def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(get_db)):
+def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_from_cookie)):
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     import json
     from database import Expense
     exp = db.query(Expense).filter(Expense.id == exp_id).first()

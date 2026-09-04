@@ -4,14 +4,21 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
+from sqlalchemy.pool import NullPool
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./guasa_house.db")
 
 # Convert postgres:// URI scheme to postgresql:// for SQLAlchemy compatibility
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("SERVERLESS"))
+
 if "sqlite" in DATABASE_URL:
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+elif is_serverless:
+    # Use NullPool on serverless to prevent connection exhaustion across ephemeral Lambdas
+    engine = create_engine(DATABASE_URL, poolclass=NullPool, pool_pre_ping=True)
 else:
     engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5, max_overflow=10)
 
@@ -56,7 +63,7 @@ class Document(Base):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True, index=True)
     document_number = Column(String, unique=True, index=True, nullable=False) # e.g. INV-2026-0001
-    date = Column(String, nullable=False) # YYYY-MM-DD
+    date = Column(String, index=True, nullable=False) # YYYY-MM-DD
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     customer_name = Column(String, nullable=False)
     customer_address = Column(String, nullable=False)
@@ -118,7 +125,7 @@ class Expense(Base):
     __tablename__ = "expenses"
     id = Column(Integer, primary_key=True, index=True)
     voucher_number = Column(String, nullable=True) # PV-2026-0001
-    date = Column(String, nullable=False) # YYYY-MM-DD
+    date = Column(String, index=True, nullable=False) # YYYY-MM-DD
     category = Column(String, nullable=False) # ค่าน้ำ-ค่าไฟ, ค่าเช่า, ค่าแรง, ซื้อสินค้าเข้าสต็อก, ฯลฯ
     pay_to = Column(String, nullable=True) # จ่ายให้แก่ใคร
     address = Column(String, nullable=True) # ที่อยู่ผู้รับเงิน

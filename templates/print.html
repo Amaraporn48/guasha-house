@@ -307,7 +307,11 @@
                 <p class="text-[10px] text-gray-500">เลขที่เอกสารอ้างอิง / Ref Document No: {{ doc.document_number }}</p>
             </div>
             <div class="flex items-center justify-center p-6 border border-dashed border-gray-300 rounded-2xl bg-gray-50">
+                {% if doc.payment_slip.startswith('data:') or doc.payment_slip.startswith('http://') or doc.payment_slip.startswith('https://') or doc.payment_slip.startswith('/static/') %}
+                <img src="{{ doc.payment_slip }}" class="max-h-[200mm] max-w-full object-contain rounded shadow">
+                {% else %}
                 <img src="/static/uploads/slips/{{ doc.payment_slip }}" class="max-h-[200mm] max-w-full object-contain rounded shadow">
+                {% endif %}
             </div>
         </div>
     </div>
