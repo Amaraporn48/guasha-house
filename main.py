@@ -1652,7 +1652,7 @@ def print_monthly_account_summary(
         ).all()
         
         months_th = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
-        monthly_stats = {m: {"sales": 0.0, "vat": 0.0, "count": 0} for m in range(1, 13)}
+        monthly_stats = {m: {"sales": 0.0, "vat": 0.0, "count": 0, "expense": 0.0} for m in range(1, 13)}
         
         total_docs_count = 0
         total_vat_sum = 0.0
@@ -1675,17 +1675,32 @@ def print_monthly_account_summary(
                 except Exception:
                     pass
 
+        # Query expenses per month
+        year_expenses = db.query(Expense.date, Expense.amount).filter(Expense.date.like(year_pattern)).all()
+        for exp_date, exp_amt in year_expenses:
+            if exp_date and len(exp_date) >= 7:
+                try:
+                    m = int(exp_date.split("-")[1])
+                    if 1 <= m <= 12:
+                        monthly_stats[m]["expense"] += float(exp_amt or 0.0)
+                except Exception:
+                    pass
+
         months_list = []
         for m in range(1, 13):
+            s_val = monthly_stats[m]["sales"]
+            e_val = monthly_stats[m]["expense"]
             months_list.append({
                 "month_num": m,
                 "month_name": months_th[m-1],
                 "count": monthly_stats[m]["count"],
                 "vat": monthly_stats[m]["vat"],
-                "sales": monthly_stats[m]["sales"]
+                "sales": s_val,
+                "expense": e_val,
+                "net": s_val - e_val
             })
             
-        # Expenses for target_year
+        # Total Expenses for target_year
         exp_sum = db.query(func.sum(Expense.amount)).filter(Expense.date.like(year_pattern)).scalar()
         total_expenses = float(exp_sum) if exp_sum else 0.0
         net_profit = total_sales_sum - total_expenses
