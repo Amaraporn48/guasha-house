@@ -1,19 +1,15 @@
-# Hostinger LiteSpeed / Apache Routing for Python WSGI / Static
+# Hostinger LiteSpeed / Apache Routing for FastAPI
 Options -Indexes
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
 
-    # Serve existing static files directly if they exist
+    # Serve existing static files directly
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Route all other requests to WSGI application if passenger is available
-    <IfModule mod_passenger.c>
-        PassengerAppRoot /home
-        PassengerAppType wsgi
-        PassengerStartupFile passenger_wsgi.py
-    </IfModule>
+    # Proxy all traffic to background FastAPI app on port 8000
+    RewriteRule ^(.*)$ http://127.0.0.1:8000/$1 [P,L]
 </IfModule>
