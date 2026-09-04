@@ -167,39 +167,39 @@
                 <div class="flex items-center gap-3.5">
                     <img src="/static/logo.png" alt="Logo" class="h-14 w-14 object-contain p-1 border border-[#c5a880]/50 rounded-xl bg-white shadow-sm">
                     <div>
-                        <h1 class="text-lg font-bold text-[#1a1a1a] tracking-wide">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
-                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none">GUASHA HOUSE CO., LTD.</p>
-                        <p class="text-[11px] text-gray-600 mt-1">199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพมหานคร 10240</p>
-                        <p class="text-[10.5px] text-gray-500 mt-0.5">โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษี 0105565028948</p>
+                        <h1 class="text-lg font-bold text-[#1a1a1a]">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
+                        <p class="text-xs font-bold text-gray-500 uppercase leading-none mt-0.5">GUASHA HOUSE CO., LTD.</p>
+                        <p class="text-xs text-gray-600 mt-1">199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพมหานคร 10240</p>
+                        <p class="text-xs text-gray-500 mt-0.5">โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษี 0105565028948</p>
                     </div>
                 </div>
                 <div class="text-right text-xs text-gray-600 space-y-1">
                     <div class="bg-[#f5f2eb] px-3.5 py-1.5 rounded-lg border border-[#e5e0d8] text-right inline-block">
-                        <span class="font-bold text-gray-500 text-[9.5px] uppercase block">ประจำปีงบประมาณ / FISCAL YEAR</span>
-                        <span class="font-bold text-[#1a1a1a] text-sm">{{ target_year_th }} ({{ target_year }})</span>
+                        <span class="font-bold text-gray-700 text-xs block mb-0.5">ประจำปีงบประมาณ / FISCAL YEAR</span>
+                        <span class="font-bold text-[#1a1a1a] text-sm font-mono block">{{ target_year_th }} ({{ target_year }})</span>
                     </div>
-                    <p class="text-[10.5px] text-gray-500 pt-0.5">วันที่พิมพ์: <strong class="text-gray-800">{{ print_date }}</strong></p>
+                    <p class="text-xs text-gray-500 pt-0.5">วันที่พิมพ์: <strong class="text-gray-800">{{ print_date }}</strong></p>
                 </div>
             </div>
 
             <!-- 2. Title Section (Centered) -->
             <div class="text-center my-4 space-y-0.5">
-                <h2 class="text-xl font-bold text-[#1a1a1a] tracking-wide">รายงานสรุปบัญชีรายเดือน</h2>
-                <p class="text-xs font-bold text-[#b39268] uppercase tracking-widest">MONTHLY ACCOUNT SUMMARY</p>
+                <h2 class="text-xl font-bold text-[#1a1a1a]">รายงานสรุปบัญชีรายเดือน</h2>
+                <p class="text-xs font-bold text-[#b39268] uppercase">MONTHLY ACCOUNT SUMMARY</p>
             </div>
 
             <!-- 3. Summary Cards (3 Horizontal Columns, 100% Width) -->
             <div class="w-full grid grid-cols-3 gap-3.5 mb-4">
                 <div class="bg-[#fcfbfa] border border-[#e5e0d8] rounded-xl p-3 text-center shadow-xs">
-                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">จำนวนใบแจ้งหนี้</span>
+                    <span class="text-xs font-bold text-gray-500 uppercase block">จำนวนใบแจ้งหนี้</span>
                     <span class="text-base font-bold text-[#1a1a1a] mt-0.5 block">{{ total_docs_count }} <span class="text-xs font-normal text-gray-500">ใบ</span></span>
                 </div>
                 <div class="bg-[#fcfbfa] border border-[#e5e0d8] rounded-xl p-3 text-center shadow-xs">
-                    <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">ยอดรวมรายรับ</span>
+                    <span class="text-xs font-bold text-amber-700 uppercase block">ยอดรวมรายรับ</span>
                     <span class="text-base font-bold text-amber-700 mt-0.5 block">฿{{ "{:,.2f}".format(total_sales_sum or 0) }}</span>
                 </div>
                 <div class="bg-[#fcfbfa] border border-[#e5e0d8] rounded-xl p-3 text-center shadow-xs">
-                    <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">ยอดรวมรายจ่าย</span>
+                    <span class="text-xs font-bold text-amber-700 uppercase block">ยอดรวมรายจ่าย</span>
                     <span class="text-base font-bold text-amber-700 mt-0.5 block">฿{{ "{:,.2f}".format(total_expenses or 0) }}</span>
                 </div>
             </div>
@@ -281,7 +281,7 @@
             }
             const element = document.getElementById('pdf-content');
             const opt = {
-                margin:       [5, 5, 5, 5],
+                margin:       0,
                 filename:     'Monthly_Account_Summary_{{ target_year }}.pdf',
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { 
@@ -292,9 +292,10 @@
                     onclone: (clonedDoc) => {
                         const pdfEl = clonedDoc.getElementById('pdf-content');
                         if (pdfEl) {
-                            pdfEl.style.height = 'auto';
-                            pdfEl.style.maxHeight = 'none';
+                            pdfEl.style.height = '297mm';
+                            pdfEl.style.maxHeight = '297mm';
                             pdfEl.style.boxShadow = 'none';
+                            pdfEl.style.fontFamily = "'Sarabun', 'TH Sarabun New', 'Leelawadee UI', 'Tahoma', sans-serif";
                         }
                     }
                 },
