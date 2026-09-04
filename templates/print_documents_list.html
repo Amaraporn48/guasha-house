@@ -272,32 +272,27 @@
                 }
                 const element = document.getElementById('pdf-content');
                 
-                // Use domtoimage to render SVG foreignObject using native browser rendering engine (100% perfect Thai text)
-                const scale = 2.5;
-                const options = {
-                    quality: 1,
-                    width: element.offsetWidth * scale,
-                    height: element.offsetHeight * scale,
+                // Capture exact element dimensions without transform clipping
+                const dataUrl = await domtoimage.toPng(element, {
+                    bgcolor: '#ffffff',
+                    width: element.offsetWidth,
+                    height: element.offsetHeight,
                     style: {
-                        transform: `scale(${scale})`,
-                        transformOrigin: 'top left',
-                        width: `${element.offsetWidth}px`,
-                        height: `${element.offsetHeight}px`,
+                        margin: '0',
                         boxShadow: 'none',
-                        margin: '0 auto'
+                        border: 'none',
+                        borderRadius: '0'
                     }
-                };
+                });
 
-                const dataUrl = await domtoimage.toPng(element, options);
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF({
                     orientation: 'portrait',
                     unit: 'mm',
-                    format: 'a4',
-                    compress: true
+                    format: 'a4'
                 });
 
-                pdf.addImage(dataUrl, 'PNG', 0, 0, 210, 297, '', 'FAST');
+                pdf.addImage(dataUrl, 'PNG', 0, 0, 210, 297);
                 pdf.save('Documents_Summary_Report.pdf');
             } catch (error) {
                 console.error('PDF export failed:', error);
