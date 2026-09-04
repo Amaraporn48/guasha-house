@@ -65,9 +65,9 @@ python3 -c "from database import init_db; init_db()"
 pkill -f "uvicorn main:app" 2>/dev/null || true
 sleep 1
 
-# 7. Start Uvicorn background server
+# 7. Start Uvicorn background server with auto-reload on file changes
 echo "🚀 Starting Guasha House server on Hostinger..."
-nohup python3 -m uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips "*" > uvicorn.log 2>&1 &
+nohup python3 -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload --proxy-headers --forwarded-allow-ips "*" > uvicorn.log 2>&1 &
 
 sleep 3
 
