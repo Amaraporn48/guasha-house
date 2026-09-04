@@ -1539,92 +1539,6 @@ def share_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
     )
 
 # ----------------- PRINT ROUTE -----------------
-@app.get("/print/{doc_id}", response_class=HTMLResponse)
-def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
-    # Load document without strict user context for easy print popup
-    doc = db.query(Document).filter(Document.id == doc_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="ไม่พบเอกสารที่ต้องการพิมพ์")
-    
-    # Sort items
-    items = sorted(doc.items, key=lambda x: x.item_index)
-    
-    # Pad items to at least 5 rows for standard invoice look
-    display_items = []
-    for item in items:
-        display_items.append(item)
-        
-    # Calculate padding rows
-    padding_count = max(0, 8 - len(display_items))
-    padding_rows = range(padding_count)
-    
-    return templates.TemplateResponse(
-        request=request,
-        name="print.html",
-        context={
-            "doc": doc,
-            "items": display_items,
-            "padding_rows": padding_rows
-        }
-    )
-
-@app.get("/print/shipping/{doc_id}", response_class=HTMLResponse)
-def print_shipping_label(doc_id: int, request: Request, db: Session = Depends(get_db)):
-    doc = db.query(Document).filter(Document.id == doc_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
-    return templates.TemplateResponse(
-        request=request,
-        name="shipping_label.html",
-        context={
-            "doc": doc
-        }
-    )
-
-@app.get("/print/expense/{exp_id}", response_class=HTMLResponse)
-def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(get_db)):
-    import json
-    from database import Expense
-    exp = db.query(Expense).filter(Expense.id == exp_id).first()
-    if not exp:
-        raise HTTPException(status_code=404, detail="ไม่พบใบสำคัญจ่ายที่ระบุ")
-        
-    items = []
-    if exp.items_json:
-        try:
-            items = json.loads(exp.items_json)
-        except Exception:
-            items = []
-            
-    months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
-    formatted_date = str(exp.date)
-    if exp.date:
-        try:
-            parts = str(exp.date).split('T')[0].split('-')
-            if len(parts) == 3:
-                y = int(parts[0]) + 543
-                m = int(parts[1])
-                d = int(parts[2])
-                if 1 <= m <= 12:
-                    formatted_date = f"{d} {months_th[m-1]} {y}"
-        except Exception:
-            pass
-
-    setattr(exp, "formatted_date", formatted_date)
-    
-    padding_count = max(0, 8 - (len(items) if items else 1))
-    padding_rows = range(padding_count)
-
-    return templates.TemplateResponse(
-        request=request,
-        name="print_voucher.html",
-        context={
-            "exp": exp,
-            "items": items,
-            "padding_rows": padding_rows
-        }
-    )
-
 @app.get("/print/summary/list", response_class=HTMLResponse)
 def print_documents_summary_list(
     request: Request,
@@ -1798,6 +1712,92 @@ def print_monthly_account_summary(
     except Exception as e:
         print(f"Error rendering print_summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/print/{doc_id}", response_class=HTMLResponse)
+def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
+    # Load document without strict user context for easy print popup
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="ไม่พบเอกสารที่ต้องการพิมพ์")
+    
+    # Sort items
+    items = sorted(doc.items, key=lambda x: x.item_index)
+    
+    # Pad items to at least 5 rows for standard invoice look
+    display_items = []
+    for item in items:
+        display_items.append(item)
+        
+    # Calculate padding rows
+    padding_count = max(0, 8 - len(display_items))
+    padding_rows = range(padding_count)
+    
+    return templates.TemplateResponse(
+        request=request,
+        name="print.html",
+        context={
+            "doc": doc,
+            "items": display_items,
+            "padding_rows": padding_rows
+        }
+    )
+
+@app.get("/print/shipping/{doc_id}", response_class=HTMLResponse)
+def print_shipping_label(doc_id: int, request: Request, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
+    return templates.TemplateResponse(
+        request=request,
+        name="shipping_label.html",
+        context={
+            "doc": doc
+        }
+    )
+
+@app.get("/print/expense/{exp_id}", response_class=HTMLResponse)
+def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(get_db)):
+    import json
+    from database import Expense
+    exp = db.query(Expense).filter(Expense.id == exp_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="ไม่พบใบสำคัญจ่ายที่ระบุ")
+        
+    items = []
+    if exp.items_json:
+        try:
+            items = json.loads(exp.items_json)
+        except Exception:
+            items = []
+            
+    months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+    formatted_date = str(exp.date)
+    if exp.date:
+        try:
+            parts = str(exp.date).split('T')[0].split('-')
+            if len(parts) == 3:
+                y = int(parts[0]) + 543
+                m = int(parts[1])
+                d = int(parts[2])
+                if 1 <= m <= 12:
+                    formatted_date = f"{d} {months_th[m-1]} {y}"
+        except Exception:
+            pass
+
+    setattr(exp, "formatted_date", formatted_date)
+    
+    padding_count = max(0, 8 - (len(items) if items else 1))
+    padding_rows = range(padding_count)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="print_voucher.html",
+        context={
+            "exp": exp,
+            "items": items,
+            "padding_rows": padding_rows
+        }
+    )
 
 # ----------------- VIDEO COURSES API -----------------
 class VideoCourseSchema(BaseModel):
