@@ -157,35 +157,39 @@ class VideoCourse(Base):
 def init_db():
     try:
         Base.metadata.create_all(bind=engine)
-        # Seed default users if table is empty
         db = SessionLocal()
         try:
-            if db.query(User).count() == 0:
-                import bcrypt
-                def hash_pw(pw_str: str) -> str:
-                    return bcrypt.hashpw(pw_str.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                
-                admin_user = User(
+            import bcrypt
+            def hash_pw(pw_str: str) -> str:
+                return bcrypt.hashpw(pw_str.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
+            # Ensure guasha user exists with requested credentials
+            guasha_user = db.query(User).filter(User.username == "guasha").first()
+            if not guasha_user:
+                guasha_user = User(
                     username="guasha",
                     fullname="Guasha Administrator",
                     role="admin",
-                    hashed_password=hash_pw("123456")
+                    hashed_password=hash_pw("199/4")
                 )
+                db.add(guasha_user)
+            else:
+                guasha_user.hashed_password = hash_pw("199/4")
+                guasha_user.role = "admin"
+                
+            # Seed user1 if not present
+            user1 = db.query(User).filter(User.username == "user1").first()
+            if not user1:
                 user1 = User(
                     username="user1",
                     fullname="Account 1",
                     role="admin",
                     hashed_password=hash_pw("123456")
                 )
-                user2 = User(
-                    username="user2",
-                    fullname="Account 2",
-                    role="staff",
-                    hashed_password=hash_pw("123456")
-                )
-                db.add_all([admin_user, user1, user2])
-                db.commit()
-                print("✅ Initial admin users (guasha, user1, user2) seeded successfully.")
+                db.add(user1)
+                
+            db.commit()
+            print("✅ User 'guasha' configured with admin access.")
         finally:
             db.close()
     except Exception as e:
