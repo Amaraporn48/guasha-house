@@ -13,7 +13,7 @@
 
         @page {
             size: A4 portrait;
-            margin: 12mm 15mm 12mm 15mm;
+            margin: 0;
         }
 
         * {
@@ -21,7 +21,7 @@
         }
 
         body {
-            font-family: 'Sarabun', sans-serif;
+            font-family: 'Sarabun', 'TH Sarabun New', 'Angsana New', sans-serif;
             color: #1a1a1a;
             margin: 0;
             padding: 0;
@@ -43,10 +43,11 @@
             }
             .summary-page {
                 width: 210mm;
-                min-height: 297mm;
-                padding: 15mm 18mm;
+                height: 297mm;
+                padding: 12mm 15mm;
                 box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
                 border-radius: 4px;
+                overflow: hidden;
             }
         }
 
@@ -55,17 +56,21 @@
                 background-color: #ffffff !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
+                width: 210mm !important;
+                height: 297mm !important;
                 overflow: hidden !important;
             }
             .summary-page {
                 box-shadow: none !important;
                 border: none !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                padding: 0 !important;
-                margin: 0 auto !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                max-height: 297mm !important;
+                padding: 12mm 15mm !important;
+                margin: 0 !important;
+                overflow: hidden !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
             }
             .no-print {
                 display: none !important;
@@ -271,15 +276,7 @@
 
     <script>
         function downloadPDF() {
-            const element = document.getElementById('pdf-content');
-            const opt = {
-                margin:       0,
-                filename:     'Monthly_Account_Summary_{{ target_year }}.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            html2pdf().set(opt).from(element).save();
+            window.print();
         }
     </script>
 </body>
