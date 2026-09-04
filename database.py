@@ -31,7 +31,8 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     fullname = Column(String, nullable=False)
-    role = Column(String, default="staff") # admin / staff
+    role = Column(String, default="staff") # admin / developer / staff
+    token_version = Column(Integer, default=1, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Customer(Base):
@@ -154,42 +155,50 @@ class VideoCourse(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow, index=True, nullable=False)
+    user_id = Column(Integer, nullable=True, index=True)
+    username = Column(String, nullable=True, index=True)
+    role = Column(String, nullable=True) # admin / developer / staff / anonymous
+    action = Column(String, nullable=False, index=True) # LOGIN, LOGOUT, LOGIN_FAILED, CHANGE_PASSWORD, etc.
+    target_type = Column(String, nullable=True) # auth, user, document, expense, customer, product, system
+    target_id = Column(String, nullable=True) # document_number, user_id, etc.
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    result = Column(String, default="success") # success / failed
+    details = Column(Text, nullable=True) # Sanitized audit summary (STRICTLY NO PASSWORDS OR TOKENS)
+
 def init_db():
     try:
         Base.metadata.create_all(bind=engine)
+        
+        # Safely migrate token_version column if missing
+        with engine.begin() as conn:
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1;"))
+            except Exception:
+                pass # Column already exists
+                
+        # Seed default admin user only if users table is empty
         db = SessionLocal()
         try:
-            import bcrypt
-            def hash_pw(pw_str: str) -> str:
-                return bcrypt.hashpw(pw_str.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-            
-            # Ensure guasha user exists with requested credentials
-            guasha_user = db.query(User).filter(User.username == "guasha").first()
-            if not guasha_user:
-                guasha_user = User(
+            if db.query(User).count() == 0:
+                import bcrypt
+                def hash_pw(pw_str: str) -> str:
+                    return bcrypt.hashpw(pw_str.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                
+                admin_user = User(
                     username="guasha",
                     fullname="Guasha Administrator",
                     role="admin",
+                    token_version=1,
                     hashed_password=hash_pw("199/4")
                 )
-                db.add(guasha_user)
-            else:
-                guasha_user.hashed_password = hash_pw("199/4")
-                guasha_user.role = "admin"
-                
-            # Seed user1 if not present
-            user1 = db.query(User).filter(User.username == "user1").first()
-            if not user1:
-                user1 = User(
-                    username="user1",
-                    fullname="Account 1",
-                    role="admin",
-                    hashed_password=hash_pw("123456")
-                )
-                db.add(user1)
-                
-            db.commit()
-            print("✅ User 'guasha' configured with admin access.")
+                db.add(admin_user)
+                db.commit()
+                print("✅ Initial admin user 'guasha' seeded successfully.")
         finally:
             db.close()
     except Exception as e:

@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 *.db
+*.zip
 .env
 .DS_Store
 static/uploads/*

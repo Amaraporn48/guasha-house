@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text, and_, or_, func
 from sqlalchemy.exc import IntegrityError
 
-from database import engine, SessionLocal, init_db, User, Customer, Product, Document, DocumentItem, Expense, Branch, VideoCourse
+import json
+from database import engine, SessionLocal, init_db, User, Customer, Product, Document, DocumentItem, Expense, Branch, VideoCourse, AuditLog
 
 # Initialize database safely
 try:
@@ -72,7 +73,101 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+# Security Audit Logging System
+def create_audit_log(
+    db: Session,
+    action: str,
+    target_type: Optional[str] = None,
+    target_id: Optional[str] = None,
+    result: str = "success",
+    details: Optional[str] = None,
+    user: Optional[User] = None,
+    user_id: Optional[int] = None,
+    username: Optional[str] = None,
+    role: Optional[str] = None,
+    request: Optional[Request] = None
+):
+    """
+    Safely creates an immutable audit trail entry for important system operations.
+    Strictly sanitizes details to NEVER record passwords, tokens, or secret keys.
+    """
+    try:
+        ip_addr = None
+        user_agent_str = None
+        if request:
+            forwarded = request.headers.get("X-Forwarded-For")
+            if forwarded:
+                ip_addr = forwarded.split(",")[0].strip()
+            elif request.headers.get("X-Real-IP"):
+                ip_addr = request.headers.get("X-Real-IP").strip()
+            elif request.client:
+                ip_addr = request.client.host
+            user_agent_str = request.headers.get("User-Agent", "")[:255]
+
+        uid = user.id if user else user_id
+        uname = user.username if user else username
+        urole = user.role if user else role
+
+        clean_details = str(details) if details else None
+        if clean_details:
+            import re
+            # Redact passwords, tokens, secrets from audit details
+            for sensitive in ["password", "token", "secret", "hashed_password", "access_token", "cookie"]:
+                clean_details = re.sub(rf'(?i)("{sensitive}"\s*:\s*")[^"]*(")', r'\1[REDACTED]\2', clean_details)
+
+        log_entry = AuditLog(
+            timestamp=datetime.datetime.utcnow(),
+            user_id=uid,
+            username=uname,
+            role=urole or "anonymous",
+            action=action.upper(),
+            target_type=target_type,
+            target_id=str(target_id) if target_id is not None else None,
+            ip_address=ip_addr,
+            user_agent=user_agent_str,
+            result=result,
+            details=clean_details
+        )
+        db.add(log_entry)
+        db.commit()
+    except Exception as e:
+        print(f"Audit log exception: {e}")
+
+# In-memory Login Rate Limiter / Brute-force Protection
+FAILED_LOGIN_ATTEMPTS = {}
+LOCKOUT_DURATION_SECONDS = 300 # 5 minutes
+MAX_FAILED_LOGIN_ATTEMPTS = 5
+
+def check_login_rate_limit(client_ip: str, username: str) -> None:
+    now = datetime.datetime.utcnow()
+    keys = [f"ip:{client_ip}", f"user:{username.strip().lower()}"]
+    for k in keys:
+        attempts = FAILED_LOGIN_ATTEMPTS.get(k, [])
+        valid_attempts = [t for t in attempts if (now - t).total_seconds() < LOCKOUT_DURATION_SECONDS]
+        FAILED_LOGIN_ATTEMPTS[k] = valid_attempts
+        if len(valid_attempts) >= MAX_FAILED_LOGIN_ATTEMPTS:
+            oldest = valid_attempts[0]
+            remaining = int(LOCKOUT_DURATION_SECONDS - (now - oldest).total_seconds())
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"คุณป้อนรหัสผ่านผิดเกินกำหนด ({MAX_FAILED_LOGIN_ATTEMPTS} ครั้ง) กรุณารอ {max(remaining, 1)} วินาทีก่อนลองใหม่"
+            )
+
+def record_failed_login(client_ip: str, username: str) -> None:
+    now = datetime.datetime.utcnow()
+    for k in [f"ip:{client_ip}", f"user:{username.strip().lower()}"]:
+        if k not in FAILED_LOGIN_ATTEMPTS:
+            FAILED_LOGIN_ATTEMPTS[k] = []
+        FAILED_LOGIN_ATTEMPTS[k].append(now)
+
+def reset_failed_login(client_ip: str, username: str) -> None:
+    for k in [f"ip:{client_ip}", f"user:{username.strip().lower()}"]:
+        FAILED_LOGIN_ATTEMPTS.pop(k, None)
 
 # Thai Baht wording converter
 def bahttext(number: float) -> str:
@@ -356,6 +451,7 @@ def get_current_user(access_token: Optional[str] = Cookie(None), db: Session = D
     try:
         payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        token_version: int = payload.get("token_version", 1)
         if username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ข้อมูลสิทธิ์การเข้าใช้งานไม่ถูกต้อง")
     except jwt.PyJWTError:
@@ -364,13 +460,22 @@ def get_current_user(access_token: Optional[str] = Cookie(None), db: Session = D
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ไม่พบบัญชีผู้ใช้งานในระบบ")
+        
+    # Session Invalidation Check: Validate token version against DB
+    user_token_ver = getattr(user, "token_version", 1)
+    if user_token_ver != token_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session ถูกยกเลิกเนื่องจากมีการเปลี่ยนรหัสผ่านหรือออกจากระบบ กรุณาเข้าสู่ระบบใหม่"
+        )
+        
     return user
 
 def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "admin":
+    if current_user.role not in ["admin", "developer"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่มีสิทธิ์ดำเนินการในส่วนนี้"
+            detail="เฉพาะผู้ดูแลระบบ (Admin) หรือ Developer เท่านั้นที่มีสิทธิ์ดำเนินการในส่วนนี้"
         )
     return current_user
 
@@ -380,9 +485,13 @@ def get_current_user_from_cookie(access_token: Optional[str] = Cookie(None), db:
     try:
         payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        token_version: int = payload.get("token_version", 1)
         if not username:
             return None
-        return db.query(User).filter(User.username == username).first()
+        user = db.query(User).filter(User.username == username).first()
+        if user and getattr(user, "token_version", 1) == token_version:
+            return user
+        return None
     except jwt.PyJWTError:
         return None
 
@@ -393,51 +502,74 @@ def get_home_page(request: Request):
 
 @app.get("/admin", response_class=HTMLResponse)
 def get_admin_page(request: Request, access_token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
-    if not access_token:
+    user = get_current_user_from_cookie(access_token, db)
+    if not user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-    try:
-        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        user = db.query(User).filter(User.username == username).first()
-        if not user:
-            return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-        return templates.TemplateResponse(request=request, name="index.html", context={"user": user})
-    except jwt.PyJWTError:
-        response = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-        response.delete_cookie(key="access_token")
-        return response
+    return templates.TemplateResponse(request=request, name="index.html", context={"user": user})
 
 @app.get("/login", response_class=HTMLResponse)
 def get_login_page(request: Request, access_token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
-    if access_token:
-        try:
-            payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
-            username = payload.get("sub")
-            user = db.query(User).filter(User.username == username).first()
-            if user:
-                return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
-        except jwt.PyJWTError:
-            pass
+    user = get_current_user_from_cookie(access_token, db)
+    if user:
+        return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse(request=request, name="login.html")
 
 @app.post("/api/auth/login")
-def login_api(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
+def login_api(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    client_ip = "127.0.0.1"
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    elif request.headers.get("X-Real-IP"):
+        client_ip = request.headers.get("X-Real-IP").strip()
+    elif request.client:
+        client_ip = request.client.host
+        
+    # 1. Check Rate Limit / Brute Force
+    check_login_rate_limit(client_ip, username)
+    
+    # 2. Verify User and Password Hash (bcrypt)
+    user = db.query(User).filter(User.username == username.strip()).first()
     if not user or not verify_password(password, user.hashed_password):
+        record_failed_login(client_ip, username)
+        create_audit_log(
+            db=db,
+            action="LOGIN_FAILED",
+            target_type="auth",
+            target_id=username.strip(),
+            result="failed",
+            details=json.dumps({"reason": "Invalid credentials", "attempted_username": username.strip()}),
+            username=username.strip(),
+            request=request
+        )
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "message": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"}
         )
     
-    # Generate JWT
+    # 3. Successful Login
+    reset_failed_login(client_ip, username)
+    user_token_ver = getattr(user, "token_version", 1)
     token_data = {
         "sub": user.username,
+        "token_version": user_token_ver,
+        "role": user.role,
         "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7)
     }
     token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
     
+    create_audit_log(
+        db=db,
+        action="LOGIN",
+        target_type="auth",
+        target_id=str(user.id),
+        result="success",
+        details=json.dumps({"role": user.role, "fullname": user.fullname}),
+        user=user,
+        request=request
+    )
+    
     response = JSONResponse(content={"success": True, "message": "เข้าสู่ระบบสำเร็จ"})
-    # Secure HTTPOnly Cookie valid for 7 days
     response.set_cookie(
         key="access_token", 
         value=token, 
@@ -449,8 +581,19 @@ def login_api(username: str = Form(...), password: str = Form(...), db: Session 
     return response
 
 @app.get("/api/auth/logout")
-def logout_api():
-    response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+def logout_api(request: Request, access_token: Optional[str] = Cookie(None), db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(access_token, db)
+    if user:
+        create_audit_log(
+            db=db,
+            action="LOGOUT",
+            target_type="auth",
+            target_id=str(user.id),
+            result="success",
+            user=user,
+            request=request
+        )
+    response = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie(key="access_token")
     return response
 
@@ -461,6 +604,168 @@ def get_me(current_user: User = Depends(get_current_user)):
         "username": current_user.username,
         "fullname": current_user.fullname,
         "role": current_user.role
+    }
+
+class ChangePasswordSchema(BaseModel):
+    old_password: str
+    new_password: str
+
+@app.post("/api/auth/change-password")
+def change_password_api(
+    data: ChangePasswordSchema,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not verify_password(data.old_password, current_user.hashed_password):
+        create_audit_log(
+            db=db,
+            action="CHANGE_PASSWORD",
+            target_type="user",
+            target_id=str(current_user.id),
+            result="failed",
+            details=json.dumps({"reason": "Incorrect old password"}),
+            user=current_user,
+            request=request
+        )
+        raise HTTPException(status_code=400, detail="รหัสผ่านเดิมไม่ถูกต้อง")
+        
+    if len(data.new_password.strip()) < 4:
+        raise HTTPException(status_code=400, detail="รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร")
+        
+    # Securely hash new password with bcrypt
+    current_user.hashed_password = hash_password(data.new_password.strip())
+    # Session Invalidation: increment token version to invalidate all other active tokens
+    current_user.token_version = getattr(current_user, "token_version", 1) + 1
+    db.commit()
+    
+    create_audit_log(
+        db=db,
+        action="CHANGE_PASSWORD",
+        target_type="user",
+        target_id=str(current_user.id),
+        result="success",
+        details=json.dumps({"info": "Password changed successfully; other sessions invalidated"}),
+        user=current_user,
+        request=request
+    )
+    
+    # Issue fresh token for current user
+    token_data = {
+        "sub": current_user.username,
+        "token_version": current_user.token_version,
+        "role": current_user.role,
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7)
+    }
+    new_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+    
+    response = JSONResponse(content={"success": True, "message": "เปลี่ยนรหัสผ่านสำเร็จ และยกเลิก Session เก่าทั้งหมดแล้ว"})
+    response.set_cookie(
+        key="access_token",
+        value=new_token,
+        httponly=True,
+        max_age=7 * 24 * 3600,
+        samesite="lax",
+        secure=False
+    )
+    return response
+
+class ChangeUsernameSchema(BaseModel):
+    new_username: str
+
+@app.post("/api/auth/change-username")
+def change_username_api(
+    data: ChangeUsernameSchema,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    clean_username = data.new_username.strip()
+    if not clean_username or len(clean_username) < 3:
+        raise HTTPException(status_code=400, detail="ชื่อผู้ใช้งานต้องมีความยาวอย่างน้อย 3 ตัวอักษร")
+        
+    if clean_username != current_user.username:
+        existing = db.query(User).filter(User.username == clean_username).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="ชื่อผู้ใช้งาน (Username) นี้ถูกใช้งานแล้ว")
+            
+        old_username = current_user.username
+        current_user.username = clean_username
+        current_user.token_version = getattr(current_user, "token_version", 1) + 1
+        db.commit()
+        
+        create_audit_log(
+            db=db,
+            action="CHANGE_USERNAME",
+            target_type="user",
+            target_id=str(current_user.id),
+            result="success",
+            details=json.dumps({"old_username": old_username, "new_username": clean_username}),
+            user=current_user,
+            request=request
+        )
+        
+        token_data = {
+            "sub": current_user.username,
+            "token_version": current_user.token_version,
+            "role": current_user.role,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7)
+        }
+        new_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+        
+        response = JSONResponse(content={"success": True, "message": "เปลี่ยนชื่อผู้ใช้งานสำเร็จ"})
+        response.set_cookie(
+            key="access_token",
+            value=new_token,
+            httponly=True,
+            max_age=7 * 24 * 3600,
+            samesite="lax",
+            secure=False
+        )
+        return response
+        
+    return {"success": True, "message": "ชื่อผู้ใช้งานตรงกับปัจจุบัน"}
+
+@app.get("/api/audit-logs")
+def get_audit_logs(
+    limit: int = 100,
+    offset: int = 0,
+    action: Optional[str] = None,
+    username: Optional[str] = None,
+    target_type: Optional[str] = None,
+    current_user: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    query = db.query(AuditLog)
+    if action and action.strip():
+        query = query.filter(AuditLog.action == action.strip().upper())
+    if username and username.strip():
+        query = query.filter(AuditLog.username.ilike(f"%{username.strip()}%"))
+    if target_type and target_type.strip():
+        query = query.filter(AuditLog.target_type == target_type.strip().lower())
+        
+    total = query.count()
+    logs = query.order_by(AuditLog.id.desc()).offset(offset).limit(min(limit, 500)).all()
+    
+    return {
+        "total": total,
+        "items": [
+            {
+                "id": l.id,
+                "timestamp": l.timestamp.strftime("%Y-%m-%d %H:%M:%S") if l.timestamp else "",
+                "user_id": l.user_id,
+                "username": l.username,
+                "role": l.role,
+                "action": l.action,
+                "target_type": l.target_type,
+                "target_id": l.target_id,
+                "ip_address": l.ip_address,
+                "user_agent": l.user_agent,
+                "result": l.result,
+                "details": l.details
+            }
+            for l in logs
+        ]
     }
 
 # ----------------- USER MANAGEMENT API (Admin Only) -----------------
@@ -491,7 +796,7 @@ def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_c
     ]
 
 @app.post("/api/users")
-def create_user(user: UserCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
+def create_user(user: UserCreateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     if not user.username or not user.password or not user.fullname:
         raise HTTPException(status_code=400, detail="กรุณากรอกข้อมูลให้ครบถ้วน")
         
@@ -499,20 +804,33 @@ def create_user(user: UserCreateSchema, db: Session = Depends(get_db), current_u
     if existing:
         raise HTTPException(status_code=400, detail="ชื่อผู้ใช้งาน (Username) นี้ถูกใช้งานแล้ว")
         
-    role_val = user.role if user.role in ["admin", "staff"] else "staff"
+    role_val = user.role if user.role in ["admin", "developer", "staff"] else "staff"
     new_user = User(
         username=user.username.strip(),
         fullname=user.fullname.strip(),
         hashed_password=hash_password(user.password),
-        role=role_val
+        role=role_val,
+        token_version=1
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    create_audit_log(
+        db=db,
+        action="CREATE_USER",
+        target_type="user",
+        target_id=str(new_user.id),
+        result="success",
+        details=json.dumps({"username": new_user.username, "fullname": new_user.fullname, "role": new_user.role}),
+        user=current_user,
+        request=request
+    )
+    
     return {"success": True, "message": "เพิ่มผู้ใช้งานสำเร็จ", "id": new_user.id}
 
 @app.put("/api/users/{user_id}")
-def update_user(user_id: int, user: UserUpdateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
+def update_user(user_id: int, user: UserUpdateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     u = db.query(User).filter(User.id == user_id).first()
     if not u:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลผู้ใช้งาน")
@@ -522,19 +840,48 @@ def update_user(user_id: int, user: UserUpdateSchema, db: Session = Depends(get_
         if existing:
             raise HTTPException(status_code=400, detail="ชื่อผู้ใช้งาน (Username) นี้ถูกใช้งานแล้ว")
             
+    old_role = u.role
+    old_username = u.username
     u.username = user.username.strip()
     u.fullname = user.fullname.strip()
-    if user.role in ["admin", "staff"]:
+    if user.role in ["admin", "developer", "staff"]:
         u.role = user.role
     
+    password_changed = False
     if user.password and user.password.strip():
+        if len(user.password.strip()) < 4:
+            raise HTTPException(status_code=400, detail="รหัสผ่านต้องมีความยาวอย่างน้อย 4 ตัวอักษร")
         u.hashed_password = hash_password(user.password.strip())
+        u.token_version = getattr(u, "token_version", 1) + 1
+        password_changed = True
         
     db.commit()
+    
+    audit_action = "UPDATE_USER"
+    if old_role != u.role:
+        audit_action = "ROLE_CHANGE"
+        
+    create_audit_log(
+        db=db,
+        action=audit_action,
+        target_type="user",
+        target_id=str(u.id),
+        result="success",
+        details=json.dumps({
+            "old_username": old_username,
+            "new_username": u.username,
+            "old_role": old_role,
+            "new_role": u.role,
+            "password_changed": password_changed
+        }),
+        user=current_user,
+        request=request
+    )
+    
     return {"success": True, "message": "แก้ไขข้อมูลผู้ใช้งานสำเร็จ"}
 
 @app.delete("/api/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
+def delete_user(user_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="ไม่สามารถลบบัญชีผู้ใช้ที่กำลังเข้าสู่ระบบอยู่ได้")
         
@@ -550,9 +897,23 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User 
             detail="ไม่สามารถลบผู้ใช้งานนี้ได้ เนื่องจากมีประวัติการสร้างเอกสารในระบบ"
         )
         
+    deleted_username = u.username
+    deleted_role = u.role
     try:
         db.delete(u)
         db.commit()
+        
+        create_audit_log(
+            db=db,
+            action="DELETE_USER",
+            target_type="user",
+            target_id=str(user_id),
+            result="success",
+            details=json.dumps({"deleted_username": deleted_username, "deleted_role": deleted_role}),
+            user=current_user,
+            request=request
+        )
+        
         return {"success": True, "message": "ลบผู้ใช้งานสำเร็จ"}
     except Exception as e:
         db.rollback()
@@ -573,7 +934,7 @@ def list_customers(db: Session = Depends(get_db), current_user: User = Depends(g
     return db.query(Customer).order_by(Customer.name.asc()).all()
 
 @app.post("/api/customers")
-def create_customer(customer: CustomerSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_customer(customer: CustomerSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Check if duplicate name
     existing = db.query(Customer).filter(Customer.name == customer.name.strip()).first()
     if existing:
@@ -590,10 +951,22 @@ def create_customer(customer: CustomerSchema, db: Session = Depends(get_db), cur
     db.add(new_cust)
     db.commit()
     db.refresh(new_cust)
+    
+    create_audit_log(
+        db=db,
+        action="CREATE_CUSTOMER",
+        target_type="customer",
+        target_id=str(new_cust.id),
+        result="success",
+        details=json.dumps({"name": new_cust.name, "tax_id": new_cust.tax_id}),
+        user=current_user,
+        request=request
+    )
+    
     return new_cust
 
 @app.put("/api/customers/{customer_id}")
-def update_customer(customer_id: int, customer: CustomerSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_customer(customer_id: int, customer: CustomerSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     cust = db.query(Customer).filter(Customer.id == customer_id).first()
     if not cust:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลลูกค้า")
@@ -606,10 +979,22 @@ def update_customer(customer_id: int, customer: CustomerSchema, db: Session = De
     cust.notes = customer.notes
     db.commit()
     db.refresh(cust)
+    
+    create_audit_log(
+        db=db,
+        action="UPDATE_CUSTOMER",
+        target_type="customer",
+        target_id=str(cust.id),
+        result="success",
+        details=json.dumps({"name": cust.name, "tax_id": cust.tax_id}),
+        user=current_user,
+        request=request
+    )
+    
     return cust
 
 @app.delete("/api/customers/{customer_id}")
-def delete_customer(customer_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_customer(customer_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     cust = db.query(Customer).filter(Customer.id == customer_id).first()
     if not cust:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลลูกค้า")
@@ -622,15 +1007,27 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db), current_use
             detail="ไม่สามารถลบลูกค้ารายนี้ได้ เนื่องจากมีประวัติเอกสารใบกำกับภาษีในระบบ"
         )
         
+    deleted_name = cust.name
     try:
         db.delete(cust)
         db.commit()
+        
+        create_audit_log(
+            db=db,
+            action="DELETE_CUSTOMER",
+            target_type="customer",
+            target_id=str(customer_id),
+            result="success",
+            details=json.dumps({"deleted_name": deleted_name}),
+            user=current_user,
+            request=request
+        )
+        
         return {"success": True, "message": "ลบข้อมูลลูกค้าสำเร็จ"}
     except Exception as e:
         db.rollback()
         print(f"Error deleting customer: {e}")
         raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการลบข้อมูลลูกค้า")
-    return {"success": True, "message": "ลบข้อมูลลูกค้าสำเร็จ"}
 
 # ----------------- PRODUCT API -----------------
 class ProductSchema(BaseModel):
@@ -647,7 +1044,7 @@ def list_products(db: Session = Depends(get_db)):
     return db.query(Product).order_by(Product.code.asc()).all()
 
 @app.post("/api/products")
-def create_product(product: ProductSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_product(product: ProductSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if product.code:
         existing = db.query(Product).filter(Product.code == product.code).first()
         if existing:
@@ -665,10 +1062,22 @@ def create_product(product: ProductSchema, db: Session = Depends(get_db), curren
     db.add(new_prod)
     db.commit()
     db.refresh(new_prod)
+    
+    create_audit_log(
+        db=db,
+        action="CREATE_PRODUCT",
+        target_type="product",
+        target_id=str(new_prod.id),
+        result="success",
+        details=json.dumps({"name": new_prod.name, "code": new_prod.code, "unit_price": new_prod.unit_price}),
+        user=current_user,
+        request=request
+    )
+    
     return new_prod
 
 @app.put("/api/products/{product_id}")
-def update_product(product_id: int, product: ProductSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_product(product_id: int, product: ProductSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     prod = db.query(Product).filter(Product.id == product_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลสินค้า")
@@ -687,15 +1096,40 @@ def update_product(product_id: int, product: ProductSchema, db: Session = Depend
     prod.image_url = product.image_url
     db.commit()
     db.refresh(prod)
+    
+    create_audit_log(
+        db=db,
+        action="UPDATE_PRODUCT",
+        target_type="product",
+        target_id=str(prod.id),
+        result="success",
+        details=json.dumps({"name": prod.name, "code": prod.code, "unit_price": prod.unit_price}),
+        user=current_user,
+        request=request
+    )
+    
     return prod
 
 @app.delete("/api/products/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_product(product_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     prod = db.query(Product).filter(Product.id == product_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="ไม่พบข้อมูลสินค้า")
+    deleted_name = prod.name
     db.delete(prod)
     db.commit()
+    
+    create_audit_log(
+        db=db,
+        action="DELETE_PRODUCT",
+        target_type="product",
+        target_id=str(product_id),
+        result="success",
+        details=json.dumps({"deleted_name": deleted_name}),
+        user=current_user,
+        request=request
+    )
+    
     return {"success": True, "message": "ลบข้อมูลสินค้าสำเร็จ"}
 
 # ----------------- DOCUMENT API -----------------
@@ -749,7 +1183,7 @@ def generate_invoice_number(db: Session, year: str) -> str:
     return f"INV-{year}-{next_serial:04d}"
 
 @app.post("/api/documents")
-def create_document(doc_data: DocumentCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_document(doc_data: DocumentCreateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # 1. Validation for empty items or missing fields
     if not doc_data.items or len(doc_data.items) == 0:
         raise HTTPException(status_code=400, detail="กรุณาระบุรายการสินค้าอย่างน้อย 1 รายการ")
@@ -845,6 +1279,16 @@ def create_document(doc_data: DocumentCreateSchema, db: Session = Depends(get_db
                         prod.stock_quantity = max(0, (prod.stock_quantity or 0) - int(v_item["quantity"]))
                 
             db.commit()
+            create_audit_log(
+                db=db,
+                action="CREATE_DOCUMENT",
+                target_type="document",
+                target_id=doc_num,
+                result="success",
+                details=json.dumps({"total": total_after_vat, "customer": new_doc.customer_name}),
+                user=current_user,
+                request=request
+            )
             return {"success": True, "document_id": new_doc.id, "document_number": doc_num}
         except IntegrityError:
             db.rollback()
@@ -941,7 +1385,7 @@ def get_document(doc_id: int, db: Session = Depends(get_db), current_user: User 
     }
 
 @app.put("/api/documents/{doc_id}")
-def update_document(doc_id: int, doc_data: DocumentCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_document(doc_id: int, doc_data: DocumentCreateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
@@ -1035,6 +1479,18 @@ def update_document(doc_id: int, doc_data: DocumentCreateSchema, db: Session = D
                     prod.stock_quantity = max(0, (prod.stock_quantity or 0) - int(v_item["quantity"]))
                 
         db.commit()
+        
+        create_audit_log(
+            db=db,
+            action="UPDATE_DOCUMENT",
+            target_type="document",
+            target_id=doc.document_number,
+            result="success",
+            details=json.dumps({"total": total_after_vat, "customer": doc.customer_name}),
+            user=current_user,
+            request=request
+        )
+        
         return {"success": True, "document_id": doc.id, "document_number": doc.document_number}
     except HTTPException:
         raise
@@ -1044,7 +1500,7 @@ def update_document(doc_id: int, doc_data: DocumentCreateSchema, db: Session = D
         raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการแก้ไขเอกสาร กรุณาลองใหม่อีกครั้ง")
 
 @app.post("/api/documents/{doc_id}/duplicate")
-def duplicate_document(doc_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def duplicate_document(doc_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     old_doc = db.query(Document).filter(Document.id == doc_id).first()
     if not old_doc:
         raise HTTPException(status_code=404, detail="ไม่พบต้นฉบับเอกสาร")
@@ -1081,14 +1537,15 @@ def duplicate_document(doc_id: int, db: Session = Depends(get_db), current_user:
         items=items_list
     )
     
-    return create_document(doc_create_data, db, current_user)
+    return create_document(doc_create_data, request, db, current_user)
 
 @app.delete("/api/documents/{doc_id}")
-def delete_document(doc_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_document(doc_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
     
+    doc_num = doc.document_number
     try:
         with db.begin_nested():
             # Restore inventory stock for non-service items
@@ -1100,12 +1557,23 @@ def delete_document(doc_id: int, db: Session = Depends(get_db), current_user: Us
             
             db.delete(doc)
         db.commit()
+        
+        create_audit_log(
+            db=db,
+            action="DELETE_DOCUMENT",
+            target_type="document",
+            target_id=doc_num,
+            result="success",
+            details=json.dumps({"document_number": doc_num}),
+            user=current_user,
+            request=request
+        )
+        
         return {"success": True, "message": "ลบเอกสารและคืนสต็อกสินค้าสำเร็จ"}
     except Exception as e:
         db.rollback()
         print(f"Error deleting document: {e}")
         raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการลบเอกสาร กรุณาลองใหม่อีกครั้ง")
-    return {"success": True, "message": "ลบเอกสารสำเร็จ"}
 
 # ----------------- DASHBOARD API -----------------
 @app.get("/api/dashboard/stats")
@@ -1481,7 +1949,7 @@ def get_expenses(db: Session = Depends(get_db), current_user: User = Depends(get
     return db.query(Expense).order_by(Expense.date.desc()).all()
 
 @app.post("/api/expenses")
-def create_expense(exp_data: ExpenseCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_expense(exp_data: ExpenseCreateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from database import Expense
     
     v_num = exp_data.voucher_number
@@ -1522,16 +1990,43 @@ def create_expense(exp_data: ExpenseCreateSchema, db: Session = Depends(get_db),
     db.commit()
     
     res_v_num = getattr(new_exp, "voucher_number", None) or f"PV-{new_exp.id:04d}"
+    
+    create_audit_log(
+        db=db,
+        action="CREATE_EXPENSE",
+        target_type="expense",
+        target_id=str(new_exp.id),
+        result="success",
+        details=json.dumps({"voucher_number": res_v_num, "category": new_exp.category, "net_amount": net_amt, "pay_to": getattr(new_exp, 'pay_to', '')}),
+        user=current_user,
+        request=request
+    )
+    
     return {"success": True, "message": "บันทึกใบสำคัญจ่ายสำเร็จ", "expense_id": new_exp.id, "voucher_number": res_v_num}
 
 @app.delete("/api/expenses/{exp_id}")
-def delete_expense(exp_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_expense(exp_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from database import Expense
     exp = db.query(Expense).filter(Expense.id == exp_id).first()
     if not exp:
         raise HTTPException(status_code=404, detail="ไม่พบรายการรายจ่าย")
+    v_num = getattr(exp, "voucher_number", None) or f"PV-{exp.id}"
+    cat = exp.category
+    amt = exp.amount
     db.delete(exp)
     db.commit()
+    
+    create_audit_log(
+        db=db,
+        action="DELETE_EXPENSE",
+        target_type="expense",
+        target_id=str(exp_id),
+        result="success",
+        details=json.dumps({"voucher_number": v_num, "category": cat, "amount": amt}),
+        user=current_user,
+        request=request
+    )
+    
     return {"success": True, "message": "ลบรายการรายจ่ายสำเร็จ"}
 
 # ----------------- INVENTORY UPGRADE & RESTOCK -----------------
@@ -1542,25 +2037,47 @@ class RestockSchema(BaseModel):
     date: str
 
 @app.post("/api/products/restock")
-def restock_product(restock_data: RestockSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def restock_product(restock_data: RestockSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from database import Expense
     prod = db.query(Product).filter(Product.id == restock_data.product_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="ไม่พบสินค้า")
     
     # Update stock quantity
-    prod.stock_quantity = (prod.stock_quantity or 0) + restock_data.quantity
+    old_stock = prod.stock_quantity or 0
+    prod.stock_quantity = old_stock + restock_data.quantity
     
     # Register as expense
     new_exp = Expense(
-        amount=restock_data.cost_amount,
+        date=restock_data.date,
         category="ซื้อสินค้าเข้าสต็อก",
-        description=f"ซื้อสินค้าเติมสต็อก: {prod.name} จำนวน {restock_data.quantity} ชิ้น",
-        date=restock_data.date
+        amount=restock_data.cost_amount,
+        description=f"เพิ่มสต็อก {prod.name} จำนวน {restock_data.quantity} ชิ้น (ราคารวม {restock_data.cost_amount:.2f} บาท)"
     )
     db.add(new_exp)
     db.commit()
-    return {"success": True, "message": "เพิ่มสินค้าเข้าสต็อกและบันทึกรายจ่ายสำเร็จ", "new_stock": prod.stock_quantity}
+    
+    create_audit_log(
+        db=db,
+        action="UPDATE_STOCK",
+        target_type="product",
+        target_id=str(prod.id),
+        result="success",
+        details=json.dumps({
+            "product_name": prod.name,
+            "added_quantity": restock_data.quantity,
+            "new_stock": prod.stock_quantity,
+            "cost_amount": restock_data.cost_amount
+        }),
+        user=current_user,
+        request=request
+    )
+    
+    return {
+        "success": True, 
+        "message": f"เพิ่มสต็อก {prod.name} จำนวน {restock_data.quantity} ชิ้น เรียบร้อยแล้ว",
+        "new_stock": prod.stock_quantity
+    }
 
 # ----------------- PAYMENT SLIP & IMAGE UPLOAD -----------------
 from fastapi import File, UploadFile
