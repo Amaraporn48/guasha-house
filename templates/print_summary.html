@@ -72,14 +72,16 @@
             }
         }
 
-        /* Table styling: ~92% width, centered */
+        /* Table styling: 100% width of printable area */
         .table-container {
-            width: 92%;
+            width: 100%;
             margin: 0 auto;
+            overflow: hidden;
         }
 
         .report-table {
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             margin-top: 10px;
             page-break-inside: avoid;
@@ -88,22 +90,26 @@
         .report-table th {
             background-color: #1a1a1a !important;
             color: #c5a880 !important;
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
-            padding: 8px 14px;
+            padding: 8px 4px;
             border: 1px solid #1a1a1a;
-            white-space: nowrap;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .report-table td {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
             color: #1a1a1a;
-            padding: 7px 14px;
+            padding: 6px 8px;
             border-bottom: 1px solid #e2ddd5;
             border-left: 1px solid #f0eae1;
             border-right: 1px solid #f0eae1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .report-table tr:nth-child(even) td {
@@ -165,7 +171,7 @@
                 <div class="text-right text-xs text-gray-600 space-y-1">
                     <div class="bg-[#f5f2eb] px-3.5 py-1.5 rounded-lg border border-[#e5e0d8] text-right inline-block">
                         <span class="font-bold text-gray-500 text-[9.5px] uppercase block">ประจำปีงบประมาณ / FISCAL YEAR</span>
-                        <span class="font-bold text-[#1a1a1a] text-sm font-mono">{{ target_year_th }} ({{ target_year }})</span>
+                        <span class="font-bold text-[#1a1a1a] text-sm">{{ target_year_th }} ({{ target_year }})</span>
                     </div>
                     <p class="text-[10.5px] text-gray-500 pt-0.5">วันที่พิมพ์: <strong class="text-gray-800">{{ print_date }}</strong></p>
                 </div>
@@ -177,71 +183,71 @@
                 <p class="text-xs font-bold text-[#b39268] uppercase tracking-widest">MONTHLY ACCOUNT SUMMARY</p>
             </div>
 
-            <!-- 3. Summary Cards (3 Horizontal Columns, 92% Width Centered) -->
-            <div class="w-[92%] mx-auto grid grid-cols-3 gap-3.5 mb-4">
+            <!-- 3. Summary Cards (3 Horizontal Columns, 100% Width) -->
+            <div class="w-full grid grid-cols-3 gap-3.5 mb-4">
                 <div class="bg-[#fcfbfa] border border-[#e5e0d8] rounded-xl p-3 text-center shadow-xs">
                     <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">จำนวนใบแจ้งหนี้</span>
-                    <span class="text-base font-bold text-[#1a1a1a] font-mono mt-0.5 block">{{ total_docs_count }} <span class="text-xs font-normal text-gray-500">ใบ</span></span>
+                    <span class="text-base font-bold text-[#1a1a1a] mt-0.5 block">{{ total_docs_count }} <span class="text-xs font-normal text-gray-500">ใบ</span></span>
                 </div>
                 <div class="bg-[#fcfbfa] border border-[#e5e0d8] rounded-xl p-3 text-center shadow-xs">
-                    <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">ยอดรวมรายรับ</span>
-                    <span class="text-base font-bold text-amber-700 font-mono mt-0.5 block">฿{{ "{:,.2f}".format(total_sales_sum or 0) }}</span>
+                    <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">ยอดรวมรายรับ</span>
+                    <span class="text-base font-bold text-amber-700 mt-0.5 block">฿{{ "{:,.2f}".format(total_sales_sum or 0) }}</span>
                 </div>
                 <div class="bg-[#fcfbfa] border border-[#e5e0d8] rounded-xl p-3 text-center shadow-xs">
-                    <span class="text-[10px] font-bold text-red-700 uppercase tracking-wider block">ยอดรวมรายจ่าย</span>
-                    <span class="text-base font-bold text-amber-700 font-mono mt-0.5 block">฿{{ "{:,.2f}".format(total_expenses or 0) }}</span>
+                    <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">ยอดรวมรายจ่าย</span>
+                    <span class="text-base font-bold text-amber-700 mt-0.5 block">฿{{ "{:,.2f}".format(total_expenses or 0) }}</span>
                 </div>
             </div>
 
-            <!-- 4. Main Table (92% Width, Centered, 6 Columns) -->
+            <!-- 4. Main Table (100% Width, Table Layout Fixed, 6 Columns) -->
             <div class="table-container">
                 <table class="report-table">
                     <thead>
                         <tr>
-                            <th class="text-center w-10">ลำดับ</th>
-                            <th class="text-left w-28">เดือน / MONTH</th>
-                            <th class="text-center w-36">จำนวนใบแจ้งหนี้ / COUNT</th>
-                            <th class="text-right w-36">ยอดรวมรายรับ / INCOME</th>
-                            <th class="text-right w-36">ยอดรวมรายจ่าย / EXPENSE</th>
-                            <th class="text-right w-40">ยอดคงเหลือ / GRAND TOTAL</th>
+                            <th class="text-center w-[6%]">ลำดับ</th>
+                            <th class="text-left w-[18%]">เดือน / MONTH</th>
+                            <th class="text-center w-[18%]">จำนวนใบแจ้งหนี้ / COUNT</th>
+                            <th class="text-right w-[19%]">ยอดรวมรายรับ / INCOME</th>
+                            <th class="text-right w-[19%]">ยอดรวมรายจ่าย / EXPENSE</th>
+                            <th class="text-right w-[20%]">ยอดคงเหลือ / GRAND TOTAL</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for m in months_data %}
                         <tr>
-                            <td class="text-center font-mono font-semibold text-gray-400">{{ loop.index }}</td>
+                            <td class="text-center font-semibold text-gray-500">{{ loop.index }}</td>
                             <td class="font-bold text-[#1a1a1a]">{{ m.month_name }}</td>
-                            <td class="text-center font-bold text-gray-700 font-mono">{{ m.count }}</td>
-                            <td class="text-right font-bold text-[#1a1a1a] font-mono">฿{{ "{:,.2f}".format(m.sales or 0) }}</td>
-                            <td class="text-right font-bold text-[#1a1a1a] font-mono">฿{{ "{:,.2f}".format(m.expense or 0) }}</td>
-                            <td class="text-right font-bold text-[#1a1a1a] font-mono">฿{{ "{:,.2f}".format(m.net or 0) }}</td>
+                            <td class="text-center font-bold text-gray-700">{{ m.count }}</td>
+                            <td class="text-right font-bold text-[#1a1a1a]">฿{{ "{:,.2f}".format(m.sales or 0) }}</td>
+                            <td class="text-right font-bold text-[#1a1a1a]">฿{{ "{:,.2f}".format(m.expense or 0) }}</td>
+                            <td class="text-right font-bold text-[#1a1a1a]">฿{{ "{:,.2f}".format(m.net or 0) }}</td>
                         </tr>
                         {% endfor %}
                         <!-- Total Row -->
                         <tr class="total-row">
-                            <td colspan="2" class="text-center py-2.5 text-xs total-label uppercase tracking-wider">รวมทั้งสิ้น</td>
-                            <td class="text-center py-2.5 text-xs font-mono text-white">{{ total_docs_count }}</td>
-                            <td class="text-right py-2.5 text-xs font-mono text-[#c5a880]">฿{{ "{:,.2f}".format(total_sales_sum or 0) }}</td>
-                            <td class="text-right py-2.5 text-xs font-mono text-[#c5a880]">฿{{ "{:,.2f}".format(total_expenses or 0) }}</td>
-                            <td class="text-right py-2.5 text-xs font-mono text-white">฿{{ "{:,.2f}".format(net_profit or 0) }}</td>
+                            <td colspan="2" class="text-center py-2 text-xs total-label uppercase tracking-wider">รวมทั้งสิ้น</td>
+                            <td class="text-center py-2 text-xs font-bold text-white">{{ total_docs_count }}</td>
+                            <td class="text-right py-2 text-xs font-bold text-[#c5a880]">฿{{ "{:,.2f}".format(total_sales_sum or 0) }}</td>
+                            <td class="text-right py-2 text-xs font-bold text-[#c5a880]">฿{{ "{:,.2f}".format(total_expenses or 0) }}</td>
+                            <td class="text-right py-2 text-xs font-bold text-white">฿{{ "{:,.2f}".format(net_profit or 0) }}</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- 5. Total Summary Bar (92% Width, Matching Table) -->
-            <div class="w-[92%] mx-auto grid grid-cols-3 gap-3.5 bg-[#f8f6f0] p-3.5 rounded-xl border border-[#e5e0d8] mt-3">
+            <!-- 5. Total Summary Bar (100% Width, Matching Table) -->
+            <div class="w-full grid grid-cols-3 gap-3.5 bg-[#f8f6f0] p-3.5 rounded-xl border border-[#e5e0d8] mt-3">
                 <div class="text-center border-r border-[#e5e0d8] pr-2">
                     <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">รวมรายรับทั้งหมด / TOTAL INCOME</span>
-                    <span class="text-base font-bold text-emerald-700 font-mono mt-0.5 block">฿{{ "{:,.2f}".format(total_sales_sum or 0) }}</span>
+                    <span class="text-base font-bold text-emerald-700 mt-0.5 block">฿{{ "{:,.2f}".format(total_sales_sum or 0) }}</span>
                 </div>
                 <div class="text-center border-r border-[#e5e0d8] pr-2">
                     <span class="text-[10px] font-bold text-red-700 uppercase tracking-wider block">รวมรายจ่ายทั้งหมด / TOTAL EXPENSE</span>
-                    <span class="text-base font-bold text-red-700 font-mono mt-0.5 block">฿{{ "{:,.2f}".format(total_expenses or 0) }}</span>
+                    <span class="text-base font-bold text-red-700 mt-0.5 block">฿{{ "{:,.2f}".format(total_expenses or 0) }}</span>
                 </div>
                 <div class="text-center">
                     <span class="text-[10px] font-bold text-gray-700 uppercase tracking-wider block">ยอดคงเหลือสุทธิ / NET BALANCE</span>
-                    <span class="text-base font-bold text-[#1a1a1a] font-mono mt-0.5 block">฿{{ "{:,.2f}".format(net_profit or 0) }}</span>
+                    <span class="text-base font-bold text-[#1a1a1a] mt-0.5 block">฿{{ "{:,.2f}".format(net_profit or 0) }}</span>
                 </div>
             </div>
         </div>
@@ -250,7 +256,7 @@
         <div class="mt-6 pt-4 border-t border-gray-300 space-y-5">
             
             <!-- Signature Box (2 Columns) -->
-            <div class="w-[92%] mx-auto grid grid-cols-2 gap-12 text-center text-xs pt-1">
+            <div class="w-full grid grid-cols-2 gap-12 text-center text-xs pt-1">
                 <div>
                     <div class="h-12 flex items-end justify-center border-b border-gray-400 pb-1">
                         <span class="text-gray-300 text-[10px]">(ลายเซ็น / Signature)</span>

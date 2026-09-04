@@ -72,12 +72,14 @@
         }
 
         .table-container {
-            width: 92%;
+            width: 100%;
             margin: 0 auto;
+            overflow: hidden;
         }
 
         .report-table {
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             margin-top: 10px;
             page-break-inside: avoid;
@@ -86,22 +88,26 @@
         .report-table th {
             background-color: #1a1a1a !important;
             color: #c5a880 !important;
-            font-size: 12.5px;
+            font-size: 11.5px;
             font-weight: 700;
-            padding: 8px 12px;
+            padding: 8px 6px;
             border: 1px solid #1a1a1a;
             white-space: nowrap;
             letter-spacing: 0.3px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .report-table td {
-            font-size: 12.5px;
+            font-size: 12px;
             font-weight: 500;
             color: #1a1a1a;
-            padding: 7px 12px;
+            padding: 6px 8px;
             border-bottom: 1px solid #e2ddd5;
             border-left: 1px solid #f0eae1;
             border-right: 1px solid #f0eae1;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .report-table tr:nth-child(even) td {
@@ -155,7 +161,7 @@
                 <div class="text-right text-xs text-gray-600 space-y-1">
                     <div class="bg-[#f5f2eb] px-3.5 py-1.5 rounded-lg border border-[#e5e0d8]">
                         <span class="font-bold text-gray-500 text-[9.5px] uppercase block">วันที่พิมพ์รายงาน / PRINT DATE</span>
-                        <span class="font-bold text-[#1a1a1a] text-xs font-mono">{{ print_date }}</span>
+                        <span class="font-bold text-[#1a1a1a] text-xs">{{ print_date }}</span>
                     </div>
                 </div>
             </div>
@@ -164,11 +170,11 @@
             <div class="grid grid-cols-3 gap-3.5 mb-3.5">
                 <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3 text-center">
                     <span class="text-[9.5px] font-bold text-gray-400 uppercase tracking-wider block">จำนวนเอกสารรวม / Total Docs</span>
-                    <span class="text-base font-bold text-[#1a1a1a] font-mono">{{ documents|length }} <span class="text-xs font-normal text-gray-500">รายการ</span></span>
+                    <span class="text-base font-bold text-[#1a1a1a]">{{ documents|length }} <span class="text-xs font-normal text-gray-500">รายการ</span></span>
                 </div>
                 <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3 text-center">
                     <span class="text-[9.5px] font-bold text-gray-400 uppercase tracking-wider block">ยอดเงินรวมทั้งสิ้น / Grand Total</span>
-                    <span class="text-base font-bold text-[#b39268] font-mono">฿{{ "{:,.2f}".format(total_amount_sum) }}</span>
+                    <span class="text-base font-bold text-[#b39268]">฿{{ "{:,.2f}".format(total_amount_sum) }}</span>
                 </div>
                 <div class="bg-[#fbfaf7] border border-[#e5e0d8] rounded-xl p-3 text-center">
                     <span class="text-[9.5px] font-bold text-gray-400 uppercase tracking-wider block">เงื่อนไขการกรอง / Filter Applied</span>
@@ -176,41 +182,43 @@
                 </div>
             </div>
 
-            <!-- Documents Table -->
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th class="text-center w-12">ลำดับ</th>
-                        <th class="text-left w-36">เลขที่เอกสาร</th>
-                        <th class="text-center w-28">วันที่ออก</th>
-                        <th class="text-left">ชื่อลูกค้า / CUSTOMER</th>
-                        <th class="text-center w-28">วิธีชำระเงิน</th>
-                        <th class="text-right w-36">จำนวนเงินรวม (บาท)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for doc in documents %}
-                    <tr>
-                        <td class="text-center font-mono font-semibold text-gray-400 text-xs">{{ loop.index }}</td>
-                        <td class="font-bold font-mono text-[#1a1a1a] nowrap">{{ doc.document_number }}</td>
-                        <td class="text-center font-medium text-gray-600 nowrap">{{ doc.formatted_date }}</td>
-                        <td class="font-bold text-gray-800">{{ doc.customer_name }}</td>
-                        <td class="text-center nowrap">
-                            {% if doc.payment_method == 'CASH' %}
-                            <span class="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">เงินสด / CASH</span>
-                            {% else %}
-                            <span class="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">เช็ค / CHEQUE</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-right font-bold font-mono text-xs text-[#1a1a1a] nowrap">฿{{ "{:,.2f}".format(doc.total_amount_after_vat) }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center py-12 text-gray-400 font-medium">ไม่พบรายการเอกสารตรงตามเงื่อนไขที่เลือก</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <!-- Documents Table (100% Width, Table Layout Fixed) -->
+            <div class="table-container">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th class="text-center w-[8%]">ลำดับ</th>
+                            <th class="text-left w-[22%]">เลขที่เอกสาร</th>
+                            <th class="text-center w-[15%]">วันที่ออก</th>
+                            <th class="text-left w-[27%]">ชื่อลูกค้า / CUSTOMER</th>
+                            <th class="text-center w-[13%]">วิธีชำระเงิน</th>
+                            <th class="text-right w-[15%]">จำนวนเงินรวม (บาท)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr>
+                            <td class="text-center font-semibold text-gray-500 text-xs">{{ loop.index }}</td>
+                            <td class="font-bold text-[#1a1a1a] nowrap">{{ doc.document_number }}</td>
+                            <td class="text-center font-medium text-gray-600 nowrap">{{ doc.formatted_date }}</td>
+                            <td class="font-bold text-gray-800 truncate">{{ doc.customer_name }}</td>
+                            <td class="text-center nowrap">
+                                {% if doc.payment_method == 'CASH' %}
+                                <span class="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">เงินสด / CASH</span>
+                                {% else %}
+                                <span class="inline-block bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">เช็ค / CHEQUE</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right font-bold text-xs text-[#1a1a1a] nowrap">฿{{ "{:,.2f}".format(doc.total_amount_after_vat) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-12 text-gray-400 font-medium">ไม่พบรายการเอกสารตรงตามเงื่อนไขที่เลือก</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Footer Grand Total & Signatures Box -->
