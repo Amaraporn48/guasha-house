@@ -1,25 +1,22 @@
 <?php
 /**
- * Guasha House Zero-Hang Gateway
- * Direct Execution with Real-Time Diagnostics
+ * Guasha House Safe LiteSpeed Gateway
  */
 
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+ini_set('display_errors', 0);
+error_reporting(0);
 
 $dir = __DIR__;
+$backend_host = "http://127.0.0.1:8000";
 
-// 1. First check if persistent daemon is running on 8000 with ultra-short timeout (0.01s)
-$is_daemon_up = false;
-$s = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.01);
-if ($s) {
-    fclose($s);
-    $is_daemon_up = true;
-}
+// Check if Uvicorn daemon is active on port 8000
+$fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.05);
 
-if ($is_daemon_up) {
+if ($fp) {
+    fclose($fp);
+    
     $request_uri = $_SERVER['REQUEST_URI'] ?? '/';
-    $target_url = "http://127.0.0.1:8000" . $request_uri;
+    $target_url = $backend_host . $request_uri;
 
     $ch = curl_init($target_url);
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -27,8 +24,8 @@ if ($is_daemon_up) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
     curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
     $headers = [];
@@ -82,115 +79,45 @@ if ($is_daemon_up) {
     curl_close($ch);
 }
 
-// 2. Try In-Process WSGI Execution
-$pythons = [
-    "$dir/venv/bin/python",
-    "$dir/venv/bin/python3",
-    "/home/u713703050/python/bin/python3",
-    "/usr/local/bin/python3",
-    "/usr/bin/python3",
-    "python3"
-];
-
-$python_bin = "python3";
-foreach ($pythons as $p) {
-    if (file_exists($p) && is_executable($p)) {
-        $python_bin = $p;
-        break;
-    }
-}
-
-$descriptorspec = [
-    0 => ["pipe", "r"],
-    1 => ["pipe", "w"],
-    2 => ["pipe", "w"]
-];
-
-$env = $_SERVER;
-$env['SCRIPT_FILENAME'] = "$dir/wsgi_runner.py";
-$env['SCRIPT_NAME'] = "";
-$req_uri = $_SERVER['REQUEST_URI'] ?? '/';
-$uri_parts = explode('?', $req_uri, 2);
-$env['PATH_INFO'] = $uri_parts[0];
-$env['QUERY_STRING'] = $uri_parts[1] ?? ($_SERVER['QUERY_STRING'] ?? '');
-$env['SERVER_NAME'] = $_SERVER['HTTP_HOST'] ?? 'guashahouse.com';
-$env['SERVER_PORT'] = ($_SERVER['SERVER_PORT'] ?? '443');
-$env['SERVER_PROTOCOL'] = $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.1';
-$env['REQUEST_METHOD'] = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-
-$process = @proc_open("$python_bin $dir/wsgi_runner.py", $descriptorspec, $pipes, $dir, $env);
-$output = "";
-$errors = "";
-
-if (is_resource($process)) {
-    $input = file_get_contents('php://input');
-    if (!empty($input)) {
-        fwrite($pipes[0], $input);
-    }
-    fclose($pipes[0]);
-
-    $output = stream_get_contents($pipes[1]);
-    fclose($pipes[1]);
-    $errors = stream_get_contents($pipes[2]);
-    fclose($pipes[2]);
-    proc_close($process);
-
-    if (!empty($output)) {
-        $parts = explode("\r\n\r\n", $output, 2);
-        if (count($parts) < 2) {
-            $parts = explode("\n\n", $output, 2);
-        }
-        if (count($parts) === 2) {
-            $header_lines = explode("\n", $parts[0]);
-            foreach ($header_lines as $h) {
-                $h = trim($h);
-                if (empty($h)) continue;
-                if (stripos($h, 'Status:') === 0) {
-                    $code = intval(trim(substr($h, 7)));
-                    http_response_code($code);
-                } else {
-                    header($h, false);
-                }
-            }
-            echo $parts[1];
-            exit;
-        }
-    }
-}
-
-// 3. Transparent Diagnostic Output (NO INFINITE RELOAD)
+// If port 8000 is not yet active, show status page with instructions
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
     <meta charset="utf-8">
-    <title>🌿 Guasha House - Status Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌿 ระบบจัดการร้าน กัวซา เฮ้าส์ (Guasha House)</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fbfaf7; color: #2d3748; padding: 40px 20px; }
-        .container { max-width: 650px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #ede8e1; }
-        h2 { margin-top: 0; color: #1a202c; font-size: 22px; }
-        .box { background: #1a202c; color: #68d391; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 13px; overflow-x: auto; white-space: pre-wrap; margin-top: 15px; max-height: 250px; }
-        .btn { display: inline-block; background: #c5a880; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px; }
-        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .badge-warn { background: #feebc8; color: #c05621; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fbfaf7; color: #2d3748; padding: 40px 20px; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 35px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border: 1px solid #ede8e1; text-align: center; }
+        .logo { font-size: 48px; margin-bottom: 15px; }
+        h2 { margin: 0 0 10px; color: #1a202c; font-size: 24px; font-weight: 700; }
+        .status-badge { display: inline-block; background: #feebc8; color: #c05621; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
+        .info-box { text-align: left; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-top: 20px; font-size: 14px; }
+        code { background: #edf2f7; color: #805ad5; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; font-weight: bold; }
+        .cmd-box { background: #1a202c; color: #68d391; padding: 12px 16px; border-radius: 8px; font-family: monospace; font-size: 13px; overflow-x: auto; margin: 10px 0; word-break: break-all; }
     </style>
 </head>
 <body>
 <div class="container">
-    <div style="font-size: 40px; margin-bottom: 10px;">🌿</div>
-    <h2>ระบบ Guasha House</h2>
-    <p><span class="badge badge-warn">Backend Offline</span> เซิร์ฟเวอร์ Python กำลังรอการสั่งรันครั้งแรก</p>
+    <div class="logo">🌿</div>
+    <h2>ระบบ กัวซา เฮ้าส์ (Guasha House)</h2>
+    <div class="status-badge">⏳ เซิร์ฟเวอร์กำลังรอคำสั่ง Start</div>
     
-    <?php if (!empty($errors)): ?>
-        <p><strong>Python Error Output:</strong></p>
-        <div class="box"><?php echo htmlspecialchars($errors); ?></div>
-    <?php endif; ?>
+    <p style="color: #4a5568;">ไฟล์ระบบและฐานข้อมูลได้รับการติดตั้งสมบูรณ์แล้ว พร้อมเริ่มการทำงาน 24/7</p>
 
-    <p style="margin-top: 20px; color: #4a5568; font-size: 14px;">
-        📌 <strong>คำสั่งเปิดใช้งานบน Hostinger:</strong><br>
-        เปิด SSH แล้วรันคำสั่ง: <code>bash hostinger_run.sh</code>
-    </p>
+    <div class="info-box">
+        <strong>🚀 วิธีเปิดให้ระบบออนไลน์ 24 ชั่วโมง (เลือก 1 ข้อ):</strong><br><br>
+        <strong>วิธีที่ 1: ตั้งค่า Cron Job บน Hostinger (แนะนำ - เว็บจะติดตลอดเวลา)</strong>
+        <p style="margin: 5px 0 10px; color: #718096;">ไปที่ <strong>hPanel &rarr; Advanced &rarr; Cron Jobs</strong> เลือก <code>Every minute (* * * * *)</code> และใส่คำสั่ง:</p>
+        <div class="cmd-box">cd /home/u713703050/domains/guashahouse.com/public_html && bash hostinger_run.sh --keepalive</div>
+        
+        <hr style="border: none; border-top: 1px dashed #cbd5e0; margin: 15px 0;">
+        
+        <strong>วิธีที่ 2: รันผ่าน SSH Terminal</strong>
+        <div class="cmd-box">cd /home/u713703050/domains/guashahouse.com/public_html && bash hostinger_run.sh</div>
+    </div>
 </div>
 </body>
 </html>
