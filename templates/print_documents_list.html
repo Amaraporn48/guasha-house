@@ -257,8 +257,33 @@
     </div>
 
     <script>
-        function downloadPDF() {
-            window.print();
+        async function downloadPDF() {
+            if (document.fonts) {
+                await document.fonts.ready;
+            }
+            const element = document.getElementById('pdf-content');
+            const opt = {
+                margin:       [5, 5, 5, 5],
+                filename:     'Documents_Summary_Report.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false,
+                    letterRendering: false,
+                    onclone: (clonedDoc) => {
+                        const pdfEl = clonedDoc.getElementById('pdf-content');
+                        if (pdfEl) {
+                            pdfEl.style.height = 'auto';
+                            pdfEl.style.maxHeight = 'none';
+                            pdfEl.style.boxShadow = 'none';
+                        }
+                    }
+                },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['avoid-all', 'css'] }
+            };
+            html2pdf().set(opt).from(element).save();
         }
     </script>
 </body>
