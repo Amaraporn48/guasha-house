@@ -24,12 +24,15 @@ except Exception:
 IS_PRODUCTION = bool(os.getenv("VERCEL") or os.getenv("ENVIRONMENT") == "production")
 JWT_SECRET_ENV = os.getenv("JWT_SECRET_KEY")
 
-if IS_PRODUCTION and not JWT_SECRET_ENV:
-    import secrets
-    SECRET_KEY = secrets.token_urlsafe(32)
-    print("WARNING: JWT_SECRET_KEY environment variable is not set in production. Generated temporary runtime secret.")
+if IS_PRODUCTION:
+    if not JWT_SECRET_ENV or not JWT_SECRET_ENV.strip():
+        raise RuntimeError(
+            "CRITICAL CONFIGURATION ERROR: JWT_SECRET_KEY environment variable is required in production! "
+            "Please configure JWT_SECRET_KEY in your environment/Vercel settings."
+        )
+    SECRET_KEY = JWT_SECRET_ENV.strip()
 else:
-    SECRET_KEY = JWT_SECRET_ENV or "guasa_house_dev_secret_key_2026_local_only"
+    SECRET_KEY = JWT_SECRET_ENV.strip() if (JWT_SECRET_ENV and JWT_SECRET_ENV.strip()) else "guasa_house_dev_secret_key_2026_local_only"
 
 ALGORITHM = "HS256"
 
