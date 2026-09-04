@@ -1,6 +1,5 @@
-# Hostinger LiteSpeed / Apache Routing for Guasha House
+# Hostinger LiteSpeed / Passenger Configuration for Guasha House
 Options -Indexes
-DirectoryIndex index.php index.html
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -9,8 +8,4 @@ DirectoryIndex index.php index.html
     # Serve static assets directly if file exists
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
-
-    # Route all requests to high-speed PHP gateway
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^(.*)$ index.php [QSA,L]
 </IfModule>
