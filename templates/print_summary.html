@@ -6,9 +6,6 @@
     <title>รายงานสรุปบัญชีรายเดือน - บริษัท กัวซา เฮ้าส์ จำกัด</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- dom-to-image-more & jsPDF for 100% native vector/raster PDF rendering without Thai font glitches -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image-more/3.5.0/dom-to-image-more.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
 
@@ -151,10 +148,6 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                     <span>🖨️ สั่งพิมพ์เอกสาร A4</span>
                 </button>
-                <button onclick="downloadPDF()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    <span>📥 บันทึกไฟล์ PDF</span>
-                </button>
             </div>
         </div>
     </div>
@@ -275,53 +268,5 @@
 
     </div>
 
-    <script>
-        async function downloadPDF() {
-            const btn = document.querySelector('button[onclick="downloadPDF()"]');
-            const originalHTML = btn ? btn.innerHTML : '';
-            if (btn) {
-                btn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>กำลังบันทึก PDF...</span>';
-                btn.disabled = true;
-            }
-
-            try {
-                if (document.fonts) {
-                    await document.fonts.ready;
-                }
-                const element = document.getElementById('pdf-content');
-                
-                // Capture exact element dimensions without transform clipping
-                const dataUrl = await domtoimage.toPng(element, {
-                    bgcolor: '#ffffff',
-                    width: element.offsetWidth,
-                    height: element.offsetHeight,
-                    style: {
-                        margin: '0',
-                        boxShadow: 'none',
-                        border: 'none',
-                        borderRadius: '0'
-                    }
-                });
-
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: 'a4'
-                });
-
-                pdf.addImage(dataUrl, 'PNG', 0, 0, 210, 297);
-                pdf.save('Monthly_Account_Summary_{{ target_year }}.pdf');
-            } catch (error) {
-                console.error('PDF export failed:', error);
-                window.print();
-            } finally {
-                if (btn) {
-                    btn.innerHTML = originalHTML;
-                    btn.disabled = false;
-                }
-            }
-        }
-    </script>
 </body>
 </html>
