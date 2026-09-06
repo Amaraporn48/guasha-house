@@ -79,7 +79,12 @@ if ($fp) {
     curl_close($ch);
 }
 
-// If port 8000 is not yet active, show status page with instructions
+// If port 8000 is not yet active, read logs if any
+$log_output = "";
+if (file_exists("$dir/uvicorn.log")) {
+    $log_output = htmlspecialchars(substr(file_get_contents("$dir/uvicorn.log"), -2000));
+}
+
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>
@@ -97,6 +102,7 @@ header('Content-Type: text/html; charset=utf-8');
         .info-box { text-align: left; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-top: 20px; font-size: 14px; }
         code { background: #edf2f7; color: #805ad5; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; font-weight: bold; }
         .cmd-box { background: #1a202c; color: #68d391; padding: 12px 16px; border-radius: 8px; font-family: monospace; font-size: 13px; overflow-x: auto; margin: 10px 0; word-break: break-all; }
+        .log-box { background: #1a202c; color: #ecc94b; padding: 12px 16px; border-radius: 8px; font-family: monospace; font-size: 12px; overflow-x: auto; margin: 10px 0; text-align: left; max-height: 180px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -105,18 +111,20 @@ header('Content-Type: text/html; charset=utf-8');
     <h2>ระบบ กัวซา เฮ้าส์ (Guasha House)</h2>
     <div class="status-badge">⏳ เซิร์ฟเวอร์กำลังรอคำสั่ง Start</div>
     
-    <p style="color: #4a5568;">ไฟล์ระบบและฐานข้อมูลได้รับการติดตั้งสมบูรณ์แล้ว พร้อมเริ่มการทำงาน 24/7</p>
+    <p style="color: #4a5568;">ไฟล์ระบบและฐานข้อมูลได้รับการติดตั้งสมบูรณ์แล้ว</p>
+
+    <?php if (!empty(trim($log_output))): ?>
+    <div style="text-align: left; margin-top: 15px;">
+        <strong>📋 Server Log ล่าสุด:</strong>
+        <div class="log-box"><?php echo $log_output; ?></div>
+    </div>
+    <?php endif; ?>
 
     <div class="info-box">
-        <strong>🚀 วิธีเปิดให้ระบบออนไลน์ 24 ชั่วโมง (เลือก 1 ข้อ):</strong><br><br>
-        <strong>วิธีที่ 1: ตั้งค่า Cron Job บน Hostinger (แนะนำ - เว็บจะติดตลอดเวลา)</strong>
-        <p style="margin: 5px 0 10px; color: #718096;">ไปที่ <strong>hPanel &rarr; Advanced &rarr; Cron Jobs</strong> เลือก <code>Every minute (* * * * *)</code> และใส่คำสั่ง:</p>
+        <strong>🚀 วิธีเปิดให้ระบบออนไลน์ 24 ชั่วโมง:</strong><br><br>
+        <strong>ตั้งค่า Cron Job บน Hostinger</strong>
+        <p style="margin: 5px 0 10px; color: #718096;">ไปที่ <strong>hPanel &rarr; Advanced &rarr; Cron Jobs</strong> เลือก <code>กำหนดเอง</code> และใส่คำสั่ง:</p>
         <div class="cmd-box">cd /home/u713703050/domains/guashahouse.com/public_html && bash hostinger_run.sh --keepalive</div>
-        
-        <hr style="border: none; border-top: 1px dashed #cbd5e0; margin: 15px 0;">
-        
-        <strong>วิธีที่ 2: รันผ่าน SSH Terminal</strong>
-        <div class="cmd-box">cd /home/u713703050/domains/guashahouse.com/public_html && bash hostinger_run.sh</div>
     </div>
 </div>
 </body>
