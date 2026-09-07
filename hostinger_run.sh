@@ -10,6 +10,11 @@ cd "$DIR"
 DATE_STR=$(date "+%Y-%m-%d %H:%M:%S")
 echo "[$DATE_STR] Cron check executed" >> "$DIR/cron.log"
 
+# 0. Auto-pull latest code from GitHub if git repo exists
+if [ -d "$DIR/.git" ]; then
+    git pull origin main >> "$DIR/cron.log" 2>&1 || true
+fi
+
 # 1. Locate Python / VirtualEnv
 VENV_PYTHON="$DIR/venv/bin/python"
 if [ ! -x "$VENV_PYTHON" ]; then
@@ -28,8 +33,8 @@ if [ ! -x "$VENV_PYTHON" ]; then
         rm -f /tmp/cpython.tar.gz
         PYTHON_BIN="$HOME/python/bin/python3"
     fi
-    "$PYTHON_BIN" -m venv "$DIR/venv" 2>> "$DIR/cron.log" || true
-    "$DIR/venv/bin/pip" install -r "$DIR/requirements.txt" --trusted-host pypi.org --trusted-host files.pythonhosted.org 2>> "$DIR/cron.log" || true
+    "$PYTHON_BIN" -m venv "$DIR/venv" >> "$DIR/cron.log" 2>&1 || true
+    "$DIR/venv/bin/pip" install -r "$DIR/requirements.txt" --trusted-host pypi.org --trusted-host files.pythonhosted.org >> "$DIR/cron.log" 2>&1 || true
 fi
 
 # 2. Check if uvicorn is ALREADY responding on port 8000
