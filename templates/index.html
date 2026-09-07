@@ -156,6 +156,16 @@
                 <!-- Group 4: SETTINGS -->
                 <div class="space-y-1 pt-2 border-t border-beige/60">
                     <p x-show="!sidebarCollapsed" x-transition.opacity class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-2">ตั้งค่าร้านค้า / Settings</p>
+                    <a href="#" @click.prevent="setView('banners')" 
+                       title="แบนเนอร์ & ข้อมูลติดต่อ / Banners & Contacts"
+                       :class="[
+                          activeView === 'banners' ? 'bg-beige border-gold text-charcoal font-semibold shadow-sm' : 'text-gray-600 hover:bg-cream border-transparent',
+                          sidebarCollapsed ? 'justify-center px-2 py-3.5' : 'justify-start px-4 py-3'
+                       ]"
+                       class="flex items-center gap-3.5 rounded-xl text-sm transition-all duration-200 border-l-4">
+                        <svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span x-show="!sidebarCollapsed" x-transition.opacity class="truncate">แบนเนอร์ & ช่องทางติดต่อ</span>
+                    </a>
                     <a href="#" @click.prevent="setView('branches')" 
                        title="จัดการสาขา / Branches"
                        :class="[
@@ -1620,6 +1630,180 @@
                 </div>
             </div>
 
+            <!-- 8.5 BANNERS & CONTACTS VIEW -->
+            <div x-show="activeView === 'banners'" class="space-y-8">
+                <!-- SECTION 1: SLIDE BANNERS -->
+                <div class="space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 border border-beige rounded-2xl shadow-sm">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="bg-gold/15 text-gold-dark text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">หน้าแรก / Home</span>
+                                <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase">ภาพสไลด์แบนเนอร์ / Slide Banners</h3>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">จัดการรูปภาพสไลด์ขนาดใหญ่ด้านบนของหน้าแรก เปลี่ยนภาพ ลำดับ ลิงก์ และข้อความได้ทันที</p>
+                        </div>
+                        <button @click="openBannerModal()" class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3 rounded-xl transition uppercase tracking-widest flex items-center gap-2 self-start sm:self-auto shadow-sm">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            <span>+ เพิ่มแบนเนอร์ / Add Banner</span>
+                        </button>
+                    </div>
+
+                    <!-- Banners Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <template x-for="b in banners" :key="b.id">
+                            <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                                <div>
+                                    <!-- Banner Image Container -->
+                                    <div class="relative h-44 bg-charcoal overflow-hidden group">
+                                        <img :src="b.image_url" class="w-full h-full object-cover transition duration-300 group-hover:scale-105" alt="Banner Image">
+                                        <div class="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent"></div>
+                                        
+                                        <!-- Badges on image -->
+                                        <div class="absolute top-3 left-3 flex items-center gap-1.5">
+                                            <span class="bg-charcoal/80 backdrop-blur-sm text-gold text-[10px] font-bold px-2 py-0.5 rounded-lg border border-gold/30">
+                                                ลำดับ: <span x-text="b.order_index"></span>
+                                            </span>
+                                            <span :class="b.is_active ? 'bg-emerald-500 text-white' : 'bg-gray-400 text-white'" class="text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm">
+                                                <span x-text="b.is_active ? 'เปิดแสดง' : 'ซ่อนไว้'"></span>
+                                            </span>
+                                        </div>
+
+                                        <div class="absolute bottom-3 left-3 right-3 text-white">
+                                            <p class="text-[10px] text-gold font-bold uppercase tracking-wider truncate" x-text="b.subtitle || 'ไม่มีหัวข้อย่อย'"></p>
+                                            <h4 class="text-sm font-bold truncate" x-text="b.title || '(ภาพแบนเนอร์เดี่ยว)'"></h4>
+                                        </div>
+                                    </div>
+
+                                    <!-- Banner Details -->
+                                    <div class="p-4 space-y-2">
+                                        <p class="text-xs text-gray-500 line-clamp-2" x-text="b.description || 'ไม่มีคำอธิบาย'"></p>
+                                        <div class="flex items-center gap-1 text-[11px] text-gray-400 font-mono truncate">
+                                            <span class="font-bold text-gray-600">ลิงก์:</span>
+                                            <span x-text="b.link_url || '-'"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="p-4 bg-cream/50 border-t border-beige flex justify-between items-center">
+                                    <button @click="toggleBannerActive(b)" class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition"
+                                            :class="b.is_active ? 'border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100' : 'border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'">
+                                        <span x-text="b.is_active ? 'กดเพื่อซ่อน' : 'กดเพื่อเปิด'"></span>
+                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button @click="openBannerModal(b)" class="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-1">แก้ไข</button>
+                                        <button @click="deleteBanner(b.id)" class="text-xs text-red-600 hover:text-red-800 font-semibold px-2 py-1">ลบ</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Empty State -->
+                        <div x-show="banners.length === 0" class="col-span-full bg-white border border-dashed border-beige rounded-2xl p-12 text-center text-gray-400">
+                            <p class="text-sm">ยังไม่มีภาพแบนเนอร์ในระบบ</p>
+                            <button @click="openBannerModal()" class="mt-3 text-xs text-gold font-bold hover:underline">+ เพิ่มแบนเนอร์ภาพแรก</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: CONTACT & SOCIAL MEDIA SETTINGS -->
+                <div class="bg-white border border-beige rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+                    <div class="border-b border-beige pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">ช่องทางติดต่อ / Contacts</span>
+                                <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase">ตั้งค่าช่องทางการติดต่อ & โซเชียลมีเดีย</h3>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">ข้อมูลที่ระบุที่นี่จะนำไปแสดงบนหน้าแรกของเว็บไซต์ (แถบด้านบน, ปุ่มสั่งซื้อ, และส่วนท้าย Footer)</p>
+                        </div>
+                    </div>
+
+                    <form @submit.prevent="saveSiteSettings()" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- LINE Official URL -->
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-semibold text-charcoal">
+                                    ลิงก์ LINE Official (LINE URL) <span class="text-gray-400 font-normal">เช่น https://line.me/R/ti/p/@guashahouse</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-600 font-bold text-xs">LINE</span>
+                                    <input type="url" x-model="siteSettings.contact_line_url" placeholder="https://line.me/R/ti/p/@guashahouse"
+                                           class="w-full bg-cream border border-beige rounded-xl pl-14 pr-4 py-2.5 text-sm focus-gold">
+                                </div>
+                            </div>
+
+                            <!-- LINE ID -->
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-semibold text-charcoal">
+                                    LINE ID สำหรับสั่งซื้อสินค้า <span class="text-gray-400 font-normal">เช่น @guashahouse</span>
+                                </label>
+                                <input type="text" x-model="siteSettings.contact_line_id" placeholder="@guashahouse"
+                                       class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
+                            </div>
+
+                            <!-- Facebook URL -->
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-semibold text-charcoal">
+                                    ลิงก์เพจ Facebook (Facebook Page URL)
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600 font-bold text-xs">FB</span>
+                                    <input type="url" x-model="siteSettings.contact_facebook_url" placeholder="https://www.facebook.com/..."
+                                           class="w-full bg-cream border border-beige rounded-xl pl-12 pr-4 py-2.5 text-sm focus-gold">
+                                </div>
+                            </div>
+
+                            <!-- TikTok URL -->
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-semibold text-charcoal">
+                                    ลิงก์ TikTok Profile (TikTok URL)
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-black font-bold text-xs">TT</span>
+                                    <input type="url" x-model="siteSettings.contact_tiktok_url" placeholder="https://www.tiktok.com/@guashahouse_bykrunoon"
+                                           class="w-full bg-cream border border-beige rounded-xl pl-12 pr-4 py-2.5 text-sm focus-gold">
+                                </div>
+                            </div>
+
+                            <!-- Phone Number -->
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-semibold text-charcoal">
+                                    เบอร์โทรศัพท์ติดต่อ (Phone Number)
+                                </label>
+                                <input type="text" x-model="siteSettings.contact_phone" placeholder="061-496-6361"
+                                       class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
+                            </div>
+
+                            <!-- Email -->
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-semibold text-charcoal">
+                                    อีเมลติดต่อ (Email Address)
+                                </label>
+                                <input type="email" x-model="siteSettings.contact_email" placeholder="info@guashahouse.com"
+                                       class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
+                            </div>
+
+                            <!-- Company Address -->
+                            <div class="col-span-full space-y-1.5">
+                                <label class="block text-xs font-semibold text-charcoal">
+                                    ชื่อบริษัทและที่อยู่ (Company & Address - แสดงส่วน Footer)
+                                </label>
+                                <textarea x-model="siteSettings.contact_address" rows="3" placeholder="บริษัท กัวซา เฮ้าส์ จำกัด&#10;199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240"
+                                          class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold leading-relaxed"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end pt-4 border-t border-beige">
+                            <button type="submit" :disabled="savingSettings" :class="savingSettings ? 'opacity-50 cursor-not-allowed' : ''"
+                                    class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-8 py-3.5 rounded-xl transition tracking-widest uppercase shadow-md flex items-center gap-2">
+                                <svg x-show="!savingSettings" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <span x-text="savingSettings ? 'กำลังบันทึกข้อมูล...' : 'บันทึกช่องทางติดต่อ / Save Contacts'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- 9. USERS VIEW -->
             <div x-show="activeView === 'users'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 border border-beige rounded-2xl shadow-sm">
@@ -2462,6 +2646,99 @@
         </div>
     </div>
 
+    <!-- Banner Modal Form -->
+    <div x-show="bannerModal.open" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 no-print" x-transition>
+        <div class="bg-white border border-beige rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-beige flex items-center justify-between flex-shrink-0">
+                <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase" x-text="bannerModal.id ? 'แก้ไขแบนเนอร์ / Edit Banner' : 'เพิ่มแบนเนอร์ใหม่ / Add Banner'"></h3>
+                <button @click="bannerModal.open = false" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            
+            <form @submit.prevent="saveBanner()" class="p-6 space-y-4 overflow-y-auto flex-grow">
+                <!-- Image Upload & Preview -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">รูปภาพแบนเนอร์ (Banner Image) *</label>
+                    <div class="space-y-3">
+                        <div class="relative w-full h-36 bg-cream border-2 border-dashed border-beige rounded-xl overflow-hidden flex items-center justify-center">
+                            <template x-if="bannerModal.image_url">
+                                <img :src="bannerModal.image_url" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!bannerModal.image_url">
+                                <div class="text-center p-4">
+                                    <svg class="w-8 h-8 text-gray-300 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span class="text-xs text-gray-400">ยังไม่ได้เลือกรูปภาพแบนเนอร์</span>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <label class="cursor-pointer bg-gold hover:bg-gold-dark text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                                <span x-text="uploadingBannerImage ? 'กำลังอัปโหลด...' : 'อัปโหลดรูปภาพใหม่'"></span>
+                                <input type="file" accept="image/*" class="hidden" :disabled="uploadingBannerImage" @change="uploadBannerImageFile($event.target.files[0])">
+                            </label>
+                            <button type="button" x-show="bannerModal.image_url" @click="bannerModal.image_url = ''" 
+                                    class="text-xs text-red-600 hover:underline">ล้างรูป</button>
+                        </div>
+                        <div>
+                            <input type="text" x-model="bannerModal.image_url" placeholder="หรือวางลิงก์รูปภาพ เช่น /static/banner1.png หรือ https://..." required
+                                   class="w-full bg-cream border border-beige rounded-xl px-4 py-2 text-xs focus-gold font-mono">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">หัวข้อย่อย (Subtitle - สีทอง)</label>
+                        <input type="text" x-model="bannerModal.subtitle" placeholder="เช่น Guasha House Skincare"
+                               class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ลำดับการแสดงผล (Order Index)</label>
+                        <input type="number" x-model.number="bannerModal.order_index" placeholder="1"
+                               class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">หัวข้อหลัก (Title - ตัวหนังสือใหญ่)</label>
+                    <input type="text" x-model="bannerModal.title" placeholder="เช่น คอร์สเรียนสปานวดกัวซายกกระชับ (เว้นว่างได้)"
+                           class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ข้อความอธิบาย (Description)</label>
+                    <textarea x-model="bannerModal.description" rows="2" placeholder="เช่น รายละเอียดสั้นๆ ใต้หัวข้อ..."
+                              class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold leading-relaxed"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ลิงก์เมื่อกดแบนเนอร์ (Link URL)</label>
+                    <input type="text" x-model="bannerModal.link_url" placeholder="เช่น #branches, #products, #lessons หรือ https://..."
+                           class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold font-mono">
+                </div>
+
+                <div class="flex items-center gap-2 pt-2">
+                    <input type="checkbox" id="bannerIsActive" x-model="bannerModal.is_active" class="rounded text-gold focus:ring-gold h-4 w-4">
+                    <label for="bannerIsActive" class="text-xs font-semibold text-charcoal cursor-pointer">เปิดใช้งานแบนเนอร์นี้ทันที (Active)</label>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-beige">
+                    <button type="button" @click="bannerModal.open = false" 
+                            class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-3.5 rounded-xl border border-beige transition">ยกเลิก</button>
+                    <button type="submit" :disabled="savingBanner" :class="savingBanner ? 'opacity-50 cursor-not-allowed' : ''"
+                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-3.5 rounded-xl transition tracking-widest uppercase shadow-sm">
+                        <span x-text="savingBanner ? 'กำลังบันทึก...' : 'บันทึกแบนเนอร์'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- User Modal Form -->
     <div x-show="userModal.open" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 no-print" x-transition>
         <div class="bg-white border border-beige rounded-2xl max-w-md w-full shadow-2xl overflow-hidden relative">
@@ -2972,6 +3249,9 @@
                 savingExpense: false,
                 savingRestock: false,
                 savingVideo: false,
+                savingBanner: false,
+                uploadingBannerImage: false,
+                savingSettings: false,
 
                 // Databases lists
                 customers: [],
@@ -2980,6 +3260,16 @@
                 branches: [],
                 expenses: [],
                 users: [],
+                banners: [],
+                siteSettings: {
+                    contact_phone: '',
+                    contact_address: '',
+                    contact_line_url: '',
+                    contact_line_id: '',
+                    contact_facebook_url: '',
+                    contact_tiktok_url: '',
+                    contact_email: ''
+                },
                 expenseCategories: [],
                 hoveredExpenseCategory: null,
 
@@ -2999,6 +3289,7 @@
                 customerModal: { open: false, id: null, name: '', address: '', tax_id: '', phone: '', email: '', notes: '', source: 'db' },
                 productModal: { open: false, id: null, code: '', name: '', description: '', unit_price: 0, stock_quantity: 0, is_service: false, image_url: '' },
                 branchModal: { open: false, id: null, name: '', region: '', address: '', phone: '', map_pin: '', image_url: '' },
+                bannerModal: { open: false, id: null, title: '', subtitle: '', description: '', image_url: '', link_url: '', order_index: 1, is_active: true },
                 userModal: { open: false, id: null, username: '', fullname: '', password: '', role: 'staff' },
                 expenseModal: { open: false, id: null, date: new Date().toISOString().substring(0, 10), category: '', description: '', amount: 0.0 },
                 restockModal: { open: false, product_id: null, product_name: '', quantity: 10, cost_amount: 0.0, date: new Date().toISOString().substring(0, 10) },
@@ -3064,6 +3355,8 @@
                     this.fetchDocuments();
                     this.fetchReportsData();
                     this.fetchBranches();
+                    this.fetchBanners();
+                    this.fetchSiteSettings();
                     this.fetchUsers();
                     this.fetchExpenses();
                     this.fetchExpenseCategories();
@@ -3093,6 +3386,7 @@
                         documents: 'เอกสารทั้งหมด / Documents',
                         customers: 'ลูกค้า / Customers',
                         products: 'สินค้าและบริการ / Products & Services',
+                        banners: 'แบนเนอร์ & ช่องทางติดต่อ / Banners & Contacts',
                         branches: 'จัดการสาขา / Branches',
                         users: 'จัดการผู้ใช้งาน / Users Management',
                         expenses: 'บันทึกรายจ่าย / Expenses',
@@ -3106,6 +3400,10 @@
                     if (view === 'documents') this.fetchDocuments();
                     if (view === 'customers') this.fetchCustomers();
                     if (view === 'products') this.fetchProducts();
+                    if (view === 'banners') {
+                        this.fetchBanners();
+                        this.fetchSiteSettings();
+                    }
                     if (view === 'branches') this.fetchBranches();
                     if (view === 'users') this.fetchUsers();
                     if (view === 'expenses') {
@@ -3412,6 +3710,180 @@
                             })
                             .catch(err => alert(err.message || 'เกิดข้อผิดพลาด'));
                     }
+                },
+
+                // --- SLIDE BANNERS & SITE SETTINGS FUNCTIONS ---
+                fetchBanners() {
+                    fetch('/api/admin/banners')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (Array.isArray(data)) {
+                                this.banners = data;
+                            }
+                        })
+                        .catch(err => console.error('fetchBanners err:', err));
+                },
+                openBannerModal(b = null) {
+                    if (b) {
+                        this.bannerModal = {
+                            open: true,
+                            id: b.id,
+                            title: b.title || '',
+                            subtitle: b.subtitle || '',
+                            description: b.description || '',
+                            image_url: b.image_url || '',
+                            link_url: b.link_url || '',
+                            order_index: b.order_index !== undefined ? b.order_index : 1,
+                            is_active: b.is_active !== undefined ? b.is_active : true
+                        };
+                    } else {
+                        const nextOrder = (this.banners && this.banners.length > 0) ? Math.max(...this.banners.map(x => x.order_index || 0)) + 1 : 1;
+                        this.bannerModal = {
+                            open: true,
+                            id: null,
+                            title: '',
+                            subtitle: '',
+                            description: '',
+                            image_url: '',
+                            link_url: '',
+                            order_index: nextOrder,
+                            is_active: true
+                        };
+                    }
+                },
+                uploadBannerImageFile(file) {
+                    if (!file) return;
+                    this.uploadingBannerImage = true;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    fetch('/api/admin/banners/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.url) {
+                            this.bannerModal.image_url = data.url;
+                            this.showToast('อัปโหลดรูปภาพแบนเนอร์สำเร็จ');
+                        } else {
+                            alert(data.detail || 'อัปโหลดรูปภาพไม่สำเร็จ');
+                        }
+                    })
+                    .catch(err => alert('เกิดข้อผิดพลาดในการอัปโหลด: ' + (err.message || err)))
+                    .finally(() => {
+                        this.uploadingBannerImage = false;
+                    });
+                },
+                saveBanner() {
+                    if (this.savingBanner) return;
+                    if (!this.bannerModal.image_url) {
+                        alert('กรุณาเลือกรูปภาพหรือระบุ URL รูปภาพ');
+                        return;
+                    }
+                    this.savingBanner = true;
+                    const isEdit = !!this.bannerModal.id;
+                    const method = isEdit ? 'PUT' : 'POST';
+                    const url = isEdit ? `/api/admin/banners/${this.bannerModal.id}` : '/api/admin/banners';
+                    
+                    fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: this.bannerModal.title,
+                            subtitle: this.bannerModal.subtitle,
+                            description: this.bannerModal.description,
+                            image_url: this.bannerModal.image_url,
+                            link_url: this.bannerModal.link_url,
+                            order_index: parseInt(this.bannerModal.order_index) || 0,
+                            is_active: this.bannerModal.is_active
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.showToast(data.message || 'บันทึกแบนเนอร์สำเร็จ');
+                            this.bannerModal.open = false;
+                            this.fetchBanners();
+                        } else {
+                            alert(data.detail || 'เกิดข้อผิดพลาดในการบันทึก');
+                        }
+                    })
+                    .catch(err => alert('เกิดข้อผิดพลาด: ' + (err.message || err)))
+                    .finally(() => {
+                        this.savingBanner = false;
+                    });
+                },
+                toggleBannerActive(b) {
+                    const newStatus = !b.is_active;
+                    fetch(`/api/admin/banners/${b.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ is_active: newStatus })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            b.is_active = newStatus;
+                            this.showToast(newStatus ? 'เปิดแสดงแบนเนอร์แล้ว' : 'ซ่อนแบนเนอร์แล้ว');
+                        }
+                    })
+                    .catch(err => console.error(err));
+                },
+                deleteBanner(id) {
+                    if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบแบนเนอร์นี้?')) {
+                        fetch(`/api/admin/banners/${id}`, { method: 'DELETE' })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    this.showToast(data.message || 'ลบแบนเนอร์สำเร็จ');
+                                    this.fetchBanners();
+                                } else {
+                                    alert(data.detail || 'ไม่สามารถลบได้');
+                                }
+                            });
+                    }
+                },
+                fetchSiteSettings() {
+                    fetch('/api/settings')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && typeof data === 'object') {
+                                this.siteSettings = {
+                                    contact_phone: data.contact_phone || '',
+                                    contact_address: data.contact_address || '',
+                                    contact_line_url: data.contact_line_url || '',
+                                    contact_line_id: data.contact_line_id || '',
+                                    contact_facebook_url: data.contact_facebook_url || '',
+                                    contact_tiktok_url: data.contact_tiktok_url || '',
+                                    contact_email: data.contact_email || ''
+                                };
+                            }
+                        })
+                        .catch(err => console.error('fetchSiteSettings err:', err));
+                },
+                saveSiteSettings() {
+                    if (this.savingSettings) return;
+                    this.savingSettings = true;
+                    fetch('/api/admin/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ settings: this.siteSettings })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.showToast('บันทึกช่องทางติดต่อเรียบร้อยแล้ว');
+                            if (data.settings) {
+                                this.siteSettings = { ...this.siteSettings, ...data.settings };
+                            }
+                        } else {
+                            alert(data.detail || 'ไม่สามารถบันทึกข้อมูลได้');
+                        }
+                    })
+                    .catch(err => alert('เกิดข้อผิดพลาด: ' + (err.message || err)))
+                    .finally(() => {
+                        this.savingSettings = false;
+                    });
                 },
 
                 // --- BRANCH MANAGEMENT FUNCTIONS ---

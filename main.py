@@ -1,6 +1,6 @@
 import os
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 import jwt
 import bcrypt
 from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, Cookie
@@ -13,7 +13,7 @@ from sqlalchemy import text, and_, or_, func
 from sqlalchemy.exc import IntegrityError
 
 import json
-from database import engine, SessionLocal, init_db, User, Customer, Product, Document, DocumentItem, Expense, Branch, VideoCourse, AuditLog
+from database import engine, SessionLocal, init_db, User, Customer, Product, Document, DocumentItem, Expense, Branch, VideoCourse, AuditLog, SlideBanner, SiteSetting
 
 # Initialize database safely
 try:
@@ -42,7 +42,8 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 for path in [
     os.path.join(STATIC_DIR, "uploads", "slips"),
     os.path.join(STATIC_DIR, "uploads", "branches"),
-    os.path.join(STATIC_DIR, "uploads", "products")
+    os.path.join(STATIC_DIR, "uploads", "products"),
+    os.path.join(STATIC_DIR, "uploads", "banners")
 ]:
     try:
         os.makedirs(path, exist_ok=True)
@@ -2163,6 +2164,34 @@ def upload_product_image(file: UploadFile = File(...), current_user: User = Depe
         except Exception as err:
             raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพสินค้า: {err}")
 
+@app.post("/api/admin/banners/upload-image")
+def upload_banner_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "banners")
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP)")
+        
+    filename = f"banner_{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return {"success": True, "filename": filename, "url": f"/static/uploads/banners/{filename}"}
+    except Exception:
+        try:
+            file.file.seek(0)
+            content = file.file.read()
+            mime_ext = ext.replace(".", "")
+            if mime_ext == "jpg":
+                mime_ext = "jpeg"
+            b64_str = base64.b64encode(content).decode("utf-8")
+            data_url = f"data:image/{mime_ext};base64,{b64_str}"
+            return {"success": True, "filename": data_url, "url": data_url}
+        except Exception as err:
+            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพแบนเนอร์: {err}")
+
 # ----------------- SHARE ROUTE -----------------
 @app.get("/share/invoice/{doc_id}", response_class=HTMLResponse)
 def share_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
@@ -2670,6 +2699,173 @@ def delete_video(video_id: int, db: Session = Depends(get_db), current_user: Use
     db.delete(v)
     db.commit()
     return {"success": True, "message": "ลบคลิปการสอนเรียบร้อยแล้ว"}
+
+# ----------------- SLIDE BANNERS API -----------------
+class BannerCreate(BaseModel):
+    title: Optional[str] = ""
+    subtitle: Optional[str] = ""
+    description: Optional[str] = ""
+    image_url: str
+    link_url: Optional[str] = ""
+    order_index: Optional[int] = 0
+    is_active: Optional[bool] = True
+
+class BannerUpdate(BaseModel):
+    title: Optional[str] = None
+    subtitle: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    link_url: Optional[str] = None
+    order_index: Optional[int] = None
+    is_active: Optional[bool] = None
+
+@app.get("/api/banners")
+def get_public_banners(db: Session = Depends(get_db)):
+    """Public endpoint: returns all active banners ordered by order_index and id."""
+    return db.query(SlideBanner).filter(SlideBanner.is_active == True).order_by(SlideBanner.order_index.asc(), SlideBanner.id.asc()).all()
+
+@app.get("/api/admin/banners")
+def get_admin_banners(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Admin endpoint: returns all banners ordered by order_index and id."""
+    return db.query(SlideBanner).order_by(SlideBanner.order_index.asc(), SlideBanner.id.asc()).all()
+
+@app.post("/api/admin/banners")
+def create_banner(payload: BannerCreate, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    banner = SlideBanner(
+        title=payload.title or "",
+        subtitle=payload.subtitle or "",
+        description=payload.description or "",
+        image_url=payload.image_url,
+        link_url=payload.link_url or "",
+        order_index=payload.order_index or 0,
+        is_active=True if payload.is_active is None else payload.is_active
+    )
+    db.add(banner)
+    db.commit()
+    db.refresh(banner)
+    create_audit_log(
+        db=db,
+        action="CREATE_BANNER",
+        target_type="banner",
+        target_id=str(banner.id),
+        details=f"Created slide banner ID={banner.id} title='{banner.title}'",
+        user=current_user,
+        request=request
+    )
+    return {
+        "success": True, 
+        "message": "เพิ่มภาพแบนเนอร์สำเร็จ", 
+        "banner_id": banner.id,
+        "banner": {
+            "id": banner.id,
+            "title": banner.title,
+            "subtitle": banner.subtitle,
+            "description": banner.description,
+            "image_url": banner.image_url,
+            "link_url": banner.link_url,
+            "order_index": banner.order_index,
+            "is_active": banner.is_active
+        }
+    }
+
+@app.put("/api/admin/banners/{banner_id}")
+def update_banner(banner_id: int, payload: BannerUpdate, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    banner = db.query(SlideBanner).filter(SlideBanner.id == banner_id).first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="ไม่พบแบนเนอร์ที่ต้องการแก้ไข")
+    
+    if payload.title is not None:
+        banner.title = payload.title
+    if payload.subtitle is not None:
+        banner.subtitle = payload.subtitle
+    if payload.description is not None:
+        banner.description = payload.description
+    if payload.image_url is not None:
+        banner.image_url = payload.image_url
+    if payload.link_url is not None:
+        banner.link_url = payload.link_url
+    if payload.order_index is not None:
+        banner.order_index = payload.order_index
+    if payload.is_active is not None:
+        banner.is_active = payload.is_active
+        
+    db.commit()
+    db.refresh(banner)
+    create_audit_log(
+        db=db,
+        action="UPDATE_BANNER",
+        target_type="banner",
+        target_id=str(banner.id),
+        details=f"Updated slide banner ID={banner.id}",
+        user=current_user,
+        request=request
+    )
+    return {
+        "success": True, 
+        "message": "อัปเดตแบนเนอร์สำเร็จ",
+        "banner": {
+            "id": banner.id,
+            "title": banner.title,
+            "subtitle": banner.subtitle,
+            "description": banner.description,
+            "image_url": banner.image_url,
+            "link_url": banner.link_url,
+            "order_index": banner.order_index,
+            "is_active": banner.is_active
+        }
+    }
+
+@app.delete("/api/admin/banners/{banner_id}")
+def delete_banner(banner_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    banner = db.query(SlideBanner).filter(SlideBanner.id == banner_id).first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="ไม่พบแบนเนอร์ที่ต้องการลบ")
+    
+    db.delete(banner)
+    db.commit()
+    create_audit_log(
+        db=db,
+        action="DELETE_BANNER",
+        target_type="banner",
+        target_id=str(banner_id),
+        details=f"Deleted slide banner ID={banner_id}",
+        user=current_user,
+        request=request
+    )
+    return {"success": True, "message": "ลบแบนเนอร์เรียบร้อยแล้ว"}
+
+# ----------------- SITE SETTINGS API -----------------
+class SiteSettingsUpdate(BaseModel):
+    settings: Dict[str, Optional[str]]
+
+@app.get("/api/settings")
+def get_public_settings(db: Session = Depends(get_db)):
+    """Public endpoint: returns all site settings as a key-value map."""
+    rows = db.query(SiteSetting).all()
+    return {row.key: row.value for row in rows}
+
+@app.post("/api/admin/settings")
+def update_admin_settings(payload: SiteSettingsUpdate, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Admin endpoint: updates or creates site settings."""
+    for key, value in payload.settings.items():
+        if key:
+            setting = db.query(SiteSetting).filter(SiteSetting.key == key).first()
+            if setting:
+                setting.value = value or ""
+            else:
+                db.add(SiteSetting(key=key, value=value or ""))
+    db.commit()
+    create_audit_log(
+        db=db,
+        action="UPDATE_SITE_SETTINGS",
+        target_type="settings",
+        target_id="general",
+        details=f"Updated site settings: {list(payload.settings.keys())}",
+        user=current_user,
+        request=request
+    )
+    rows = db.query(SiteSetting).all()
+    return {"success": True, "message": "บันทึกการตั้งค่าเว็บไซต์สำเร็จ", "settings": {row.key: row.value for row in rows}}
 
 if __name__ == "__main__":
     import uvicorn

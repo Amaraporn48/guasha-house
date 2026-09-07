@@ -170,6 +170,26 @@ class AuditLog(Base):
     result = Column(String, default="success") # success / failed
     details = Column(Text, nullable=True) # Sanitized audit summary (STRICTLY NO PASSWORDS OR TOKENS)
 
+class SlideBanner(Base):
+    __tablename__ = "slide_banners"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=True)
+    subtitle = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    image_url = Column(String, nullable=False)
+    link_url = Column(String, nullable=True, default="")
+    order_index = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+class SiteSetting(Base):
+    __tablename__ = "site_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, index=True, nullable=False)
+    value = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
 def init_db():
     try:
         Base.metadata.create_all(bind=engine)
@@ -199,6 +219,58 @@ def init_db():
                 db.add(admin_user)
                 db.commit()
                 print("✅ Initial admin user 'guasha' seeded successfully.")
+
+            # Seed default slide banners if table is empty
+            if db.query(SlideBanner).count() == 0:
+                default_banners = [
+                    SlideBanner(
+                        image_url="/static/banner1.png",
+                        subtitle="",
+                        title="",
+                        description="",
+                        link_url="#branches",
+                        order_index=1,
+                        is_active=True
+                    ),
+                    SlideBanner(
+                        image_url="https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80",
+                        subtitle="Professional Training Course",
+                        title="คอร์สเรียนสปานวดกัวซายกกระชับระดับมืออาชีพ",
+                        description="หลักสูตรเรียนกัวซาอย่างละเอียดทุกขั้นตอน สอนเทคนิคการกวาดเปิดน้ำเหลืองและผ่อนคลายกล้ามเนื้อหน้าสำหรับทำธุรกิจหรือดูแลตัวเอง",
+                        link_url="#lessons",
+                        order_index=2,
+                        is_active=True
+                    ),
+                    SlideBanner(
+                        image_url="https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?auto=format&fit=crop&w=1200&q=80",
+                        subtitle="Guasha House Skincare",
+                        title="ผลิตภัณฑ์ครีมบำรุงธรรมชาติสำหรับนวดกัวซา",
+                        description="พัฒนาครีมและน้ำมันสูตรพิเศษสำหรับหล่อลื่นผิวขณะทำกัวซา อุดมด้วยสารสกัดธรรมชาติบริสุทธิ์เพื่อความกระจ่างใสเปล่งปลั่ง",
+                        link_url="#products",
+                        order_index=3,
+                        is_active=True
+                    )
+                ]
+                db.add_all(default_banners)
+                db.commit()
+                print("✅ Default slide banners seeded successfully.")
+
+            # Seed default site settings if not present
+            default_settings = {
+                "contact_phone": "061-496-6361",
+                "contact_address": "บริษัท กัวซา เฮ้าส์ จำกัด\n199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240",
+                "contact_line_url": "https://line.me",
+                "contact_line_id": "@guashahouse",
+                "contact_facebook_url": "https://www.facebook.com/share/19USgHRf1X/?mibextid=wwXIfr",
+                "contact_tiktok_url": "https://www.tiktok.com/@guashahouse_bykrunoon",
+                "contact_email": "info@guashahouse.com"
+            }
+            for k, v in default_settings.items():
+                existing = db.query(SiteSetting).filter(SiteSetting.key == k).first()
+                if not existing:
+                    db.add(SiteSetting(key=k, value=v))
+            db.commit()
+            print("✅ Default site settings seeded successfully.")
         finally:
             db.close()
     except Exception as e:
