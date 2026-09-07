@@ -6,10 +6,10 @@ if [ ! -d "$DIR" ]; then
 fi
 cd "$DIR"
 
-# 1. Kill stale processes
-echo "Cleaning up stale processes..."
-pkill -9 -f "uvicorn main:app" 2>/dev/null || true
-sleep 1
+# 1. Quick check: If backend is ALREADY responding on port 8000, do nothing!
+if python3 -c "import socket; s = socket.socket(); s.settimeout(0.5); s.connect(('127.0.0.1', 8000)); s.close()" 2>/dev/null; then
+    exit 0
+fi
 
 # 2. Locate Python binary
 PYTHON_BIN=""
@@ -29,12 +29,10 @@ if [ -z "$PYTHON_BIN" ]; then
     PYTHON_BIN="$HOME/python/bin/python3"
 fi
 
-# 3. Setup clean Virtual Environment and install all required modules
-if [ ! -f "$DIR/venv/bin/python" ] || ! "$DIR/venv/bin/python" -c "import uvicorn, fastapi, bcrypt" 2>/dev/null; then
-    echo "📦 Installing required Python packages into Virtualenv (FastAPI, Uvicorn, Bcrypt, SQLAlchemy)..."
-    rm -rf "$DIR/venv"
+# 3. Setup clean Virtual Environment if missing
+if [ ! -f "$DIR/venv/bin/python" ]; then
+    echo "📦 Creating virtualenv..."
     "$PYTHON_BIN" -m venv "$DIR/venv"
-    "$DIR/venv/bin/pip" install --upgrade pip
     "$DIR/venv/bin/pip" install -r "$DIR/requirements.txt" --trusted-host pypi.org --trusted-host files.pythonhosted.org
 fi
 
@@ -43,16 +41,15 @@ VENV_PYTHON="$DIR/venv/bin/python"
 # 4. Initialize Database
 "$VENV_PYTHON" -c "from database import init_db; init_db()" 2>/dev/null || true
 
-# 5. Boot Uvicorn Daemon
-echo "🚀 Booting Guasha House backend..."
+# 5. Clean stale process and boot Uvicorn
+pkill -9 -f "uvicorn main:app" 2>/dev/null || true
+sleep 0.5
 nohup "$VENV_PYTHON" -m uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips "*" > "$DIR/uvicorn.log" 2>&1 &
-sleep 2
+sleep 1.5
 
 # 6. Verify socket connectivity
 if python3 -c "import socket; s = socket.socket(); s.settimeout(1); s.connect(('127.0.0.1', 8000)); s.close()" 2>/dev/null || "$VENV_PYTHON" -c "import socket; s = socket.socket(); s.settimeout(1); s.connect(('127.0.0.1', 8000)); s.close()" 2>/dev/null; then
-    echo "=================================================="
     echo "🎉 SUCCESS: Guasha House is ACTIVE and HEALTHY!"
-    echo "=================================================="
 else
     echo "❌ Startup failed. Log contents:"
     cat "$DIR/uvicorn.log" || true

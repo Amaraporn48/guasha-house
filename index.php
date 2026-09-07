@@ -12,6 +12,12 @@ $backend_host = "http://127.0.0.1:8000";
 
 function wake_up_backend() {
     global $dir;
+    $lockfile = sys_get_temp_dir() . '/guasha_boot.lock';
+    if (file_exists($lockfile) && (time() - filemtime($lockfile)) < 5) {
+        return;
+    }
+    @touch($lockfile);
+    
     $cmd = "cd $dir && bash hostinger_run.sh > uvicorn.log 2>&1 &";
     if (function_exists('exec')) {
         @exec($cmd);
@@ -25,17 +31,17 @@ function wake_up_backend() {
     }
 }
 
-// 1. Check if backend daemon is active
-$fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.05);
+// 1. Check if backend daemon is active with reasonable timeout (0.2s)
+$fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.2);
 
-// 2. If offline, automatically wake it up!
+// 2. If offline, wake it up!
 if (!$fp) {
     wake_up_backend();
     
-    // Poll for up to 3.5 seconds
-    for ($i = 0; $i < 18; $i++) {
+    // Poll for up to 4 seconds
+    for ($i = 0; $i < 20; $i++) {
         usleep(200000); // 0.2s
-        $fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.05);
+        $fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.2);
         if ($fp) break;
     }
 }
@@ -53,8 +59,8 @@ if ($fp) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
     curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
     $headers = [];
@@ -108,7 +114,16 @@ if ($fp) {
     curl_close($ch);
 }
 
-// 4. Fallback Fast Self-Reload (if backend took more than 3.5s on fresh cold start)
+// 4. If request is an API request, return JSON error instead of HTML
+$request_uri = $_SERVER['REQUEST_URI'] ?? '/';
+if (strpos($request_uri, '/api/') !== false) {
+    http_response_code(503);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'detail' => 'ระบบหลังบ้านกำลังเริ่มการทำงาน กรุณารอสักครู่แล้วลองใหม่อีกครั้ง']);
+    exit;
+}
+
+// 5. Fallback HTML Reload Screen for web browser
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>

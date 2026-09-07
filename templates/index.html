@@ -3760,16 +3760,22 @@
                         method: 'POST',
                         body: formData
                     })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success && data.url) {
+                    .then(async res => {
+                        const text = await res.text();
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            throw new Error('ระบบหลังบ้านกำลังรีโหลด กรุณารอ 2-3 วินาทีแล้วลองใหม่อีกครั้ง');
+                        }
+                        if (res.ok && data.success && data.url) {
                             this.bannerModal.image_url = data.url;
                             this.showToast('อัปโหลดรูปภาพแบนเนอร์สำเร็จ');
                         } else {
                             alert(data.detail || 'อัปโหลดรูปภาพไม่สำเร็จ');
                         }
                     })
-                    .catch(err => alert('เกิดข้อผิดพลาดในการอัปโหลด: ' + (err.message || err)))
+                    .catch(err => alert(err.message || 'เกิดข้อผิดพลาดในการอัปโหลด'))
                     .finally(() => {
                         this.uploadingBannerImage = false;
                     });
