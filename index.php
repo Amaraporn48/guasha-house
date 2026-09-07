@@ -1,6 +1,7 @@
 <?php
 /**
- * Guasha House Safe LiteSpeed Gateway
+ * Guasha House Zero-Maintenance Self-Healing Gateway
+ * Automatically boots backend on demand - never requires manual start
  */
 
 ini_set('display_errors', 0);
@@ -9,9 +10,37 @@ error_reporting(0);
 $dir = __DIR__;
 $backend_host = "http://127.0.0.1:8000";
 
-// Check if Uvicorn daemon is active on port 8000
+function wake_up_backend() {
+    global $dir;
+    $cmd = "cd $dir && bash hostinger_run.sh > uvicorn.log 2>&1 &";
+    if (function_exists('exec')) {
+        @exec($cmd);
+    } elseif (function_exists('shell_exec')) {
+        @shell_exec($cmd);
+    } elseif (function_exists('system')) {
+        @system($cmd);
+    } elseif (function_exists('popen')) {
+        $p = @popen($cmd, 'r');
+        if ($p) @pclose($p);
+    }
+}
+
+// 1. Check if backend daemon is active
 $fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.05);
 
+// 2. If offline, automatically wake it up!
+if (!$fp) {
+    wake_up_backend();
+    
+    // Poll for up to 3.5 seconds
+    for ($i = 0; $i < 18; $i++) {
+        usleep(200000); // 0.2s
+        $fp = @fsockopen('127.0.0.1', 8000, $errno, $errstr, 0.05);
+        if ($fp) break;
+    }
+}
+
+// 3. Proxy request to Uvicorn Backend
 if ($fp) {
     fclose($fp);
     
@@ -79,53 +108,28 @@ if ($fp) {
     curl_close($ch);
 }
 
-// If port 8000 is not yet active, read logs if any
-$log_output = "";
-if (file_exists("$dir/uvicorn.log")) {
-    $log_output = htmlspecialchars(substr(file_get_contents("$dir/uvicorn.log"), -2000));
-}
-
+// 4. Fallback Fast Self-Reload (if backend took more than 3.5s on fresh cold start)
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌿 ระบบจัดการร้าน กัวซา เฮ้าส์ (Guasha House)</title>
+    <title>🌿 Guasha House</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fbfaf7; color: #2d3748; padding: 40px 20px; line-height: 1.6; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 35px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border: 1px solid #ede8e1; text-align: center; }
-        .logo { font-size: 48px; margin-bottom: 15px; }
-        h2 { margin: 0 0 10px; color: #1a202c; font-size: 24px; font-weight: 700; }
-        .status-badge { display: inline-block; background: #feebc8; color: #c05621; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
-        .info-box { text-align: left; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-top: 20px; font-size: 14px; }
-        code { background: #edf2f7; color: #805ad5; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; font-weight: bold; }
-        .cmd-box { background: #1a202c; color: #68d391; padding: 12px 16px; border-radius: 8px; font-family: monospace; font-size: 13px; overflow-x: auto; margin: 10px 0; word-break: break-all; }
-        .log-box { background: #1a202c; color: #ecc94b; padding: 12px 16px; border-radius: 8px; font-family: monospace; font-size: 12px; overflow-x: auto; margin: 10px 0; text-align: left; max-height: 180px; white-space: pre-wrap; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #fbfaf7; text-align: center; padding: 50px 20px; color: #1a1a1a; }
+        .card { max-width: 480px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); border: 1px solid #ede8e1; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #c5a880; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="logo">🌿</div>
-    <h2>ระบบ กัวซา เฮ้าส์ (Guasha House)</h2>
-    <div class="status-badge">⏳ เซิร์ฟเวอร์กำลังรอคำสั่ง Start</div>
-    
-    <p style="color: #4a5568;">ไฟล์ระบบและฐานข้อมูลได้รับการติดตั้งสมบูรณ์แล้ว</p>
-
-    <?php if (!empty(trim($log_output))): ?>
-    <div style="text-align: left; margin-top: 15px;">
-        <strong>📋 Server Log ล่าสุด:</strong>
-        <div class="log-box"><?php echo $log_output; ?></div>
-    </div>
-    <?php endif; ?>
-
-    <div class="info-box">
-        <strong>🚀 วิธีเปิดให้ระบบออนไลน์ 24 ชั่วโมง:</strong><br><br>
-        <strong>ตั้งค่า Cron Job บน Hostinger</strong>
-        <p style="margin: 5px 0 10px; color: #718096;">ไปที่ <strong>hPanel &rarr; Advanced &rarr; Cron Jobs</strong> เลือก <code>กำหนดเอง</code> และใส่คำสั่ง:</p>
-        <div class="cmd-box">cd /home/u713703050/domains/guashahouse.com/public_html && bash hostinger_run.sh --keepalive</div>
-    </div>
+<div class="card">
+    <div style="font-size: 40px;">🌿</div>
+    <h3 style="margin: 10px 0;">กำลังเปิดระบบ Guasha House</h3>
+    <div class="spinner"></div>
+    <p style="color: #666; font-size: 14px;">ระบบกำลังโหลดอัตโนมัติ กรุณารอสักครู่...</p>
 </div>
+<script>setTimeout(function(){ window.location.reload(); }, 1500);</script>
 </body>
 </html>
