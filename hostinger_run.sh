@@ -6,26 +6,39 @@ if [ ! -d "$DIR" ]; then
 fi
 cd "$DIR"
 
-# 1. If already running, exit immediately
-if pgrep -f "uvicorn main:app" > /dev/null 2>&1; then
+# Check if backend on port 8000 is genuinely healthy and responding
+IS_HEALTHY=0
+if python3 -c "import socket; s = socket.socket(); s.settimeout(0.5); s.connect(('127.0.0.1', 8000)); s.close()" 2>/dev/null; then
+    IS_HEALTHY=1
+fi
+
+# If healthy, nothing to do
+if [ "$IS_HEALTHY" -eq 1 ]; then
+    echo "Guasha House is already running and healthy."
     exit 0
 fi
 
-# 2. Locate Virtualenv Python
+# If unhealthy or stopped, kill stale zombies
+echo "Cleaning up stale processes..."
+pkill -9 -f "uvicorn main:app" 2>/dev/null || true
+sleep 1
+
+# Locate Python in venv
 VENV_PYTHON="$DIR/venv/bin/python"
 if [ ! -f "$VENV_PYTHON" ]; then
-    for p in "$HOME/python/bin/python3" "/usr/local/bin/python3" "/usr/bin/python3" "python3"; do
-        if command -v "$p" &> /dev/null || [ -f "$p" ]; then
-            VENV_PYTHON="$p"
-            break
-        fi
-    done
+    VENV_PYTHON="$(which python3 || echo "$HOME/python/bin/python3")"
 fi
 
-# 3. Boot detached daemon with setsid so process lives forever
-if command -v setsid > /dev/null 2>&1; then
-    setsid "$VENV_PYTHON" -m uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips "*" > "$DIR/uvicorn.log" 2>&1 &
+# Boot fresh server
+echo "🚀 Booting fresh Guasha House backend..."
+nohup "$VENV_PYTHON" -m uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips "*" > "$DIR/uvicorn.log" 2>&1 &
+sleep 2
+
+if python3 -c "import socket; s = socket.socket(); s.settimeout(1); s.connect(('127.0.0.1', 8000)); s.close()" 2>/dev/null; then
+    echo "=================================================="
+    echo "🎉 SUCCESS: Guasha House is ACTIVE and HEALTHY!"
+    echo "=================================================="
 else
-    nohup "$VENV_PYTHON" -m uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips "*" > "$DIR/uvicorn.log" 2>&1 &
+    echo "❌ Status: Log contents below:"
+    cat "$DIR/uvicorn.log" || true
 fi
-disown -a 2>/dev/null || true
