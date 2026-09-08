@@ -177,6 +177,7 @@
                         <span x-show="!sidebarCollapsed" x-transition.opacity class="truncate">จัดการสาขา / Branches</span>
                     </a>
                     <a href="#" @click.prevent="setView('users')" 
+                       x-show="user && user.role === 'admin'"
                        title="จัดการผู้ใช้ / Users"
                        :class="[
                           activeView === 'users' ? 'bg-beige border-gold text-charcoal font-semibold shadow-sm' : 'text-gray-600 hover:bg-cream border-transparent',
@@ -1805,7 +1806,7 @@
             </div>
 
             <!-- 9. USERS VIEW -->
-            <div x-show="activeView === 'users'" class="space-y-6">
+            <div x-show="activeView === 'users' && user && user.role === 'admin'" class="space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 border border-beige rounded-2xl shadow-sm">
                     <div>
                         <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase">จัดการผู้ใช้งานและสิทธิ์ / Users Management</h3>
@@ -3363,6 +3364,9 @@
                         })
                         .then(data => {
                             this.user = data;
+                            if (this.user && this.user.role === 'admin') {
+                                this.fetchUsers();
+                            }
                         });
 
                     // Fetch base data
@@ -3374,7 +3378,6 @@
                     this.fetchBranches();
                     this.fetchBanners();
                     this.fetchSiteSettings();
-                    this.fetchUsers();
                     this.fetchExpenses();
                     this.fetchExpenseCategories();
                 },
@@ -3395,6 +3398,9 @@
                 },
 
                 setView(view) {
+                    if (view === 'users' && (!this.user || this.user.role !== 'admin')) {
+                        return;
+                    }
                     this.activeView = view;
                     this.mobileMenuOpen = false;
                     const titles = {
@@ -3628,9 +3634,14 @@
 
                 // --- USER MANAGEMENT FUNCTIONS ---
                 fetchUsers() {
+                    if (!this.user || this.user.role !== 'admin') return;
                     fetch('/api/users')
-                        .then(res => res.json())
-                        .then(data => this.users = data);
+                        .then(res => {
+                            if (!res.ok) return [];
+                            return res.json();
+                        })
+                        .then(data => this.users = data || [])
+                        .catch(() => {});
                 },
 
                 openUserModal(u = null) {
