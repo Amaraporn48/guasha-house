@@ -122,6 +122,13 @@ class Branch(Base):
     image_url = Column(String, nullable=True) # Storefront Image URL
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+class Region(Base):
+    __tablename__ = "regions"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    display_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 class Expense(Base):
     __tablename__ = "expenses"
     id = Column(Integer, primary_key=True, index=True)
@@ -271,6 +278,21 @@ def init_db():
                     db.add(SiteSetting(key=k, value=v))
             db.commit()
             print("✅ Default site settings seeded successfully.")
+
+            # Seed default regions if not present
+            from database import Region
+            default_regions = [
+                ("กรุงเทพฯ", 0),
+                ("ภาคกลาง", 1),
+                ("ภาคเหนือ", 2),
+                ("ภาคใต้", 3),
+                ("ภาคตะวันออกเฉียงเหนือ", 4),
+            ]
+            for region_name, order in default_regions:
+                if not db.query(Region).filter(Region.name == region_name).first():
+                    db.add(Region(name=region_name, display_order=order))
+            db.commit()
+            print("✅ Default regions seeded successfully.")
         finally:
             db.close()
     except Exception as e:

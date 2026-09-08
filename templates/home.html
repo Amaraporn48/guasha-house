@@ -396,7 +396,7 @@
             return {
                 searchQuery: '',
                 selectedRegion: 'ALL',
-                regions: ['กรุงเทพฯ', 'ภาคกลาง', 'ภาคเหนือ', 'ภาคใต้', 'ภาคตะวันออกเฉียงเหนือ'],
+                regions: [],
                 branches: [],
                 products: [],
                 videos: [],
@@ -416,6 +416,7 @@
                     this.fetchPublicBranches();
                     this.fetchPublicProducts();
                     this.fetchPublicVideos();
+                    this.fetchPublicRegions();
                 },
 
                 fetchPublicSettings() {
@@ -427,6 +428,17 @@
                             }
                         })
                         .catch(err => console.error('fetchPublicSettings err:', err));
+                },
+
+                fetchPublicRegions() {
+                    fetch('/api/regions')
+                        .then(res => res.json())
+                        .then(data => {
+                            this.regions = (data || []).map(r => r.name);
+                        })
+                        .catch(() => {
+                            this.regions = ['กรุงเทพฯ', 'ภาคกลาง', 'ภาคเหนือ', 'ภาคใต้', 'ภาคตะวันออกเฉียงเหนือ'];
+                        });
                 },
                 
                 fetchPublicBranches() {

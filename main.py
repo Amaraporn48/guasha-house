@@ -1867,6 +1867,41 @@ class ExpenseCreateSchema(BaseModel):
     net_amount: Optional[float] = 0.0
     note: Optional[str] = ""
 
+# ----------------- REGIONS API -----------------
+class RegionCreateSchema(BaseModel):
+    name: str
+
+@app.get("/api/regions")
+def get_regions(db: Session = Depends(get_db)):
+    from database import Region
+    return db.query(Region).order_by(Region.display_order, Region.name).all()
+
+@app.post("/api/admin/regions")
+def create_region(data: RegionCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from database import Region
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="ชื่อภูมิภาคห้ามว่าง")
+    existing = db.query(Region).filter(Region.name == name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="มีภูมิภาคนี้อยู่แล้ว")
+    max_order = db.query(Region).count()
+    new_region = Region(name=name, display_order=max_order)
+    db.add(new_region)
+    db.commit()
+    db.refresh(new_region)
+    return {"success": True, "region": {"id": new_region.id, "name": new_region.name, "display_order": new_region.display_order}}
+
+@app.delete("/api/admin/regions/{region_id}")
+def delete_region(region_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from database import Region
+    region = db.query(Region).filter(Region.id == region_id).first()
+    if not region:
+        raise HTTPException(status_code=404, detail="ไม่พบภูมิภาค")
+    db.delete(region)
+    db.commit()
+    return {"success": True, "message": "ลบภูมิภาคสำเร็จ"}
+
 # ----------------- BRANCHES API -----------------
 @app.get("/api/branches")
 def get_branches(db: Session = Depends(get_db)):

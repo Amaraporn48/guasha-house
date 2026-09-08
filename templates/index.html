@@ -2575,15 +2575,29 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ภูมิภาค / Region</label>
-                    <select x-model="branchModal.region" required
-                            class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
-                        <option value="">-- กรุณาเลือกภาค --</option>
-                        <option value="กรุงเทพฯ">กรุงเทพฯ</option>
-                        <option value="ภาคกลาง">ภาคกลาง</option>
-                        <option value="ภาคเหนือ">ภาคเหนือ</option>
-                        <option value="ภาคใต้">ภาคใต้</option>
-                        <option value="ภาคตะวันออกเฉียงเหนือ">ภาคตะวันออกเฉียงเหนือ</option>
-                    </select>
+                    <div class="flex gap-2 items-center">
+                        <select x-model="branchModal.region" required
+                                class="flex-1 bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
+                            <option value="">-- กรุณาเลือกภาค --</option>
+                            <template x-for="r in allRegions" :key="r.id">
+                                <option :value="r.name" x-text="r.name"></option>
+                            </template>
+                        </select>
+                        <button type="button" @click="showAddRegion = !showAddRegion"
+                                class="flex-shrink-0 w-9 h-9 rounded-xl bg-gold text-white font-bold text-lg flex items-center justify-center hover:bg-gold-dark transition-colors"
+                                title="เพิ่มภูมิภาคใหม่">+</button>
+                    </div>
+                    <!-- Inline add region form -->
+                    <div x-show="showAddRegion" x-transition class="mt-2 flex gap-2">
+                        <input type="text" x-model="newRegionName"
+                               placeholder="ชื่อภูมิภาคใหม่ เช่น ภาคตะวันตก"
+                               @keydown.enter.prevent="saveNewRegion()"
+                               class="flex-1 bg-cream border border-gold rounded-xl px-3 py-2 text-sm focus-gold">
+                        <button type="button" @click="saveNewRegion()"
+                                class="px-3 py-2 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-dark transition-colors">บันทึก</button>
+                        <button type="button" @click="showAddRegion = false; newRegionName = ''"
+                                class="px-3 py-2 bg-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-300 transition-colors">ยกเลิก</button>
+                    </div>
                 </div>
 
                 <div>
@@ -3289,6 +3303,9 @@
                 customerModal: { open: false, id: null, name: '', address: '', tax_id: '', phone: '', email: '', notes: '', source: 'db' },
                 productModal: { open: false, id: null, code: '', name: '', description: '', unit_price: 0, stock_quantity: 0, is_service: false, image_url: '' },
                 branchModal: { open: false, id: null, name: '', region: '', address: '', phone: '', map_pin: '', image_url: '' },
+                allRegions: [],
+                showAddRegion: false,
+                newRegionName: '',
                 bannerModal: { open: false, id: null, title: '', subtitle: '', description: '', image_url: '', link_url: '', order_index: 1, is_active: true },
                 userModal: { open: false, id: null, username: '', fullname: '', password: '', role: 'staff' },
                 expenseModal: { open: false, id: null, date: new Date().toISOString().substring(0, 10), category: '', description: '', amount: 0.0 },
@@ -3897,6 +3914,33 @@
                     fetch('/api/branches')
                         .then(res => res.json())
                         .then(data => this.branches = data);
+                    this.fetchRegions();
+                },
+                fetchRegions() {
+                    fetch('/api/regions')
+                        .then(res => res.json())
+                        .then(data => this.allRegions = data);
+                },
+                saveNewRegion() {
+                    const name = this.newRegionName.trim();
+                    if (!name) return;
+                    fetch('/api/admin/regions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.allRegions.push(data.region);
+                            this.branchModal.region = data.region.name;
+                            this.newRegionName = '';
+                            this.showAddRegion = false;
+                        } else {
+                            alert(data.detail || 'ไม่สามารถเพิ่มภูมิภาคได้');
+                        }
+                    })
+                    .catch(() => alert('เกิดข้อผิดพลาดในการเพิ่มภูมิภาค'));
                 },
                 openBranchModal(b = null) {
                     if (b) {
