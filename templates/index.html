@@ -1999,6 +1999,12 @@
                                                         <span>👁️</span>
                                                         <span>ดู</span>
                                                     </button>
+                                                    <button @click="openEditExpenseModal(exp)"
+                                                            title="แก้ไขข้อมูลใบสำคัญจ่าย"
+                                                            class="text-xs bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 px-2.5 py-1 rounded-lg border border-amber-200 font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                                                        <span>✏️</span>
+                                                        <span>แก้ไข</span>
+                                                    </button>
                                                     <button @click="printExpenseVoucher(exp.id)"
                                                             title="พิมพ์ใบสำคัญจ่าย A4"
                                                             class="text-xs bg-cream hover:bg-beige text-charcoal px-2.5 py-1 rounded-lg border border-beige font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs">
@@ -3255,10 +3261,16 @@
             <div class="flex justify-between items-center p-4 border-t border-beige bg-cream/40 flex-shrink-0">
                 <button type="button" @click="viewExpenseModal.open = false" 
                         class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-2.5 rounded-xl border border-beige transition">ปิด / Close</button>
-                <button type="button" @click="printExpenseVoucher(viewExpenseModal.exp.id)" 
-                        class="bg-charcoal hover:bg-gold-dark text-white text-xs font-bold px-6 py-2.5 rounded-xl transition tracking-wider uppercase shadow-md flex items-center gap-2">
-                    <span>🖨️ พิมพ์ใบสำคัญจ่าย A4 / Print Voucher</span>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="viewExpenseModal.open = false; openEditExpenseModal(viewExpenseModal.exp)" 
+                            class="bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 text-xs font-bold px-5 py-2.5 rounded-xl border border-amber-200 transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+                        <span>✏️ แก้ไขข้อมูล / Edit</span>
+                    </button>
+                    <button type="button" @click="printExpenseVoucher(viewExpenseModal.exp.id)" 
+                            class="bg-charcoal hover:bg-gold-dark text-white text-xs font-bold px-6 py-2.5 rounded-xl transition tracking-wider uppercase shadow-md flex items-center gap-2 cursor-pointer">
+                        <span>🖨️ พิมพ์ใบสำคัญจ่าย A4 / Print Voucher</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -3278,17 +3290,33 @@
                            class="w-full bg-beige/50 border border-beige rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-600 outline-none">
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">จำนวนที่ซื้อเข้า (ชิ้น)</label>
-                        <input type="number" x-model.number="restockModal.quantity" required min="1"
-                               class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">จำนวนที่ซื้อเข้า (ชิ้น) *</label>
+                    <input type="number" x-model.number="restockModal.quantity" @input="onRestockQtyChange()" required min="1"
+                           class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold font-bold text-charcoal">
+                </div>
+
+                <!-- Cost Options: Unit Cost vs Total Cost -->
+                <div class="p-3.5 bg-cream/60 border border-beige rounded-xl space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-charcoal uppercase tracking-wider">💰 ราคาต้นทุน (ไม่บังคับใส่)</span>
+                        <span class="text-[10px] text-gray-400">เลือกใส่อันใดอันหนึ่งได้</span>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ราคาต้นทุนรวม (บาท)</label>
-                        <input type="number" step="any" x-model.number="restockModal.cost_amount" required placeholder="บันทึกเป็นรายจ่าย"
-                               class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold text-red-600 font-semibold">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-500 mb-1">1. ต้นทุนต่อหน่วย (บาท/ชิ้น)</label>
+                            <input type="number" step="any" min="0" x-model="restockModal.unit_cost" @input="onRestockUnitCostChange()" placeholder="เช่น 50"
+                                   class="w-full bg-white border border-beige rounded-xl px-3.5 py-2 text-xs focus-gold text-charcoal font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-500 mb-1">2. ราคาต้นทุนรวม (บาท)</label>
+                            <input type="number" step="any" min="0" x-model="restockModal.cost_amount" @input="onRestockTotalCostChange()" placeholder="เช่น 500"
+                                   class="w-full bg-white border border-beige rounded-xl px-3.5 py-2 text-xs focus-gold text-red-600 font-bold">
+                        </div>
                     </div>
+                    <p class="text-[10px] text-gray-400 leading-tight">
+                        💡 ไม่บังคับใส่ ใส่อันไหนก็ได้ ระบบจะคำนวณอีกช่องให้อัตโนมัติ (หากใส่ต้นทุน ระบบจะบันทึกเป็นรายจ่ายให้อัตโนมัติ)
+                    </p>
                 </div>
 
                 <div>
@@ -3407,7 +3435,7 @@
                 bannerModal: { open: false, id: null, title: '', subtitle: '', description: '', image_url: '', link_url: '', order_index: 1, is_active: true },
                 userModal: { open: false, id: null, username: '', fullname: '', password: '', role: 'staff' },
                 expenseModal: { open: false, id: null, date: new Date().toISOString().substring(0, 10), category: '', description: '', amount: 0.0 },
-                restockModal: { open: false, product_id: null, product_name: '', quantity: 10, cost_amount: 0.0, date: new Date().toISOString().substring(0, 10) },
+                restockModal: { open: false, product_id: null, product_name: '', quantity: 10, unit_cost: '', cost_amount: '', date: new Date().toISOString().substring(0, 10) },
                 viewModal: { open: false, doc: {} },
                 uploadingSlip: false,
 
@@ -4194,6 +4222,43 @@
                     this.calculateExpenseTotals();
                 },
 
+                openEditExpenseModal(exp) {
+                    let items = [];
+                    try {
+                        items = JSON.parse(exp.items_json || '[]');
+                    } catch(e) {
+                        items = [];
+                    }
+                    if (!items || items.length === 0) {
+                        const amt = parseFloat(exp.subtotal || exp.amount || 0);
+                        items = [
+                            { description: exp.description || exp.category || 'รายการค่าใช้จ่าย', quantity: 1, unit: 'รายการ', unit_price: amt, amount: amt }
+                        ];
+                    }
+                    
+                    const hasWht = Boolean(exp.withholding_tax_amount && parseFloat(exp.withholding_tax_amount) > 0);
+                    
+                    this.expenseModal = {
+                        open: true,
+                        id: exp.id,
+                        voucher_number: exp.voucher_number || ('PV-' + String(exp.id).padStart(4, '0')),
+                        date: exp.date || new Date().toISOString().substring(0, 10),
+                        category: exp.category || 'ค่าสินค้า/วัตถุดิบ',
+                        pay_to: exp.pay_to || '',
+                        address: exp.address || '',
+                        tax_id: exp.tax_id || '',
+                        description: exp.description || '',
+                        items: items,
+                        subtotal: parseFloat(exp.subtotal || exp.amount || 0),
+                        has_withholding_tax: hasWht,
+                        withholding_tax_percent: parseFloat(exp.withholding_tax_percent) || 3.0,
+                        withholding_tax_amount: parseFloat(exp.withholding_tax_amount) || 0.0,
+                        amount: parseFloat(exp.net_amount || exp.amount || 0),
+                        note: exp.note || ''
+                    };
+                    this.calculateExpenseTotals();
+                },
+
                 saveExpenseFromModal() {
                     if (this.savingExpense) return;
                     if (!this.expenseModal.category) {
@@ -4203,6 +4268,10 @@
                     
                     this.calculateExpenseTotals();
                     this.savingExpense = true;
+                    
+                    const isEdit = Boolean(this.expenseModal.id);
+                    const url = isEdit ? `/api/expenses/${this.expenseModal.id}` : '/api/expenses';
+                    const method = isEdit ? 'PUT' : 'POST';
                     
                     const payload = {
                         voucher_number: this.expenseModal.voucher_number || '',
@@ -4221,8 +4290,8 @@
                         note: this.expenseModal.note || ''
                     };
 
-                    fetch('/api/expenses', {
-                        method: 'POST',
+                    fetch(url, {
+                        method: method,
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     })
@@ -4233,14 +4302,14 @@
                             return;
                         }
                         
-                        this.showToast(data.message || 'บันทึกใบสำคัญจ่ายสำเร็จ');
+                        this.showToast(data.message || (isEdit ? 'อัปเดตข้อมูลใบสำคัญจ่ายสำเร็จ' : 'บันทึกใบสำคัญจ่ายสำเร็จ'));
                         this.expenseModal.open = false;
                         this.fetchExpenses();
                         this.fetchExpenseCategories();
                         this.fetchReportsData();
                         this.fetchDashboardStats();
                         
-                        if (confirm('บันทึกใบสำคัญจ่ายสำเร็จ! คุณต้องการสั่งพิมพ์ใบสำคัญจ่ายทันทีใช่หรือไม่?')) {
+                        if (!isEdit && confirm('บันทึกใบสำคัญจ่ายสำเร็จ! คุณต้องการสั่งพิมพ์ใบสำคัญจ่ายทันทีใช่หรือไม่?')) {
                             window.open(`/print/expense/${data.expense_id}`, '_blank');
                         }
                     })
@@ -4423,27 +4492,60 @@
                         product_id: p.id,
                         product_name: p.name,
                         quantity: 10,
-                        cost_amount: 0.0,
+                        unit_cost: '',
+                        cost_amount: '',
                         date: new Date().toISOString().substring(0, 10)
                     };
+                },
+                onRestockQtyChange() {
+                    const qty = parseFloat(this.restockModal.quantity) || 0;
+                    const unit = parseFloat(this.restockModal.unit_cost);
+                    if (!isNaN(unit) && unit > 0 && qty > 0) {
+                        this.restockModal.cost_amount = Math.round(qty * unit * 100) / 100;
+                    } else if (parseFloat(this.restockModal.cost_amount) > 0 && qty > 0) {
+                        this.restockModal.unit_cost = Math.round((parseFloat(this.restockModal.cost_amount) / qty) * 100) / 100;
+                    }
+                },
+                onRestockUnitCostChange() {
+                    const qty = parseFloat(this.restockModal.quantity) || 0;
+                    const unit = parseFloat(this.restockModal.unit_cost);
+                    if (this.restockModal.unit_cost === '' || isNaN(unit)) {
+                        return;
+                    }
+                    if (qty > 0) {
+                        this.restockModal.cost_amount = Math.round(qty * unit * 100) / 100;
+                    }
+                },
+                onRestockTotalCostChange() {
+                    const qty = parseFloat(this.restockModal.quantity) || 0;
+                    const total = parseFloat(this.restockModal.cost_amount);
+                    if (this.restockModal.cost_amount === '' || isNaN(total)) {
+                        return;
+                    }
+                    if (qty > 0) {
+                        this.restockModal.unit_cost = Math.round((total / qty) * 100) / 100;
+                    }
                 },
                 saveRestock() {
                     if (this.savingRestock) return;
                     this.savingRestock = true;
+                    const totalCost = parseFloat(this.restockModal.cost_amount) || 0.0;
+                    const unitCost = parseFloat(this.restockModal.unit_cost) || (totalCost > 0 && this.restockModal.quantity > 0 ? totalCost / this.restockModal.quantity : 0.0);
                     fetch('/api/products/restock', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             product_id: this.restockModal.product_id,
                             quantity: parseInt(this.restockModal.quantity),
-                            cost_amount: parseFloat(this.restockModal.cost_amount),
+                            cost_amount: totalCost,
+                            unit_cost: unitCost,
                             date: this.restockModal.date
                         })
                     })
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            this.showToast(data.message || 'เติมสต็อกและบันทึกรายจ่ายสำเร็จ');
+                            this.showToast(data.message || 'เติมสต็อกสำเร็จ');
                             this.restockModal.open = false;
                             this.fetchProducts();
                             this.fetchExpenses();

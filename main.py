@@ -2059,11 +2059,62 @@ def delete_expense(exp_id: int, request: Request, db: Session = Depends(get_db),
     
     return {"success": True, "message": "ลบรายการรายจ่ายสำเร็จ"}
 
+@app.put("/api/expenses/{exp_id}")
+def update_expense(exp_id: int, exp_data: ExpenseCreateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from database import Expense
+    exp = db.query(Expense).filter(Expense.id == exp_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="ไม่พบรายการรายจ่าย")
+        
+    sub_amt = exp_data.subtotal if (exp_data.subtotal and exp_data.subtotal > 0) else exp_data.amount
+    net_amt = exp_data.net_amount if (exp_data.net_amount and exp_data.net_amount > 0) else exp_data.amount
+    wht_amt = exp_data.withholding_tax_amount or 0.0
+
+    exp.date = exp_data.date
+    exp.category = exp_data.category
+    exp.amount = net_amt
+    exp.description = exp_data.description or exp_data.pay_to or exp_data.category
+    
+    for attr, val in [
+        ("voucher_number", exp_data.voucher_number or exp.voucher_number),
+        ("pay_to", exp_data.pay_to),
+        ("address", exp_data.address),
+        ("tax_id", exp_data.tax_id),
+        ("items_json", exp_data.items_json),
+        ("subtotal", sub_amt),
+        ("withholding_tax_percent", exp_data.withholding_tax_percent or 0.0),
+        ("withholding_tax_amount", wht_amt),
+        ("net_amount", net_amt),
+        ("note", exp_data.note)
+    ]:
+        try:
+            setattr(exp, attr, val)
+        except Exception:
+            pass
+
+    db.commit()
+    db.refresh(exp)
+
+    v_num = getattr(exp, "voucher_number", None) or f"PV-{exp.id:04d}"
+    create_audit_log(
+        db=db,
+        action="UPDATE_EXPENSE",
+        target_type="expense",
+        target_id=str(exp.id),
+        result="success",
+        details=json.dumps({"voucher_number": v_num, "category": exp.category, "net_amount": net_amt, "pay_to": getattr(exp, 'pay_to', '')}),
+        user=current_user,
+        request=request
+    )
+
+    return {"success": True, "message": "อัปเดตข้อมูลใบสำคัญจ่ายสำเร็จ", "expense_id": exp.id, "voucher_number": v_num}
+
 # ----------------- INVENTORY UPGRADE & RESTOCK -----------------
 class RestockSchema(BaseModel):
     product_id: int
     quantity: int
-    cost_amount: float
+    cost_amount: Optional[float] = 0.0
+    unit_cost: Optional[float] = None
     date: str
 
 @app.post("/api/products/restock")
@@ -2077,15 +2128,60 @@ def restock_product(restock_data: RestockSchema, request: Request, db: Session =
     old_stock = prod.stock_quantity or 0
     prod.stock_quantity = old_stock + restock_data.quantity
     
-    # Register as expense
-    new_exp = Expense(
-        date=restock_data.date,
-        category="ซื้อสินค้าเข้าสต็อก",
-        amount=restock_data.cost_amount,
-        description=f"เพิ่มสต็อก {prod.name} จำนวน {restock_data.quantity} ชิ้น (ราคารวม {restock_data.cost_amount:.2f} บาท)"
-    )
-    db.add(new_exp)
-    db.commit()
+    # Calculate cost
+    total_cost = float(restock_data.cost_amount or 0.0)
+    unit_cost = float(restock_data.unit_cost or 0.0) if restock_data.unit_cost is not None else 0.0
+    if total_cost <= 0.0 and unit_cost > 0.0 and restock_data.quantity > 0:
+        total_cost = round(unit_cost * restock_data.quantity, 2)
+    elif unit_cost <= 0.0 and total_cost > 0.0 and restock_data.quantity > 0:
+        unit_cost = round(total_cost / restock_data.quantity, 2)
+
+    # Register as expense only if total_cost > 0
+    exp_id = None
+    if total_cost > 0.0:
+        count = db.query(Expense).count() + 1
+        year_str = datetime.date.today().year
+        v_num = f"PV-{year_str}-{count:04d}"
+        
+        unit_info = f" (ชิ้นละ {unit_cost:,.2f} บ.)" if unit_cost > 0 else ""
+        desc = f"ซื้อสินค้าเติมสต็อก: {prod.name} จำนวน {restock_data.quantity} ชิ้น{unit_info}"
+        
+        items_list = [
+            {
+                "description": f"{prod.name} (เติมสต็อก)",
+                "quantity": restock_data.quantity,
+                "unit": "ชิ้น",
+                "unit_price": unit_cost,
+                "amount": total_cost
+            }
+        ]
+        
+        new_exp = Expense()
+        new_exp.date = restock_data.date
+        new_exp.category = "ซื้อสินค้าเข้าสต็อก"
+        new_exp.amount = total_cost
+        new_exp.net_amount = total_cost
+        new_exp.subtotal = total_cost
+        new_exp.description = desc
+        
+        for attr, val in [
+            ("voucher_number", v_num),
+            ("pay_to", "ซื้อสินค้าเติมสต็อก"),
+            ("items_json", json.dumps(items_list, ensure_ascii=False)),
+            ("withholding_tax_amount", 0.0),
+            ("withholding_tax_percent", 0.0)
+        ]:
+            try:
+                setattr(new_exp, attr, val)
+            except Exception:
+                pass
+                
+        db.add(new_exp)
+        db.commit()
+        db.refresh(new_exp)
+        exp_id = new_exp.id
+    else:
+        db.commit()
     
     create_audit_log(
         db=db,
@@ -2097,7 +2193,9 @@ def restock_product(restock_data: RestockSchema, request: Request, db: Session =
             "product_name": prod.name,
             "added_quantity": restock_data.quantity,
             "new_stock": prod.stock_quantity,
-            "cost_amount": restock_data.cost_amount
+            "cost_amount": total_cost,
+            "unit_cost": unit_cost,
+            "expense_id": exp_id
         }),
         user=current_user,
         request=request
@@ -2105,8 +2203,9 @@ def restock_product(restock_data: RestockSchema, request: Request, db: Session =
     
     return {
         "success": True, 
-        "message": f"เพิ่มสต็อก {prod.name} จำนวน {restock_data.quantity} ชิ้น เรียบร้อยแล้ว",
-        "new_stock": prod.stock_quantity
+        "message": f"เพิ่มสต็อก {prod.name} จำนวน {restock_data.quantity} ชิ้น เรียบร้อยแล้ว" + (f" (บันทึกรายจ่าย ฿{total_cost:,.2f})" if total_cost > 0 else ""),
+        "new_stock": prod.stock_quantity,
+        "expense_id": exp_id
     }
 
 # ----------------- PAYMENT SLIP & IMAGE UPLOAD -----------------
