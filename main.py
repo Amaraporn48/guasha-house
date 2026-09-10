@@ -1,4 +1,5 @@
 import os
+import re
 import datetime
 from typing import List, Optional, Dict
 import jwt
@@ -2762,15 +2763,54 @@ def convert_to_embed_url(url: str) -> str:
     if not url:
         return ""
     url = url.strip()
-    if "youtube.com/watch?v=" in url:
-        v_id = url.split("watch?v=")[1].split("&")[0]
+    
+    # 1. YouTube Shorts: youtube.com/shorts/VIDEO_ID or youtu.be/shorts/VIDEO_ID
+    if "youtube.com/shorts/" in url:
+        v_id = url.split("shorts/")[1].split("?")[0].split("/")[0]
+        return f"https://www.youtube.com/embed/{v_id}"
+    elif "youtu.be/shorts/" in url:
+        v_id = url.split("shorts/")[1].split("?")[0].split("/")[0]
+        return f"https://www.youtube.com/embed/{v_id}"
+        
+    # 2. Standard YouTube: watch?v= or youtu.be/ or embed/
+    elif "youtube.com/watch" in url and "v=" in url:
+        v_id = url.split("v=")[1].split("&")[0].split("?")[0]
         return f"https://www.youtube.com/embed/{v_id}"
     elif "youtu.be/" in url:
-        v_id = url.split("youtu.be/")[1].split("?")[0]
+        v_id = url.split("youtu.be/")[1].split("?")[0].split("/")[0]
         return f"https://www.youtube.com/embed/{v_id}"
+    elif "youtube.com/embed/" in url:
+        return url
+        
+    # 3. TikTok: tiktok.com/@username/video/VIDEO_ID or vt.tiktok.com/...
+    elif "tiktok.com" in url:
+        if "/video/" in url:
+            match = re.search(r'/video/(\d+)', url)
+            if match:
+                return f"https://www.tiktok.com/embed/v2/{match.group(1)}"
+        elif "/embed/v2/" in url or "/embed/" in url:
+            return url
+        elif "vt.tiktok.com" in url or "vm.tiktok.com" in url or "/t/" in url:
+            import urllib.request
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+                with urllib.request.urlopen(req, timeout=4) as resp:
+                    final_url = resp.geturl()
+                    match = re.search(r'/video/(\d+)', final_url)
+                    if match:
+                        return f"https://www.tiktok.com/embed/v2/{match.group(1)}"
+            except Exception:
+                pass
+                
+    # 4. Google Drive
     elif "drive.google.com/file/d/" in url:
         f_id = url.split("drive.google.com/file/d/")[1].split("/")[0]
         return f"https://drive.google.com/file/d/{f_id}/preview"
+        
+    # 5. Direct MP4 / WebM video file
+    elif re.search(r'\.(mp4|webm|ogg|mov)(\?.*)?$', url, re.IGNORECASE):
+        return url
+        
     return url
 
 @app.get("/api/videos")
@@ -2787,7 +2827,13 @@ def get_videos(category: Optional[str] = None, query: Optional[str] = None, db: 
                 VideoCourse.instructor.ilike(search_pattern)
             )
         )
-    return q.order_by(VideoCourse.id.desc()).all()
+    videos = q.order_by(VideoCourse.id.desc()).all()
+    # Dynamic sync embed_url if needed
+    for v in videos:
+        expected_embed = convert_to_embed_url(v.video_url)
+        if expected_embed and v.embed_url != expected_embed:
+            v.embed_url = expected_embed
+    return videos
 
 @app.post("/api/videos")
 def create_video(payload: VideoCourseSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

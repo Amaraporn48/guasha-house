@@ -335,6 +335,7 @@
                                 </div>
                             </div>
                             <span class="absolute top-3 left-3 bg-gold text-charcoal text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow" x-text="v.category || 'ทั่วไป'"></span>
+                            <span class="absolute top-3 right-3 bg-charcoal/80 backdrop-blur-sm text-white text-[9px] font-semibold px-2 py-0.5 rounded-full shadow" x-text="getVideoPlatform(v.video_url || v.embed_url)"></span>
                             <span x-show="v.duration" class="absolute bottom-3 right-3 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded" x-text="v.duration"></span>
                         </div>
 
@@ -434,22 +435,39 @@
     </div>
 
     <!-- Play Video Player Modal for Public Home Page -->
-    <div x-show="playVideoModal.open" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50" x-transition>
-        <div class="bg-white border border-beige rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
-            <div class="p-4 bg-charcoal text-white flex items-center justify-between">
+    <div x-show="playVideoModal.open" class="fixed inset-0 bg-black/80 flex items-center justify-center p-3 sm:p-6 z-50" x-transition>
+        <div class="bg-white border border-beige rounded-2xl w-full shadow-2xl overflow-hidden relative flex flex-col max-h-[92vh] transition-all duration-300"
+             :class="isVerticalVideo(playVideoModal.embed_url || playVideoModal.video_url) ? 'max-w-md' : 'max-w-3xl'">
+            <div class="p-4 bg-charcoal text-white flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center gap-2 truncate">
-                    <span class="bg-gold text-charcoal text-[10px] font-bold px-2.5 py-0.5 rounded-full" x-text="playVideoModal.category || 'วิดีโอการสอน'"></span>
-                    <h3 class="text-xs sm:text-sm font-bold truncate" x-text="playVideoModal.title"></h3>
+                    <span class="bg-gold text-charcoal text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase"
+                          x-text="getVideoPlatform(playVideoModal.video_url || playVideoModal.embed_url)"></span>
+                    <span class="text-gray-400 text-xs font-normal" x-show="playVideoModal.category" x-text="'• ' + playVideoModal.category"></span>
+                    <h3 class="text-xs sm:text-sm font-bold truncate ml-1" x-text="playVideoModal.title"></h3>
                 </div>
-                <button @click="playVideoModal.open = false; playVideoModal.embed_url = ''" class="text-white hover:text-gold text-2xl font-bold px-2">&times;</button>
+                <button @click="closePlayVideoModal()" class="text-white hover:text-gold text-2xl font-bold px-2 cursor-pointer">&times;</button>
             </div>
             
             <!-- Video Frame Container -->
-            <div class="w-full bg-black aspect-video relative flex items-center justify-center">
-                <template x-if="playVideoModal.embed_url">
-                    <iframe :src="playVideoModal.embed_url" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <div class="w-full bg-black relative flex items-center justify-center overflow-hidden"
+                 :class="isVerticalVideo(playVideoModal.embed_url || playVideoModal.video_url) ? 'h-[580px] max-h-[72vh]' : 'aspect-video'">
+                
+                <!-- Direct MP4 / Video File -->
+                <template x-if="isDirectVideo(playVideoModal.video_url)">
+                    <video :src="playVideoModal.video_url" controls autoplay class="w-full h-full object-contain"></video>
                 </template>
-                <template x-if="!playVideoModal.embed_url && playVideoModal.video_url">
+
+                <!-- Iframe Embed (YouTube, YouTube Shorts, TikTok, Google Drive) -->
+                <template x-if="!isDirectVideo(playVideoModal.video_url) && playVideoModal.embed_url">
+                    <iframe :src="playVideoModal.embed_url" 
+                            class="w-full h-full" 
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen></iframe>
+                </template>
+
+                <!-- Fallback link if cannot embed -->
+                <template x-if="!isDirectVideo(playVideoModal.video_url) && !playVideoModal.embed_url && playVideoModal.video_url">
                     <div class="text-center p-6 text-white space-y-3">
                         <p class="text-sm">วิดีโอนี้ไม่สามารถฝังเล่นโดยตรงได้ กรุณากดปุ่มด้านล่างเพื่อเปิดดู:</p>
                         <a :href="playVideoModal.video_url" target="_blank" class="inline-block bg-gold text-charcoal font-bold text-xs px-6 py-3 rounded-xl shadow">เปิดดูวิดีโอในแท็บใหม่ ↗</a>
@@ -458,7 +476,7 @@
             </div>
 
             <!-- Video Description Details -->
-            <div class="p-5 overflow-y-auto space-y-2 bg-white">
+            <div class="p-4 sm:p-5 overflow-y-auto space-y-2 bg-white flex-shrink-0">
                 <div class="flex items-center justify-between text-xs text-gray-500 font-semibold border-b border-beige pb-2">
                     <span>ผู้สอน: <strong class="text-charcoal" x-text="playVideoModal.instructor || 'กัวซา เฮ้าส์'"></strong></span>
                     <span x-show="playVideoModal.duration">ความยาว: <strong class="text-charcoal" x-text="playVideoModal.duration"></strong></span>
@@ -611,6 +629,41 @@
                         duration: v.duration,
                         description: v.description
                     };
+                },
+
+                closePlayVideoModal() {
+                    this.playVideoModal = {
+                        open: false,
+                        title: '',
+                        category: '',
+                        embed_url: '',
+                        video_url: '',
+                        instructor: '',
+                        duration: '',
+                        description: ''
+                    };
+                },
+
+                isVerticalVideo(url) {
+                    if (!url) return false;
+                    const str = String(url).toLowerCase();
+                    return str.includes('tiktok.com') || str.includes('shorts') || str.includes('/reel');
+                },
+
+                isDirectVideo(url) {
+                    if (!url) return false;
+                    return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(String(url));
+                },
+
+                getVideoPlatform(url) {
+                    if (!url) return 'วิดีโอการสอน';
+                    const str = String(url).toLowerCase();
+                    if (str.includes('tiktok.com')) return 'TikTok';
+                    if (str.includes('shorts')) return 'YouTube Shorts';
+                    if (str.includes('youtu')) return 'YouTube';
+                    if (str.includes('drive.google.com')) return 'Google Drive';
+                    if (this.isDirectVideo(url)) return 'MP4 Video';
+                    return 'วิดีโอการสอน';
                 },
 
                 openDetailModal(item) {
