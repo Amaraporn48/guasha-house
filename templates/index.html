@@ -2489,7 +2489,9 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">รูปภาพสินค้า / Product Image</label>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        รูปภาพสินค้า / Product Image <span class="text-gold-dark font-semibold normal-case text-[11px] bg-gold/10 px-2 py-0.5 rounded-full ml-1">ขนาดแนะนำ 800 × 800 px (สัดส่วน 1:1)</span>
+                    </label>
                     <div class="flex items-center gap-4">
                         <div class="w-20 h-20 bg-cream border border-beige rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                             <template x-if="productModal.image_url">
@@ -2782,7 +2784,9 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">รูปภาพหน้าร้าน / Storefront Image</label>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        รูปภาพหน้าร้าน / Storefront Image <span class="text-gold-dark font-semibold normal-case text-[11px] bg-gold/10 px-2 py-0.5 rounded-full ml-1">ขนาดแนะนำ 800 × 500 px (สัดส่วน 16:9)</span>
+                    </label>
                     <div class="flex items-center gap-4">
                         <div class="w-20 h-20 bg-cream border border-beige rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                             <template x-if="branchModal.image_url">
@@ -2805,7 +2809,7 @@
                                 <button type="button" x-show="branchModal.image_url" @click="branchModal.image_url = ''" 
                                         class="text-xs text-red-600 hover:underline">ลบรูป</button>
                             </div>
-                            <p class="text-[10px] text-gray-400">รองรับไฟล์ JPG, PNG, WEBP</p>
+                            <p class="text-[10px] text-gray-400">รองรับไฟล์ JPG, PNG, WEBP (ขนาดที่แนะนำ 800 × 500 px แนวนอน 16:9 เพื่อความคมชัดสวยงาม)</p>
                         </div>
                     </div>
                 </div>
