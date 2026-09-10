@@ -48,11 +48,12 @@
                 </div>
             </a>
             
-            <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
+            <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-gray-600">
                 <a href="#home" class="hover:text-gold transition">หน้าแรก</a>
                 <a href="#branches" class="hover:text-gold transition">ลูกศิษย์ของเรา</a>
                 <a href="#products" class="hover:text-gold transition">สินค้าของเรา</a>
-                <a href="#lessons" class="hover:text-gold transition">คอร์สเรียน & คลิปการสอน</a>
+                <a href="#courses" class="hover:text-gold transition">คอร์สเรียน</a>
+                <a href="#lessons" class="hover:text-gold transition">คลิปการสอน</a>
                 <a href="#contact" class="hover:text-gold transition">ติดต่อเรา</a>
             </nav>
 
@@ -208,17 +209,17 @@
         <div class="max-w-7xl mx-auto px-6 space-y-12">
             <div class="text-center max-w-xl mx-auto space-y-3">
                 <h3 class="text-xs uppercase tracking-widest text-gold font-bold">Guasha House Products</h3>
-                <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">ผลิตภัณฑ์แบรนด์กัวซาเฮ้าส์</h2>
+                <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">สินค้าของเรา</h2>
                 <div class="h-1 w-12 bg-gold mx-auto"></div>
                 <p class="text-xs text-gray-500">ผลิตภัณฑ์ดูแลผิวหน้าและนวดบำรุงที่พัฒนาขึ้นเพื่อศาสตร์กัวซาโดยเฉพาะ</p>
             </div>
 
-            <!-- Products Grid -->
+            <!-- Products Grid (Physical Products) -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <template x-for="prod in products" :key="prod.id">
+                <template x-for="prod in physicalProducts" :key="prod.id">
                     <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-300">
                         <div class="h-48 bg-cream flex items-center justify-center relative overflow-hidden">
-                            <span class="absolute top-3 right-3 bg-charcoal text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase z-10" x-text="prod.is_service ? 'คอร์สเรียน/บริการ' : 'สินค้า'"></span>
+                            <span class="absolute top-3 right-3 bg-charcoal text-white text-[9px] font-bold px-2.5 py-1 rounded-full uppercase z-10 shadow-sm">สินค้า</span>
                             <template x-if="prod.image_url">
                                 <img :src="prod.image_url" class="w-full h-full object-cover">
                             </template>
@@ -248,14 +249,61 @@
         </div>
     </section>
 
-    <!-- 4. VIDEO LESSONS SECTION -->
-    <section id="lessons" class="max-w-7xl mx-auto px-6 py-20 space-y-12">
+    <!-- 4. COURSES SECTION (Separate Courses Listing) -->
+    <section id="courses" class="max-w-7xl mx-auto px-6 py-20 space-y-12">
         <div class="text-center max-w-xl mx-auto space-y-3">
-            <h3 class="text-xs uppercase tracking-widest text-gold font-bold">Guasha Learning Hub</h3>
-            <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">คอร์สเรียน & คลิปการสอน</h2>
+            <h3 class="text-xs uppercase tracking-widest text-gold font-bold">Guasha Training Courses</h3>
+            <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">คอร์สเรียนกัวซา</h2>
             <div class="h-1 w-12 bg-gold mx-auto"></div>
-            <p class="text-xs text-gray-500">เรียนรู้ทักษะเบื้องต้นและการทำกัวซาอย่างถูกวิธีจากวิทยากรผู้เชี่ยวชาญ</p>
+            <p class="text-xs text-gray-500">หลักสูตรเรียนกัวซาระดับมืออาชีพ ถ่ายทอดเทคนิคการดูแลสุขภาพและความงามอย่างถูกวิธี</p>
         </div>
+
+        <!-- Courses Grid (Courses/Services) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <template x-for="course in courseProducts" :key="course.id">
+                <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-300">
+                    <div class="h-52 bg-cream flex items-center justify-center relative overflow-hidden">
+                        <span class="absolute top-3 right-3 bg-gold text-white text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider z-10 shadow-sm">คอร์สเรียน</span>
+                        <template x-if="course.image_url">
+                            <img :src="course.image_url" class="w-full h-full object-cover">
+                        </template>
+                        <template x-if="!course.image_url">
+                            <div class="text-center space-y-2 p-6">
+                                <img src="/static/logo.png" class="h-12 mx-auto object-contain opacity-25">
+                                <p class="text-[10px] text-gray-400 font-mono tracking-widest" x-text="course.code || 'C-000' + course.id"></p>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="p-6 flex-1 flex flex-col justify-between space-y-4">
+                        <div class="space-y-2">
+                            <h4 class="font-bold text-charcoal text-base" x-text="course.name"></h4>
+                            <p class="text-xs text-gray-500 leading-relaxed line-clamp-3" x-text="course.description || 'ไม่มีรายละเอียดคอร์สเรียน'"></p>
+                        </div>
+                        <div class="flex items-center justify-between pt-3 border-t border-beige/60">
+                            <div>
+                                <span class="text-[10px] text-gray-400 block uppercase tracking-wider">ราคาคอร์ส</span>
+                                <span class="text-charcoal font-bold text-lg" x-text="formatCurrency(course.unit_price)"></span>
+                            </div>
+                            <a :href="`https://line.me/R/ti/p/${encodeURIComponent(siteSettings.contact_line_id || '@guashahouse')}?text=สนใจสมัครเรียนคอร์ส ${encodeURIComponent(course.name)}`" target="_blank"
+                               class="bg-charcoal hover:bg-gold-dark text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5">
+                                <span>สมัครเรียน/สอบถาม</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </section>
+
+    <!-- 5. VIDEO LESSONS SECTION -->
+    <section id="lessons" class="bg-beige/40 py-20 border-t border-beige space-y-12">
+        <div class="max-w-7xl mx-auto px-6 space-y-12">
+            <div class="text-center max-w-xl mx-auto space-y-3">
+                <h3 class="text-xs uppercase tracking-widest text-gold font-bold">Guasha Video Tutorials</h3>
+                <h2 class="text-2xl md:text-3xl font-bold text-charcoal font-serif">คลิปการสอน</h2>
+                <div class="h-1 w-12 bg-gold mx-auto"></div>
+                <p class="text-xs text-gray-500">เรียนรู้ทักษะเบื้องต้นและการทำกัวซาอย่างถูกวิธีจากวิทยากรผู้เชี่ยวชาญ</p>
+            </div>
 
         <!-- Dynamic Videos Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -494,6 +542,13 @@
                     });
                 },
                 
+                get physicalProducts() {
+                    return this.products.filter(p => !p.is_service || p.is_service === 'false');
+                },
+                get courseProducts() {
+                    return this.products.filter(p => p.is_service === true || p.is_service === 'true');
+                },
+                
                 formatCurrency(val) {
                     return '฿' + parseFloat(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 }
@@ -516,7 +571,7 @@
                         subtitle: 'Professional Training Course',
                         title: 'คอร์สเรียนสปานวดกัวซายกกระชับระดับมืออาชีพ',
                         desc: 'หลักสูตรเรียนกัวซาอย่างละเอียดทุกขั้นตอน สอนเทคนิคการกวาดเปิดน้ำเหลืองและผ่อนคลายกล้ามเนื้อหน้าสำหรับทำธุรกิจหรือดูแลตัวเอง',
-                        link: '#lessons'
+                        link: '#courses'
                     },
                     {
                         image: 'https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?auto=format&fit=crop&w=1200&q=80',

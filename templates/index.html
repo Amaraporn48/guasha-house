@@ -131,14 +131,14 @@
                 <div class="space-y-1 pt-2 border-t border-beige/60">
                     <p x-show="!sidebarCollapsed" x-transition.opacity class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-2">การเงินและสินค้า / Finance & Stock</p>
                     <a href="#" @click.prevent="setView('products')" 
-                       title="สินค้าและบริการ / Products"
+                       title="สินค้า & คอร์สเรียน / Products & Courses"
                        :class="[
                           activeView === 'products' ? 'bg-beige border-gold text-charcoal font-semibold shadow-sm' : 'text-gray-600 hover:bg-cream border-transparent',
                           sidebarCollapsed ? 'justify-center px-2 py-3.5' : 'justify-start px-4 py-3'
                        ]"
                        class="flex items-center gap-3.5 rounded-xl text-sm transition-all duration-200 border-l-4">
                         <svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                        <span x-show="!sidebarCollapsed" x-transition.opacity class="truncate">สินค้าและบริการ / Products</span>
+                        <span x-show="!sidebarCollapsed" x-transition.opacity class="truncate">สินค้า & คอร์สเรียน</span>
                     </a>
 
                     <a href="#" @click.prevent="setView('expenses')" 
@@ -552,8 +552,8 @@
                                         </td>
                                         <td class="px-4 py-3.5 text-center">
                                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                                                  :class="p.is_service ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'"
-                                                  x-text="p.is_service ? 'บริการ/คอร์ส' : 'สินค้าทั่วไป'"></span>
+                                                  :class="p.is_service ? 'bg-amber-50 text-gold-dark border border-gold/30' : 'bg-emerald-50 text-emerald-600'"
+                                                  x-text="p.is_service ? '🎓 คอร์สเรียน' : '📦 สินค้าทั่วไป'"></span>
                                         </td>
                                         <td class="px-4 py-3.5 text-right font-mono text-xs text-gray-600" x-text="formatCurrency(p.unit_price)"></td>
                                         <td class="px-4 py-3.5 text-center">
@@ -1528,8 +1528,8 @@
                                         </td>
                                         <td class="px-4 py-3.5 text-center">
                                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                                                  :class="p.is_service ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'"
-                                                  x-text="p.is_service ? 'บริการ/คอร์ส' : 'สินค้าทั่วไป'"></span>
+                                                  :class="p.is_service ? 'bg-amber-50 text-gold-dark border border-gold/30' : 'bg-emerald-50 text-emerald-600'"
+                                                  x-text="p.is_service ? '🎓 คอร์สเรียน' : '📦 สินค้าทั่วไป'"></span>
                                         </td>
                                         <td class="px-4 py-3.5 text-right font-mono text-xs text-gray-600" x-text="formatCurrency(p.unit_price)"></td>
                                         <td class="px-4 py-3.5 text-center">
@@ -2302,11 +2302,11 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ประเภทสินค้า</label>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ประเภท (สินค้า หรือ คอร์สเรียน)</label>
                         <select x-model="productModal.is_service" 
                                 class="w-full bg-cream border border-beige rounded-xl px-3 py-2.5 text-sm focus-gold">
-                            <option :value="false">สินค้าทั่วไป (นับสต็อก)</option>
-                            <option :value="true">บริการ / คอร์สเรียน (ไม่นับสต็อก)</option>
+                            <option :value="false">📦 สินค้าทั่วไป (แสดงใน 'สินค้าของเรา')</option>
+                            <option :value="true">🎓 คอร์สเรียน (แสดงใน 'คอร์สเรียน')</option>
                         </select>
                     </div>
                     <div>
