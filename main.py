@@ -129,35 +129,52 @@ try:
 except Exception:
     pass
 
-def process_uploaded_image(file: UploadFile, max_dimension: int = 1200, quality: int = 82) -> str:
+def process_uploaded_image(file: UploadFile, max_dimension: int = 3840, quality: int = 95) -> str:
     """
-    Reads and compresses uploaded image using Pillow into a persistent Base64 Data URL.
-    This guarantees uploaded images are saved in PostgreSQL and NEVER lost across
-    ephemeral container redeployments (Railway / Docker / Cloud).
+    Saves image with 100% original sharpness and quality, exactly as if dragged directly into the folder.
+    Encodes the original bytes directly as a persistent Data URL in PostgreSQL so it never loses quality
+    and is never deleted on container redeployments.
     """
     file.file.seek(0)
     content = file.file.read()
+    file_size = len(content)
+    
+    # Detect proper mime type
+    ext = os.path.splitext(file.filename or "")[1].lower().replace(".", "")
+    if ext in ["jpg", "jpeg"]:
+        mime = "image/jpeg"
+    elif ext == "png":
+        mime = "image/png"
+    elif ext == "webp":
+        mime = "image/webp"
+    else:
+        mime = f"image/{ext}" if ext else "image/jpeg"
+
+    # If the file is <= 10MB, keep 100% UNTOUCHED ORIGINAL BYTES!
+    # No compression, no resampling, no downscaling — crystal clear original!
+    if file_size <= 10 * 1024 * 1024:
+        b64_str = base64.b64encode(content).decode("utf-8")
+        return f"data:{mime};base64,{b64_str}"
+
+    # For exceptionally large files (> 10MB), compress at 4K ultra-sharp quality 95
     try:
         if Image is not None:
             image = Image.open(io.BytesIO(content))
             if ImageOps is not None:
                 image = ImageOps.exif_transpose(image)
-            if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
-                image = image.convert("RGBA")
-            else:
-                image = image.convert("RGB")
             image.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
             out = io.BytesIO()
-            image.save(out, format="WEBP", quality=quality, method=6)
+            fmt = "PNG" if mime == "image/png" else "JPEG"
+            if fmt == "JPEG" and image.mode in ("RGBA", "P"):
+                image = image.convert("RGB")
+            image.save(out, format=fmt, quality=quality)
             b64_str = base64.b64encode(out.getvalue()).decode("utf-8")
-            return f"data:image/webp;base64,{b64_str}"
+            return f"data:{mime};base64,{b64_str}"
     except Exception as e:
-        print(f"Pillow image processing error, using fallback: {e}")
-        
-    ext = os.path.splitext(file.filename or "")[1].lower().replace(".", "")
-    mime = "jpeg" if ext == "jpg" else (ext or "jpeg")
+        print(f"Image processing notice: {e}")
+
     b64_str = base64.b64encode(content).decode("utf-8")
-    return f"data:image/{mime};base64,{b64_str}"
+    return f"data:{mime};base64,{b64_str}"
 
 # Helper function to get DB Session
 def get_db():

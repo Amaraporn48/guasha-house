@@ -84,7 +84,10 @@
                      
                     <!-- Sliding background images/luxury gradients -->
                     <div class="absolute inset-0 bg-gradient-to-r from-charcoal/80 to-charcoal/40 z-10" x-show="slide.title"></div>
-                    <div class="absolute inset-0 bg-cover bg-center" :style="`background-image: url('${slide.image}');`" class="w-full h-full"></div>
+                    <img :src="slide.image" 
+                         @error="$el.src='/static/banner1.png'"
+                         class="absolute inset-0 w-full h-full object-cover object-center" 
+                         alt="Banner">
                     
                     <!-- Linkable banner slide if no title overlay -->
                     <template x-if="!slide.title">
