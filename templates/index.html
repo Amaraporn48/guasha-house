@@ -2154,21 +2154,28 @@
                     <template x-for="v in videos" :key="v.id">
                         <div class="bg-white border border-beige rounded-2xl shadow-sm hover:shadow-md transition overflow-hidden flex flex-col justify-between group">
                             <div>
-                                <!-- Thumbnail / Embed preview placeholder -->
-                                <div class="relative w-full h-48 bg-charcoal/90 overflow-hidden flex items-center justify-center cursor-pointer" @click="openPlayVideoModal(v)">
-                                    <template x-if="v.embed_url">
-                                        <iframe :src="v.embed_url" class="w-full h-full pointer-events-none opacity-85 group-hover:opacity-100 transition" frameborder="0" allowfullscreen></iframe>
+                                <!-- Thumbnail / Cover Preview -->
+                                <div class="relative w-full h-48 bg-charcoal overflow-hidden flex items-center justify-center cursor-pointer" @click="openPlayVideoModal(v)">
+                                    <!-- 1. Real Image Thumbnail (Uploaded or auto-fetched from YouTube / TikTok) -->
+                                    <template x-if="getVideoThumbnail(v)">
+                                        <img :src="getVideoThumbnail(v)" 
+                                             class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                             alt="Video Cover"
+                                             loading="lazy">
                                     </template>
-                                    <template x-if="!v.embed_url">
-                                        <div class="flex flex-col items-center gap-2 text-white/60">
-                                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    
+                                    <!-- 2. Fallback if no thumbnail image available -->
+                                    <template x-if="!getVideoThumbnail(v)">
+                                        <div class="w-full h-full bg-charcoal flex flex-col items-center justify-center gap-2 text-white/50 p-4 text-center">
+                                            <svg class="w-12 h-12 text-gold/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <span class="text-xs font-medium text-gray-300 line-clamp-1" x-text="v.title"></span>
                                         </div>
                                     </template>
                                     
                                     <!-- Play Button Overlay -->
-                                    <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 flex items-center justify-center transition">
+                                    <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 flex items-center justify-center transition">
                                         <div class="w-14 h-14 rounded-full bg-gold/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition duration-200">
-                                            <svg class="w-7 h-7 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                            <svg class="w-7 h-7 ml-1 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                         </div>
                                     </div>
                                     
@@ -2260,9 +2267,43 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ลิงก์วิดีโอ (YouTube, Shorts, TikTok, Drive, MP4) <span class="text-red-500">*</span></label>
-                    <input type="url" x-model="videoModal.video_url" required placeholder="https://www.tiktok.com/@... หรือ https://youtube.com/shorts/... หรือ YouTube/Drive"
+                    <input type="url" x-model="videoModal.video_url" @input.debounce.600ms="autoDetectThumbnail()" required placeholder="https://www.tiktok.com/@... หรือ https://youtube.com/shorts/... หรือ YouTube/Drive"
                            class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-sm focus-gold">
                     <p class="text-[10px] text-gray-400 mt-1">✅ รองรับ: <strong>YouTube</strong>, <strong>YouTube Shorts</strong>, <strong>TikTok</strong> (ลิงก์เว็บ หรือแชร์จากแอป), <strong>Google Drive</strong> และไฟล์ <strong>MP4</strong></p>
+                </div>
+
+                <!-- Video Cover / Thumbnail Field -->
+                <div class="space-y-2 bg-white p-3.5 rounded-xl border border-beige">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-semibold text-charcoal">รูปภาพหน้าปกคลิป (Cover / Thumbnail)</label>
+                        <button type="button" @click="autoDetectThumbnail()" class="text-[10px] text-gold-dark hover:underline font-semibold flex items-center gap-1">
+                            <span>🔄 ดึงภาพหน้าปกอัตโนมัติ</span>
+                        </button>
+                    </div>
+                    
+                    <div class="flex gap-3 items-center">
+                        <!-- Preview Thumbnail Box -->
+                        <div class="w-24 h-16 bg-charcoal rounded-lg overflow-hidden flex-shrink-0 border border-beige flex items-center justify-center relative">
+                            <template x-if="videoModal.thumbnail_url">
+                                <img :src="videoModal.thumbnail_url" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!videoModal.thumbnail_url">
+                                <span class="text-[10px] text-gray-400 text-center px-1">ไม่มีรูปภาพ</span>
+                            </template>
+                        </div>
+                        
+                        <div class="flex-1 space-y-1.5">
+                            <div class="flex gap-2">
+                                <input type="url" x-model="videoModal.thumbnail_url" placeholder="URL รูปภาพหน้าปก หรือกดอัปโหลดด้านข้าง"
+                                       class="flex-1 bg-cream border border-beige rounded-xl px-3 py-1.5 text-xs focus-gold">
+                                <label class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-3 py-1.5 rounded-xl cursor-pointer transition flex items-center gap-1 flex-shrink-0">
+                                    <span>📷 อัปโหลด</span>
+                                    <input type="file" accept="image/*" class="hidden" @change="uploadVideoThumbnail($event)">
+                                </label>
+                            </div>
+                            <p class="text-[10px] text-gray-400 leading-tight">💡 หากไม่ใส่ ระบบจะดึงรูปภาพหน้าปกจาก YouTube หรือ TikTok ให้อัตโนมัติ</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div>
@@ -3485,7 +3526,7 @@
                 videos: [],
                 videoCategoryFilter: 'ALL',
                 videoSearchQuery: '',
-                videoModal: { open: false, id: null, title: '', category: 'กัวซาใบหน้า', video_url: '', description: '', instructor: 'อ.กัวซา เฮ้าส์', duration: '' },
+                videoModal: { open: false, id: null, title: '', category: 'กัวซาใบหน้า', video_url: '', thumbnail_url: '', description: '', instructor: 'อ.กัวซา เฮ้าส์', duration: '' },
                 playVideoModal: { open: false, title: '', embed_url: '', video_url: '', instructor: '', duration: '', description: '', category: '' },
 
                 init() {
@@ -4728,10 +4769,64 @@
                     .catch(err => console.error('Error fetching videos:', err));
                 },
                 openAddVideoModal() {
-                    this.videoModal = { open: true, id: null, title: '', category: 'กัวซาใบหน้า', video_url: '', description: '', instructor: 'อ.กัวซา เฮ้าส์', duration: '' };
+                    this.videoModal = { open: true, id: null, title: '', category: 'กัวซาใบหน้า', video_url: '', thumbnail_url: '', description: '', instructor: 'อ.กัวซา เฮ้าส์', duration: '' };
                 },
                 openEditVideoModal(v) {
-                    this.videoModal = { open: true, id: v.id, title: v.title, category: v.category, video_url: v.video_url, description: v.description || '', instructor: v.instructor || 'อ.กัวซา เฮ้าส์', duration: v.duration || '' };
+                    this.videoModal = { open: true, id: v.id, title: v.title, category: v.category, video_url: v.video_url, thumbnail_url: v.thumbnail_url || '', description: v.description || '', instructor: v.instructor || 'อ.กัวซา เฮ้าส์', duration: v.duration || '' };
+                },
+                getVideoThumbnail(v) {
+                    if (!v) return '';
+                    if (v.thumbnail_url && v.thumbnail_url.trim()) return v.thumbnail_url;
+                    const url = v.video_url || v.embed_url || '';
+                    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/(?:shorts\/)?)([^?&/]+)/i);
+                    if (ytMatch && ytMatch[1]) {
+                        return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+                    }
+                    return '';
+                },
+                autoDetectThumbnail() {
+                    const url = (this.videoModal.video_url || '').trim();
+                    if (!url) return;
+                    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/(?:shorts\/)?)([^?&/]+)/i);
+                    if (ytMatch && ytMatch[1]) {
+                        if (!this.videoModal.thumbnail_url) {
+                            this.videoModal.thumbnail_url = `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+                        }
+                        return;
+                    }
+                    if (url.includes('tiktok.com')) {
+                        fetch(`/api/videos/extract-meta?url=${encodeURIComponent(url)}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.thumbnail_url && !this.videoModal.thumbnail_url) {
+                                    this.videoModal.thumbnail_url = data.thumbnail_url;
+                                }
+                                if (data.title && !this.videoModal.title) {
+                                    this.videoModal.title = data.title;
+                                }
+                            })
+                            .catch(() => {});
+                    }
+                },
+                uploadVideoThumbnail(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    fetch('/api/videos/upload-thumbnail', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.videoModal.thumbnail_url = data.url;
+                            this.showToast('อัปโหลดรูปภาพหน้าปกสำเร็จ');
+                        } else {
+                            alert(data.detail || 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
+                        }
+                    })
+                    .catch(err => alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ'));
                 },
                 saveVideoFromModal() {
                     if (this.savingVideo) return;

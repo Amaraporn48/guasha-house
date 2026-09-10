@@ -44,7 +44,8 @@ for path in [
     os.path.join(STATIC_DIR, "uploads", "slips"),
     os.path.join(STATIC_DIR, "uploads", "branches"),
     os.path.join(STATIC_DIR, "uploads", "products"),
-    os.path.join(STATIC_DIR, "uploads", "banners")
+    os.path.join(STATIC_DIR, "uploads", "banners"),
+    os.path.join(STATIC_DIR, "uploads", "videos")
 ]:
     try:
         os.makedirs(path, exist_ok=True)
@@ -2327,6 +2328,34 @@ def upload_banner_image(file: UploadFile = File(...), current_user: User = Depen
         except Exception as err:
             raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพแบนเนอร์: {err}")
 
+@app.post("/api/videos/upload-thumbnail")
+def upload_video_thumbnail(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "videos")
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP)")
+        
+    filename = f"video_thumb_{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return {"success": True, "filename": filename, "url": f"/static/uploads/videos/{filename}"}
+    except Exception:
+        try:
+            file.file.seek(0)
+            content = file.file.read()
+            mime_ext = ext.replace(".", "")
+            if mime_ext == "jpg":
+                mime_ext = "jpeg"
+            b64_str = base64.b64encode(content).decode("utf-8")
+            data_url = f"data:image/{mime_ext};base64,{b64_str}"
+            return {"success": True, "filename": data_url, "url": data_url}
+        except Exception as err:
+            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพหน้าปกคลิป: {err}")
+
 # ----------------- SHARE ROUTE -----------------
 @app.get("/share/invoice/{doc_id}", response_class=HTMLResponse)
 def share_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
@@ -2755,6 +2784,7 @@ class VideoCourseSchema(BaseModel):
     title: str
     category: str = "ทั่วไป"
     video_url: str
+    thumbnail_url: Optional[str] = None
     description: Optional[str] = None
     instructor: Optional[str] = "กัวซา เฮ้าส์"
     duration: Optional[str] = None
@@ -2787,18 +2817,26 @@ def convert_to_embed_url(url: str) -> str:
         if "/video/" in url:
             match = re.search(r'/video/(\d+)', url)
             if match:
-                return f"https://www.tiktok.com/embed/v2/{match.group(1)}"
+                return f"https://www.tiktok.com/player/v1/{match.group(1)}"
+        elif "/player/v1/" in url:
+            return url
         elif "/embed/v2/" in url or "/embed/" in url:
+            match = re.search(r'/(?:embed/v2|embed)/(\d+)', url)
+            if match:
+                return f"https://www.tiktok.com/player/v1/{match.group(1)}"
             return url
         elif "vt.tiktok.com" in url or "vm.tiktok.com" in url or "/t/" in url:
-            import urllib.request
+            import urllib.request, ssl
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-                with urllib.request.urlopen(req, timeout=4) as resp:
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"})
+                with urllib.request.urlopen(req, context=ctx, timeout=4) as resp:
                     final_url = resp.geturl()
                     match = re.search(r'/video/(\d+)', final_url)
                     if match:
-                        return f"https://www.tiktok.com/embed/v2/{match.group(1)}"
+                        return f"https://www.tiktok.com/player/v1/{match.group(1)}"
             except Exception:
                 pass
                 
@@ -2812,6 +2850,56 @@ def convert_to_embed_url(url: str) -> str:
         return url
         
     return url
+
+def fetch_video_metadata(video_url: str) -> dict:
+    meta = {"thumbnail_url": "", "title": ""}
+    if not video_url:
+        return meta
+    video_url = video_url.strip()
+    
+    # 1. YouTube & YouTube Shorts thumbnail
+    yt_match = re.search(r'(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/(?:shorts\/)?)([^?&/]+)', video_url)
+    if yt_match:
+        vid = yt_match.group(1)
+        meta["thumbnail_url"] = f"https://img.youtube.com/vi/{vid}/hqdefault.jpg"
+        return meta
+        
+    # 2. TikTok oEmbed thumbnail & title
+    if "tiktok.com" in video_url:
+        import urllib.request, urllib.parse, ssl, json
+        try:
+            target_url = video_url
+            if "vt.tiktok.com" in target_url or "vm.tiktok.com" in target_url or "/t/" in target_url:
+                ctx_r = ssl.create_default_context()
+                ctx_r.check_hostname = False
+                ctx_r.verify_mode = ssl.CERT_NONE
+                r_req = urllib.request.Request(target_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(r_req, context=ctx_r, timeout=3) as r_resp:
+                    target_url = r_resp.geturl().split("?")[0]
+                    
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            api_url = f"https://www.tiktok.com/oembed?url={urllib.parse.quote(target_url, safe='')}"
+            req = urllib.request.Request(api_url, headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            })
+            with urllib.request.urlopen(req, context=ctx, timeout=4) as resp:
+                data = json.loads(resp.read().decode())
+                if data.get("thumbnail_url"):
+                    meta["thumbnail_url"] = data["thumbnail_url"]
+                if data.get("title"):
+                    meta["title"] = data["title"]
+        except Exception:
+            pass
+            
+    return meta
+
+@app.get("/api/videos/extract-meta")
+def extract_video_meta(url: str, current_user: User = Depends(get_current_user)):
+    meta = fetch_video_metadata(url)
+    embed = convert_to_embed_url(url)
+    return {"success": True, "thumbnail_url": meta.get("thumbnail_url", ""), "title": meta.get("title", ""), "embed_url": embed}
 
 @app.get("/api/videos")
 def get_videos(category: Optional[str] = None, query: Optional[str] = None, db: Session = Depends(get_db)):
@@ -2828,21 +2916,39 @@ def get_videos(category: Optional[str] = None, query: Optional[str] = None, db: 
             )
         )
     videos = q.order_by(VideoCourse.id.desc()).all()
-    # Dynamic sync embed_url if needed
+    # Dynamic sync embed_url & thumbnail_url if needed
+    has_changes = False
     for v in videos:
         expected_embed = convert_to_embed_url(v.video_url)
         if expected_embed and v.embed_url != expected_embed:
             v.embed_url = expected_embed
+            has_changes = True
+        if not getattr(v, "thumbnail_url", None):
+            meta = fetch_video_metadata(v.video_url)
+            if meta.get("thumbnail_url"):
+                v.thumbnail_url = meta["thumbnail_url"]
+                has_changes = True
+    if has_changes:
+        try:
+            db.commit()
+        except Exception:
+            pass
     return videos
 
 @app.post("/api/videos")
 def create_video(payload: VideoCourseSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     embed = convert_to_embed_url(payload.video_url)
+    thumb = (payload.thumbnail_url or "").strip()
+    if not thumb:
+        meta = fetch_video_metadata(payload.video_url)
+        thumb = meta.get("thumbnail_url") or ""
+        
     v = VideoCourse(
         title=payload.title,
         category=payload.category or "ทั่วไป",
         video_url=payload.video_url,
         embed_url=embed,
+        thumbnail_url=thumb,
         description=payload.description,
         instructor=payload.instructor or "กัวซา เฮ้าส์",
         duration=payload.duration,
@@ -2859,10 +2965,17 @@ def update_video(video_id: int, payload: VideoCourseSchema, db: Session = Depend
     if not v:
         raise HTTPException(status_code=404, detail="ไม่พบคลิปการสอนที่ต้องการแก้ไข")
     
+    embed = convert_to_embed_url(payload.video_url)
+    thumb = (payload.thumbnail_url or "").strip()
+    if not thumb:
+        meta = fetch_video_metadata(payload.video_url)
+        thumb = meta.get("thumbnail_url") or ""
+
     v.title = payload.title
     v.category = payload.category or "ทั่วไป"
     v.video_url = payload.video_url
-    v.embed_url = convert_to_embed_url(payload.video_url)
+    v.embed_url = embed
+    v.thumbnail_url = thumb
     v.description = payload.description
     v.instructor = payload.instructor or "กัวซา เฮ้าส์"
     v.duration = payload.duration

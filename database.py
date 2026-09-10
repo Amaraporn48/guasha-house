@@ -155,6 +155,7 @@ class VideoCourse(Base):
     category = Column(String, default="ทั่วไป")
     video_url = Column(String, nullable=False)
     embed_url = Column(String, nullable=True)
+    thumbnail_url = Column(String, nullable=True)
     description = Column(Text, nullable=True)
     instructor = Column(String, default="กัวซา เฮ้าส์")
     duration = Column(String, nullable=True)
@@ -205,6 +206,10 @@ def init_db():
         with engine.begin() as conn:
             try:
                 conn.execute(text("ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1;"))
+            except Exception:
+                pass # Column already exists
+            try:
+                conn.execute(text("ALTER TABLE video_courses ADD COLUMN thumbnail_url VARCHAR;"))
             except Exception:
                 pass # Column already exists
                 
