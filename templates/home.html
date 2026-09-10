@@ -168,6 +168,7 @@
                     <!-- Storefront Image -->
                     <div class="relative h-48 bg-cream flex-shrink-0">
                         <img :src="branch.image_url || 'https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=600&q=80'" 
+                             @error="if (!$el.dataset.fallback) { $el.dataset.fallback = '1'; $el.src = 'https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=600&q=80'; }"
                              alt="Storefront" class="w-full h-full object-cover">
                         <div class="absolute top-4 right-4">
                             <span class="bg-charcoal text-white text-[9px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full shadow" x-text="branch.region"></span>
@@ -222,7 +223,7 @@
                         <div class="h-48 bg-cream flex items-center justify-center relative overflow-hidden">
                             <span class="absolute top-3 right-3 bg-charcoal text-white text-[9px] font-bold px-2.5 py-1 rounded-full uppercase z-10 shadow-sm">สินค้า</span>
                             <template x-if="prod.image_url">
-                                <img :src="prod.image_url" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                <img :src="prod.image_url" @error="prod.image_url = ''" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             </template>
                             <template x-if="!prod.image_url">
                                 <div class="text-center space-y-2 p-6">
@@ -271,7 +272,7 @@
                     <div class="h-52 bg-cream flex items-center justify-center relative overflow-hidden">
                         <span class="absolute top-3 right-3 bg-gold text-white text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider z-10 shadow-sm">คอร์สเรียน</span>
                         <template x-if="course.image_url">
-                            <img :src="course.image_url" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            <img :src="course.image_url" @error="course.image_url = ''" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                         </template>
                         <template x-if="!course.image_url">
                             <div class="text-center space-y-2 p-6">
@@ -412,7 +413,7 @@
             <!-- Image side (Extra Large, Immersive) -->
             <div class="w-full md:w-3/5 lg:w-[58%] bg-cream min-h-[340px] sm:min-h-[440px] md:h-full relative flex items-center justify-center overflow-hidden flex-shrink-0">
                 <template x-if="detailModal.item.image_url">
-                    <img :src="detailModal.item.image_url" class="w-full h-full object-cover">
+                    <img :src="detailModal.item.image_url" @error="detailModal.item.image_url = ''" class="w-full h-full object-cover">
                 </template>
                 <template x-if="!detailModal.item.image_url">
                     <div class="text-center space-y-4 p-10">

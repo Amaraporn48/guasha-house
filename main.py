@@ -1,10 +1,19 @@
 import os
 import re
 import datetime
+import io
+import base64
+import shutil
+import uuid
 from typing import List, Optional, Dict
 import jwt
 import bcrypt
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, Cookie
+try:
+    from PIL import Image, ImageOps
+except ImportError:
+    Image = None
+    ImageOps = None
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, Cookie, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -70,6 +79,85 @@ for path in [
 # Mount static files and templates using absolute paths
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+def cleanup_missing_upload_urls():
+    """
+    Auto-repairs broken image URLs stored in the persistent PostgreSQL DB from past ephemeral container builds.
+    If an image points to a local file in /static/uploads/... that was wiped by Railway redeployment,
+    replace it with a sensible default so visitors never see a broken image icon.
+    """
+    try:
+        with SessionLocal() as db:
+            for b in db.query(Branch).all():
+                if b.image_url and b.image_url.startswith("/static/uploads/"):
+                    local_rel = b.image_url.lstrip("/")
+                    rel_path = local_rel[len("static/"):] if local_rel.startswith("static/") else local_rel
+                    full_path = os.path.join(STATIC_DIR, rel_path)
+                    if not os.path.exists(full_path):
+                        b.image_url = "https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=600&q=80"
+            
+            for banner in db.query(SlideBanner).all():
+                if banner.image_url and banner.image_url.startswith("/static/uploads/"):
+                    local_rel = banner.image_url.lstrip("/")
+                    rel_path = local_rel[len("static/"):] if local_rel.startswith("static/") else local_rel
+                    full_path = os.path.join(STATIC_DIR, rel_path)
+                    if not os.path.exists(full_path):
+                        banner.image_url = "/static/banner1.png"
+
+            for p in db.query(Product).all():
+                if p.image_url and p.image_url.startswith("/static/uploads/"):
+                    local_rel = p.image_url.lstrip("/")
+                    rel_path = local_rel[len("static/"):] if local_rel.startswith("static/") else local_rel
+                    full_path = os.path.join(STATIC_DIR, rel_path)
+                    if not os.path.exists(full_path):
+                        p.image_url = ""
+
+            for v in db.query(VideoCourse).all():
+                if v.thumbnail_url and v.thumbnail_url.startswith("/static/uploads/"):
+                    local_rel = v.thumbnail_url.lstrip("/")
+                    rel_path = local_rel[len("static/"):] if local_rel.startswith("static/") else local_rel
+                    full_path = os.path.join(STATIC_DIR, rel_path)
+                    if not os.path.exists(full_path):
+                        v.thumbnail_url = ""
+
+            db.commit()
+    except Exception as e:
+        print(f"cleanup_missing_upload_urls notice: {e}")
+
+try:
+    cleanup_missing_upload_urls()
+except Exception:
+    pass
+
+def process_uploaded_image(file: UploadFile, max_dimension: int = 1200, quality: int = 82) -> str:
+    """
+    Reads and compresses uploaded image using Pillow into a persistent Base64 Data URL.
+    This guarantees uploaded images are saved in PostgreSQL and NEVER lost across
+    ephemeral container redeployments (Railway / Docker / Cloud).
+    """
+    file.file.seek(0)
+    content = file.file.read()
+    try:
+        if Image is not None:
+            image = Image.open(io.BytesIO(content))
+            if ImageOps is not None:
+                image = ImageOps.exif_transpose(image)
+            if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+                image = image.convert("RGBA")
+            else:
+                image = image.convert("RGB")
+            image.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+            out = io.BytesIO()
+            image.save(out, format="WEBP", quality=quality, method=6)
+            b64_str = base64.b64encode(out.getvalue()).decode("utf-8")
+            return f"data:image/webp;base64,{b64_str}"
+    except Exception as e:
+        print(f"Pillow image processing error, using fallback: {e}")
+        
+    ext = os.path.splitext(file.filename or "")[1].lower().replace(".", "")
+    mime = "jpeg" if ext == "jpg" else (ext or "jpeg")
+    b64_str = base64.b64encode(content).decode("utf-8")
+    return f"data:image/{mime};base64,{b64_str}"
 
 # Helper function to get DB Session
 def get_db():
@@ -2225,151 +2313,72 @@ def restock_product(restock_data: RestockSchema, request: Request, db: Session =
         "expense_id": exp_id
     }
 
-# ----------------- PAYMENT SLIP & IMAGE UPLOAD -----------------
-from fastapi import File, UploadFile
-import shutil
-import uuid
-import os
-import base64
-
+# ----------------- PAYMENT SLIP & IMAGE UPLOAD (PERSISTENT CLOUD & DB SAFE) -----------------
 @app.post("/api/documents/upload-slip")
 def upload_payment_slip(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "slips")
-    ext = os.path.splitext(file.filename)[1].lower()
+    ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp", ".pdf"]:
         raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP, PDF)")
         
-    filename = f"slip_{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    
     try:
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        return {"success": True, "filename": filename, "url": f"/static/uploads/slips/{filename}"}
-    except Exception:
-        try:
+        if ext == ".pdf":
             file.file.seek(0)
             content = file.file.read()
-            mime_ext = ext.replace(".", "")
-            mime = "application/pdf" if mime_ext == "pdf" else f"image/{'jpeg' if mime_ext == 'jpg' else mime_ext}"
             b64_str = base64.b64encode(content).decode("utf-8")
-            data_url = f"data:{mime};base64,{b64_str}"
-            return {"success": True, "filename": data_url, "url": data_url}
-        except Exception as err:
-            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลสลิป: {err}")
+            data_url = f"data:application/pdf;base64,{b64_str}"
+        else:
+            data_url = process_uploaded_image(file, max_dimension=1200, quality=82)
+        return {"success": True, "filename": "persistent_payment_slip", "url": data_url}
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลสลิป: {err}")
 
 @app.post("/api/branches/upload-image")
 def upload_branch_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "branches")
-    ext = os.path.splitext(file.filename)[1].lower()
+    ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP)")
         
-    filename = f"branch_{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    
     try:
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        return {"success": True, "filename": filename, "url": f"/static/uploads/branches/{filename}"}
-    except Exception:
-        try:
-            file.file.seek(0)
-            content = file.file.read()
-            mime_ext = ext.replace(".", "")
-            if mime_ext == "jpg":
-                mime_ext = "jpeg"
-            b64_str = base64.b64encode(content).decode("utf-8")
-            data_url = f"data:image/{mime_ext};base64,{b64_str}"
-            return {"success": True, "filename": data_url, "url": data_url}
-        except Exception as err:
-            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพ: {err}")
+        data_url = process_uploaded_image(file, max_dimension=1200, quality=82)
+        return {"success": True, "filename": "persistent_branch_image", "url": data_url}
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพสาขา: {err}")
 
 @app.post("/api/products/upload-image")
 def upload_product_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "products")
-    ext = os.path.splitext(file.filename)[1].lower()
+    ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP)")
         
-    filename = f"product_{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    
     try:
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        return {"success": True, "filename": filename, "url": f"/static/uploads/products/{filename}"}
-    except Exception:
-        try:
-            file.file.seek(0)
-            content = file.file.read()
-            mime_ext = ext.replace(".", "")
-            if mime_ext == "jpg":
-                mime_ext = "jpeg"
-            b64_str = base64.b64encode(content).decode("utf-8")
-            data_url = f"data:image/{mime_ext};base64,{b64_str}"
-            return {"success": True, "filename": data_url, "url": data_url}
-        except Exception as err:
-            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพสินค้า: {err}")
+        data_url = process_uploaded_image(file, max_dimension=1000, quality=82)
+        return {"success": True, "filename": "persistent_product_image", "url": data_url}
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพสินค้า: {err}")
 
 @app.post("/api/admin/banners/upload-image")
 def upload_banner_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "banners")
-    ext = os.path.splitext(file.filename)[1].lower()
+    ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP)")
         
-    filename = f"banner_{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    
     try:
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        return {"success": True, "filename": filename, "url": f"/static/uploads/banners/{filename}"}
-    except Exception:
-        try:
-            file.file.seek(0)
-            content = file.file.read()
-            mime_ext = ext.replace(".", "")
-            if mime_ext == "jpg":
-                mime_ext = "jpeg"
-            b64_str = base64.b64encode(content).decode("utf-8")
-            data_url = f"data:image/{mime_ext};base64,{b64_str}"
-            return {"success": True, "filename": data_url, "url": data_url}
-        except Exception as err:
-            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพแบนเนอร์: {err}")
+        data_url = process_uploaded_image(file, max_dimension=1920, quality=82)
+        return {"success": True, "filename": "persistent_banner_image", "url": data_url}
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพแบนเนอร์: {err}")
 
 @app.post("/api/videos/upload-thumbnail")
 def upload_video_thumbnail(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "videos")
-    ext = os.path.splitext(file.filename)[1].lower()
+    ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WEBP)")
         
-    filename = f"video_thumb_{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    
     try:
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        return {"success": True, "filename": filename, "url": f"/static/uploads/videos/{filename}"}
-    except Exception:
-        try:
-            file.file.seek(0)
-            content = file.file.read()
-            mime_ext = ext.replace(".", "")
-            if mime_ext == "jpg":
-                mime_ext = "jpeg"
-            b64_str = base64.b64encode(content).decode("utf-8")
-            data_url = f"data:image/{mime_ext};base64,{b64_str}"
-            return {"success": True, "filename": data_url, "url": data_url}
-        except Exception as err:
-            raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพหน้าปกคลิป: {err}")
+        data_url = process_uploaded_image(file, max_dimension=900, quality=82)
+        return {"success": True, "filename": "persistent_video_thumbnail", "url": data_url}
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปภาพหน้าปกคลิป: {err}")
 
 # ----------------- SHARE ROUTE -----------------
 @app.get("/share/invoice/{doc_id}", response_class=HTMLResponse)
