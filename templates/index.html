@@ -1851,18 +1851,52 @@
             </div>
 
             <!-- 9. EXPENSES VIEW -->
-            <div x-show="activeView === 'expenses'" class="space-y-6">
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 border border-beige rounded-2xl shadow-sm">
+            <div x-show="activeView === 'expenses'" class="space-y-5">
+                <!-- Action Header -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 border border-beige rounded-2xl shadow-sm">
                     <div>
-                        <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase">บันทึกรายจ่าย / Expense Management</h3>
-                        <p class="text-xs text-gray-400 mt-1">บันทึกค่าใช้จ่ายต่างๆ เช่น ค่าน้ำ ค่านำส่งของ ค่าโฆษณา หรือซื้อสินค้าเข้าร้าน</p>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase">💸 บันทึกรายจ่าย & ใบสำคัญจ่าย / Expense Management</h3>
+                            <span class="bg-gold/20 text-gold-dark text-[10px] font-bold px-2.5 py-0.5 rounded-full"
+                                  x-text="`${filteredExpenses().length} รายการ`"></span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">บันทึกค่าใช้จ่ายต่างๆ ซื้อสินค้าเข้าสต็อก ค่าการตลาด ค่าแรง และสั่งพิมพ์ใบสำคัญจ่าย (Payment Voucher)</p>
                     </div>
-                    <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <button @click="openExpenseModal()"
+                                class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition uppercase tracking-wider flex items-center gap-1.5 shadow cursor-pointer">
+                            <span class="text-sm font-bold text-gold">+</span>
+                            <span>บันทึกรายจ่ายใหม่</span>
+                        </button>
+                        <button @click="printExpensesSummary()"
+                                title="พิมพ์รายงานตารางรายจ่าย / Print List"
+                                class="bg-cream hover:bg-beige border border-beige text-charcoal text-xs font-semibold px-3 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+                            <svg class="w-4 h-4 text-gold-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                            <span class="hidden sm:inline">พิมพ์รายงาน</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dedicated Filters & Search Toolbar -->
+                <div class="bg-white p-4 border border-beige rounded-2xl shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <!-- Search Input -->
+                    <div class="relative flex-1 max-w-md">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </span>
+                        <input type="text"
+                               x-model="expenseQuery"
+                               placeholder="ค้นหาเลขที่ PV, ผู้รับเงิน, หมวดหมู่, หรือรายละเอียด..."
+                               class="w-full bg-cream/70 border border-beige rounded-xl pl-9 pr-3.5 py-2 text-xs focus-gold text-charcoal placeholder-gray-400">
+                    </div>
+
+                    <!-- Dropdowns: Year, Month, Category -->
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
                         <!-- Dropdown Year -->
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 bg-cream/50 border border-beige rounded-xl px-2.5 py-1">
                             <label class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">ปี:</label>
                             <select x-model="expenseFilterYear"
-                                    class="bg-cream border border-beige rounded-xl px-3 py-2 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
+                                    class="bg-transparent border-none text-xs font-bold text-charcoal focus:ring-0 cursor-pointer py-1 pr-6 pl-1">
                                 <option value="ALL">ทุกปี (ALL)</option>
                                 <option value="2027">2570 (2027)</option>
                                 <option value="2026">2569 (2026)</option>
@@ -1872,10 +1906,10 @@
                         </div>
 
                         <!-- Dropdown Month -->
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1.5 bg-cream/50 border border-beige rounded-xl px-2.5 py-1">
                             <label class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">เดือน:</label>
                             <select x-model="expenseFilterMonth"
-                                    class="bg-cream border border-beige rounded-xl px-3 py-2 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
+                                    class="bg-transparent border-none text-xs font-bold text-charcoal focus:ring-0 cursor-pointer py-1 pr-6 pl-1">
                                 <option value="ALL">ทุกเดือน (ALL)</option>
                                 <option value="01">01 มกราคม (ม.ค.)</option>
                                 <option value="02">02 กุมภาพันธ์ (ก.พ.)</option>
@@ -1893,10 +1927,10 @@
                         </div>
 
                         <!-- Dropdown Category -->
-                        <div class="flex items-center gap-1.5">
-                            <label class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">ประเภท:</label>
+                        <div class="flex items-center gap-1.5 bg-cream/50 border border-beige rounded-xl px-2.5 py-1">
+                            <label class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">หมวดหมู่:</label>
                             <select x-model="expenseFilterCategory"
-                                    class="bg-cream border border-beige rounded-xl px-3 py-2 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
+                                    class="bg-transparent border-none text-xs font-bold text-charcoal focus:ring-0 cursor-pointer py-1 pr-6 pl-1">
                                 <option value="ALL">ทุกหมวดหมู่ (ALL)</option>
                                 <template x-for="cat in (expenseCategories && expenseCategories.length ? expenseCategories : ['ค่าสินค้า/วัตถุดิบ', 'ค่าเช่า/สถานที่', 'ค่าเงินเดือน/ค่าแรง', 'ค่าการตลาด/โฆษณา', 'ค่าน้ำ/ค่าไฟ/สาธารณูปโภค', 'ค่าใช้จ่ายทั่วไป'])" :key="cat">
                                     <option :value="cat" x-text="cat"></option>
@@ -1904,69 +1938,102 @@
                             </select>
                         </div>
 
-                        <!-- Add Expense Button -->
-                        <button @click="openExpenseModal()" class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                            <span class="text-sm font-bold text-gold">+</span>
-                            <span>บันทึกรายจ่ายใหม่</span>
-                        </button>
-
-                        <!-- Print Icon Button -->
-                        <button @click="printExpensesSummary()" title="พิมพ์รายงานตารางรายจ่าย / Print List" class="bg-charcoal hover:bg-gold-dark text-white p-2.5 rounded-xl transition shadow flex items-center justify-center cursor-pointer" aria-label="พิมพ์รายงาน">
-                            <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        <!-- Reset Filter Button -->
+                        <button x-show="expenseFilterYear !== 'ALL' || expenseFilterMonth !== 'ALL' || expenseFilterCategory !== 'ALL' || expenseQuery !== ''"
+                                @click="expenseFilterYear = 'ALL'; expenseFilterMonth = 'ALL'; expenseFilterCategory = 'ALL'; expenseQuery = ''"
+                                class="text-xs text-gray-400 hover:text-red-500 font-semibold px-2 py-1 rounded-lg hover:bg-red-50 transition cursor-pointer">
+                            ✕ ล้างตัวกรอง
                         </button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <!-- Left: Expense Table List (takes 2 cols) -->
-                    <div class="lg:col-span-2 bg-white border border-beige rounded-2xl shadow-sm overflow-hidden">
-                        <table class="w-full text-left text-sm">
-                            <thead>
-                                <tr class="bg-cream border-b border-beige text-xs text-gray-500 uppercase font-semibold">
-                                    <th class="px-4 py-3.5">เลขที่ PV / Date</th>
-                                    <th class="px-4 py-3.5">หมวดหมู่ / Category</th>
-                                    <th class="px-4 py-3.5 text-right">จำนวนเงินสุทธิ / Net</th>
-                                    <th class="px-4 py-3.5 text-center">จัดการ / Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="exp in filteredExpenses()" :key="exp.id">
-                                    <tr class="border-b border-beige hover:bg-cream/40">
-                                        <td class="px-4 py-3.5">
-                                            <div class="font-bold font-mono text-charcoal text-xs" x-text="exp.voucher_number || ('PV-' + String(exp.id).padStart(4, '0'))"></div>
-                                            <div class="text-[10px] text-gray-400" x-text="formatThaiDate(exp.date)"></div>
-                                        </td>
-                                        <td class="px-4 py-3.5 whitespace-nowrap">
-                                            <span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-beige text-gold-dark whitespace-nowrap"
-                                                  x-text="exp.category"></span>
-                                        </td>
-                                        <td class="px-4 py-3.5 text-right font-bold text-red-600 font-mono text-xs" x-text="formatCurrency(exp.net_amount || exp.amount)"></td>
-                                        <td class="px-4 py-3.5 text-center">
-                                            <div class="inline-flex gap-1.5">
-                                                <button @click="openViewExpenseModal(exp)" class="text-[11px] bg-gold/15 hover:bg-gold hover:text-white text-gold-dark px-2.5 py-1 rounded-lg border border-gold/30 font-bold transition flex items-center gap-1">
-                                                    👁️ ดู
-                                                </button>
-                                                <button @click="printExpenseVoucher(exp.id)" class="text-[11px] bg-beige hover:bg-gold hover:text-white text-charcoal px-2.5 py-1 rounded-lg border border-beige font-semibold transition">
-                                                    🖨️ พิมพ์ A4
-                                                </button>
-                                                <button @click="deleteExpense(exp.id)" class="text-[11px] bg-red-50 hover:bg-red-600 hover:text-white text-red-600 px-2.5 py-1 rounded-lg border border-red-100 font-semibold transition">
-                                                    ลบ
-                                                </button>
+                    <div class="lg:col-span-2 bg-white border border-beige rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <!-- Table Top Summary Bar -->
+                            <div class="px-5 py-3.5 bg-cream/60 border-b border-beige flex items-center justify-between">
+                                <div class="text-xs font-bold text-charcoal flex items-center gap-2">
+                                    <span>📄 รายการใบสำคัญจ่าย</span>
+                                    <span class="text-[11px] font-normal text-gray-400" x-text="`(แสดง ${filteredExpenses().length} รายการ)`"></span>
+                                </div>
+                                <div class="text-xs font-semibold text-gray-500 flex items-center gap-1.5">
+                                    <span>ยอดรวมตัวกรอง:</span>
+                                    <span class="text-xs font-bold text-red-600 font-mono"
+                                          x-text="formatCurrency(filteredExpenses().reduce((sum, e) => sum + (parseFloat(e.net_amount || e.amount) || 0), 0))"></span>
+                                </div>
+                            </div>
+
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="bg-cream/30 border-b border-beige text-xs text-gray-400 uppercase font-semibold">
+                                        <th class="px-4 py-3">เลขที่ PV / วันที่</th>
+                                        <th class="px-4 py-3">หมวดหมู่ / Category</th>
+                                        <th class="px-4 py-3 text-right">จำนวนเงินสุทธิ / Net</th>
+                                        <th class="px-4 py-3 text-center">จัดการ / Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-beige/60">
+                                    <template x-for="exp in filteredExpenses()" :key="exp.id">
+                                        <tr class="hover:bg-cream/40 transition-colors">
+                                            <td class="px-4 py-3.5">
+                                                <div class="font-bold font-mono text-charcoal text-xs" x-text="exp.voucher_number || ('PV-' + String(exp.id).padStart(4, '0'))"></div>
+                                                <div class="text-[10px] text-gray-400" x-text="formatThaiDate(exp.date)"></div>
+                                                <div x-show="exp.payee_name" class="text-[11px] text-gray-500 font-medium truncate max-w-[150px] mt-0.5" x-text="'ผู้รับ: ' + exp.payee_name"></div>
+                                            </td>
+                                            <td class="px-4 py-3.5 whitespace-nowrap">
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-full border shadow-2xs cursor-pointer transition hover:opacity-80"
+                                                      :style="`background-color: ${getCategoryStyle(exp.category).bg}; color: ${getCategoryStyle(exp.category).text}; border-color: ${getCategoryStyle(exp.category).border};`"
+                                                      @click="expenseFilterCategory = exp.category"
+                                                      :title="`คลิกเพื่อกรองเฉพาะ: ${exp.category}`">
+                                                    <span class="w-2 h-2 rounded-full flex-shrink-0" :style="`background-color: ${getCategoryStyle(exp.category).dot};`"></span>
+                                                    <span x-text="exp.category"></span>
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3.5 text-right font-bold text-red-600 font-mono text-xs sm:text-sm" x-text="formatCurrency(exp.net_amount || exp.amount)"></td>
+                                            <td class="px-4 py-3.5 text-center whitespace-nowrap">
+                                                <div class="inline-flex items-center gap-1.5">
+                                                    <button @click="openViewExpenseModal(exp)"
+                                                            title="ดูรายละเอียดใบสำคัญจ่าย"
+                                                            class="text-xs bg-gold/15 hover:bg-gold hover:text-white text-gold-dark px-2.5 py-1 rounded-lg border border-gold/30 font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                                                        <span>👁️</span>
+                                                        <span>ดู</span>
+                                                    </button>
+                                                    <button @click="printExpenseVoucher(exp.id)"
+                                                            title="พิมพ์ใบสำคัญจ่าย A4"
+                                                            class="text-xs bg-cream hover:bg-beige text-charcoal px-2.5 py-1 rounded-lg border border-beige font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                                                        <span>🖨️</span>
+                                                        <span>พิมพ์</span>
+                                                    </button>
+                                                    <button @click="deleteExpense(exp.id)"
+                                                            title="ลบรายการนี้"
+                                                            class="text-xs bg-red-50 hover:bg-red-600 hover:text-white text-red-600 px-2 py-1 rounded-lg border border-red-200 font-semibold transition cursor-pointer shadow-2xs">
+                                                        <span>ลบ</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <tr x-show="filteredExpenses().length === 0">
+                                        <td colspan="4" class="text-center py-12 text-xs text-gray-400">
+                                            <div class="flex flex-col items-center justify-center gap-2">
+                                                <span class="text-3xl opacity-50">🧾</span>
+                                                <span>ยังไม่มีประวัติการบันทึกใบสำคัญจ่าย หรือไม่พบข้อมูลตามตัวกรอง</span>
                                             </div>
                                         </td>
                                     </tr>
-                                </template>
-                                <tr x-show="filteredExpenses().length === 0">
-                                    <td colspan="4" class="text-center py-8 text-xs text-gray-400">ยังไม่มีประวัติการบันทึกใบสำคัญจ่าย หรือไม่พบข้อมูลตามตัวกรอง</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Right: Pie Chart Breakdown (takes 1 col) -->
                     <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-6">
                         <div class="text-center">
-                            <h4 class="text-xs font-bold tracking-wider text-gray-400 uppercase mb-4">กราฟวงกลมรายจ่าย / Expense Pie Chart</h4>
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-xs font-bold tracking-wider text-charcoal uppercase">สัดส่วนรายจ่าย / Expense Breakdown</h4>
+                                <span class="text-[10px] text-gray-400" x-text="expenseFilterMonth === 'ALL' ? (expenseFilterYear === 'ALL' ? 'ทั้งหมด' : `ปี ${expenseFilterYear}`) : `เดือน ${expenseFilterMonth}/${expenseFilterYear}`"></span>
+                            </div>
                             
                             <!-- SVG Interactive Donut/Pie Chart (dynamically injected via x-html) -->
                             <div class="relative w-44 h-44 mx-auto"
@@ -1990,14 +2057,29 @@
                         </div>
 
                         <!-- Colored Legend List -->
-                        <div class="space-y-2 overflow-y-auto max-h-[180px] pr-1">
+                        <div class="space-y-2 overflow-y-auto max-h-[220px] pr-1">
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                                <span>หมวดหมู่ (คลิกเพื่อกรอง)</span>
+                                <span x-show="expenseFilterCategory !== 'ALL'"
+                                      @click="expenseFilterCategory = 'ALL'"
+                                      class="text-gold-dark hover:underline cursor-pointer font-normal">แสดงทั้งหมด</span>
+                            </div>
                             <template x-for="item in getExpensesByCategory().list" :key="item.category">
-                                <div class="flex justify-between items-center text-xs">
+                                <div class="flex justify-between items-center text-xs p-1.5 rounded-xl transition cursor-pointer"
+                                     :class="expenseFilterCategory === item.category ? 'bg-gold/15 border border-gold/40' : 'hover:bg-cream/60'"
+                                     @click="expenseFilterCategory = expenseFilterCategory === item.category ? 'ALL' : item.category"
+                                     :title="`คลิกเพื่อกรองเฉพาะ: ${item.category}`">
                                     <div class="flex items-center gap-2">
                                         <span class="w-3 h-3 rounded-full flex-shrink-0" :style="`background-color: ${item.color}`"></span>
-                                        <span class="font-semibold text-gray-600 truncate max-w-[120px]" x-text="item.category"></span>
+                                        <span class="font-semibold truncate max-w-[130px]"
+                                              :class="expenseFilterCategory === item.category ? 'text-gold-dark font-bold' : 'text-gray-700'"
+                                              x-text="item.category"></span>
                                     </div>
-                                    <span class="font-bold text-gray-700" x-text="formatCurrency(item.amount)"></span>
+                                    <div class="text-right">
+                                        <span class="font-bold text-charcoal font-mono" x-text="formatCurrency(item.amount)"></span>
+                                        <span class="text-[10px] text-gray-400 ml-1 font-mono"
+                                              x-text="getExpensesByCategory().total > 0 ? `(${((item.amount / getExpensesByCategory().total) * 100).toFixed(0)}%)` : ''"></span>
+                                    </div>
                                 </div>
                             </template>
                             <div x-show="getExpensesByCategory().total === 0" class="text-center py-6 text-xs text-gray-400">
@@ -3304,6 +3386,7 @@
                 // Queries and filters
                 customerQuery: '',
                 productQuery: '',
+                expenseQuery: '',
                 expenseFilterYear: 'ALL',
                 expenseFilterMonth: 'ALL',
                 expenseFilterCategory: 'ALL',
@@ -4193,6 +4276,29 @@
                         .then(res => res.json())
                         .then(data => this.expenseCategories = data);
                 },
+                getCategoryStyle(cat) {
+                    const map = {
+                        'ค่าเงินเดือน/ค่าแรง': { bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0', dot: '#10b981', hex: '#10b981' }, // Emerald
+                        'ค่าการตลาด/โฆษณา': { bg: '#fff1f2', text: '#9f1239', border: '#fecdd3', dot: '#f43f5e', hex: '#f43f5e' }, // Rose/Red
+                        'ซื้อสินค้าเข้าสต็อก': { bg: '#fffbeb', text: '#92400e', border: '#fde68a', dot: '#f59e0b', hex: '#f59e0b' }, // Amber
+                        'ค่าสินค้า/วัตถุดิบ': { bg: '#fffbeb', text: '#92400e', border: '#fde68a', dot: '#f59e0b', hex: '#f59e0b' }, // Amber
+                        'ค่าเช่า/สถานที่': { bg: '#eff6ff', text: '#1e40af', border: '#bfdbfe', dot: '#3b82f6', hex: '#3b82f6' }, // Blue
+                        'ค่าน้ำ/ค่าไฟ/สาธารณูปโภค': { bg: '#faf5ff', text: '#581c87', border: '#e9d5ff', dot: '#a855f7', hex: '#a855f7' }, // Purple
+                        'ค่าใช้จ่ายทั่วไป': { bg: '#f8fafc', text: '#334155', border: '#e2e8f0', dot: '#64748b', hex: '#64748b' }, // Slate
+                        'ค่าขนส่ง': { bg: '#ecfeff', text: '#155e75', border: '#a5f3fc', dot: '#06b6d4', hex: '#06b6d4' } // Cyan
+                    };
+                    if (map[cat]) return map[cat];
+                    const fallbacks = [
+                        { bg: '#fdf2f8', text: '#831843', border: '#fbcfe8', dot: '#ec4899', hex: '#ec4899' },
+                        { bg: '#eef2ff', text: '#312e81', border: '#c7d2fe', dot: '#6366f1', hex: '#6366f1' },
+                        { bg: '#f0fdf4', text: '#14532d', border: '#bbf7d0', dot: '#22c55e', hex: '#22c55e' },
+                        { bg: '#fff7ed', text: '#7c2d12', border: '#fed7aa', dot: '#ea580c', hex: '#ea580c' },
+                        { bg: '#f5f3ff', text: '#4c1d95', border: '#ddd6fe', dot: '#8b5cf6', hex: '#8b5cf6' }
+                    ];
+                    let hash = 0;
+                    for (let i = 0; i < (cat || '').length; i++) hash = (hash << 5) - hash + cat.charCodeAt(i);
+                    return fallbacks[Math.abs(hash) % fallbacks.length];
+                },
                 filteredExpenses() {
                     if (!this.expenses) return [];
                     return this.expenses.filter(exp => {
@@ -4212,6 +4318,16 @@
                         if (this.expenseFilterCategory && this.expenseFilterCategory !== 'ALL') {
                             if (exp.category !== this.expenseFilterCategory) return false;
                         }
+                        if (this.expenseQuery && this.expenseQuery.trim() !== '') {
+                            const q = this.expenseQuery.toLowerCase().trim();
+                            const voucher = (exp.voucher_number || ('pv-' + String(exp.id).padStart(4, '0'))).toLowerCase();
+                            const payee = (exp.payee_name || '').toLowerCase();
+                            const desc = (exp.description || '').toLowerCase();
+                            const cat = (exp.category || '').toLowerCase();
+                            if (!voucher.includes(q) && !payee.includes(q) && !desc.includes(q) && !cat.includes(q)) {
+                                return false;
+                            }
+                        }
                         return true;
                     });
                 },
@@ -4220,24 +4336,19 @@
                     let total = 0;
                     const items = this.filteredExpenses();
                     items.forEach(e => {
-                        const amt = parseFloat(e.amount) || 0;
+                        const amt = parseFloat(e.net_amount || e.amount) || 0;
                         grouped[e.category] = (grouped[e.category] || 0) + amt;
                         total += amt;
                     });
                     
                     const list = [];
-                    const colors = [
-                        '#D97706', '#2563EB', '#10B981', '#EF4444', '#8B5CF6', 
-                        '#EC4899', '#06B6D4', '#F59E0B', '#14B8A6', '#6366F1'
-                    ];
-                    let index = 0;
                     for (const cat in grouped) {
+                        const style = this.getCategoryStyle(cat);
                         list.push({
                             category: cat,
                             amount: grouped[cat],
-                            color: colors[index % colors.length]
+                            color: style.hex
                         });
-                        index++;
                     }
                     list.sort((a, b) => b.amount - a.amount);
                     
