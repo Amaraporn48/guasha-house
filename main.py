@@ -16,11 +16,26 @@ from sqlalchemy.exc import IntegrityError
 import json
 from database import engine, SessionLocal, init_db, User, Customer, Product, Document, DocumentItem, Expense, Branch, VideoCourse, AuditLog, SlideBanner, SiteSetting
 
+def safe_migrate_columns():
+    is_pg = "postgresql" in str(engine.url).lower()
+    cols = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 1;" if is_pg else "ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1;",
+        "ALTER TABLE video_courses ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR;" if is_pg else "ALTER TABLE video_courses ADD COLUMN thumbnail_url VARCHAR;"
+    ]
+    for sql in cols:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(sql))
+                conn.commit()
+        except Exception:
+            pass
+
 # Initialize database safely
 try:
     init_db()
 except Exception:
     pass
+safe_migrate_columns()
 
 # Secret configurations for JWT
 JWT_SECRET_ENV = os.getenv("JWT_SECRET_KEY")
@@ -2903,37 +2918,49 @@ def extract_video_meta(url: str, current_user: User = Depends(get_current_user))
 
 @app.get("/api/videos")
 def get_videos(category: Optional[str] = None, query: Optional[str] = None, db: Session = Depends(get_db)):
-    q = db.query(VideoCourse)
-    if category and category != "ALL" and category != "":
-        q = q.filter(VideoCourse.category == category)
-    if query:
-        search_pattern = f"%{query.strip()}%"
-        q = q.filter(
-            or_(
-                VideoCourse.title.ilike(search_pattern),
-                VideoCourse.description.ilike(search_pattern),
-                VideoCourse.instructor.ilike(search_pattern)
+    try:
+        q = db.query(VideoCourse)
+        if category and category != "ALL" and category != "":
+            q = q.filter(VideoCourse.category == category)
+        if query:
+            search_pattern = f"%{query.strip()}%"
+            q = q.filter(
+                or_(
+                    VideoCourse.title.ilike(search_pattern),
+                    VideoCourse.description.ilike(search_pattern),
+                    VideoCourse.instructor.ilike(search_pattern)
+                )
             )
-        )
-    videos = q.order_by(VideoCourse.id.desc()).all()
-    # Dynamic sync embed_url & thumbnail_url if needed
-    has_changes = False
-    for v in videos:
-        expected_embed = convert_to_embed_url(v.video_url)
-        if expected_embed and v.embed_url != expected_embed:
-            v.embed_url = expected_embed
-            has_changes = True
-        if not getattr(v, "thumbnail_url", None):
-            meta = fetch_video_metadata(v.video_url)
-            if meta.get("thumbnail_url"):
-                v.thumbnail_url = meta["thumbnail_url"]
-                has_changes = True
-    if has_changes:
+        videos = q.order_by(VideoCourse.id.desc()).all()
+        # Fast sync: only fast string conversions, no blocking HTTP calls
+        has_changes = False
+        for v in videos:
+            try:
+                expected_embed = convert_to_embed_url(v.video_url)
+                if expected_embed and v.embed_url != expected_embed:
+                    v.embed_url = expected_embed
+                    has_changes = True
+                if not getattr(v, "thumbnail_url", None):
+                    yt_match = re.search(r'(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/(?:shorts\/)?)([^?&/]+)', v.video_url or "")
+                    if yt_match:
+                        v.thumbnail_url = f"https://img.youtube.com/vi/{yt_match.group(1)}/hqdefault.jpg"
+                        has_changes = True
+            except Exception:
+                pass
+        if has_changes:
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
+        return videos
+    except Exception as e:
+        print("Error in get_videos, attempting migration auto-heal:", e)
+        safe_migrate_columns()
         try:
-            db.commit()
-        except Exception:
-            pass
-    return videos
+            return db.query(VideoCourse).order_by(VideoCourse.id.desc()).all()
+        except Exception as retry_err:
+            print("Retry query failed:", retry_err)
+            return []
 
 @app.post("/api/videos")
 def create_video(payload: VideoCourseSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

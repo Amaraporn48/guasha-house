@@ -202,16 +202,19 @@ def init_db():
     try:
         Base.metadata.create_all(bind=engine)
         
-        # Safely migrate token_version column if missing
-        with engine.begin() as conn:
+        # Safely migrate columns in isolated transactions
+        is_pg = "postgresql" in str(engine.url).lower()
+        migrations = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 1;" if is_pg else "ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1;",
+            "ALTER TABLE video_courses ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR;" if is_pg else "ALTER TABLE video_courses ADD COLUMN thumbnail_url VARCHAR;"
+        ]
+        for cmd in migrations:
             try:
-                conn.execute(text("ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1;"))
+                with engine.connect() as conn:
+                    conn.execute(text(cmd))
+                    conn.commit()
             except Exception:
-                pass # Column already exists
-            try:
-                conn.execute(text("ALTER TABLE video_courses ADD COLUMN thumbnail_url VARCHAR;"))
-            except Exception:
-                pass # Column already exists
+                pass
                 
         # Seed default admin user only if users table is empty
         db = SessionLocal()
