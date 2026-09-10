@@ -315,9 +315,9 @@
                 <p class="text-xs text-gray-500">เรียนรู้ทักษะเบื้องต้นและการทำกัวซาอย่างถูกวิธีจากวิทยากรผู้เชี่ยวชาญ</p>
             </div>
 
-        <!-- Dynamic Videos Grid -->
+        <!-- Dynamic Videos Grid (1 row = 3 items initially) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <template x-for="v in videos" :key="v.id">
+            <template x-for="v in displayedVideos" :key="v.id">
                 <div class="bg-white border border-beige rounded-2xl overflow-hidden shadow-sm space-y-4 hover:shadow-md transition flex flex-col justify-between">
                     <div class="space-y-4">
                         <div class="relative aspect-video bg-charcoal overflow-hidden group cursor-pointer" @click="openPlayVideoModal(v)">
@@ -360,6 +360,28 @@
                     </div>
                 </div>
             </template>
+        </div>
+
+        <!-- View More / Load Next Row Button -->
+        <div x-show="videos && videos.length > 3" class="text-center pt-2">
+            <div class="inline-flex items-center gap-3">
+                <button x-show="visibleVideoLimit < videos.length"
+                        @click="showMoreVideos()" 
+                        class="bg-white hover:bg-gold hover:text-white text-charcoal border border-beige hover:border-gold px-8 py-3 rounded-full text-xs font-bold transition shadow-sm hover:shadow-md inline-flex items-center gap-2 group cursor-pointer">
+                    <span>ดูเพิ่มเติม (คลิปแถวถัดไป)</span>
+                    <svg class="w-4 h-4 text-gold group-hover:text-white transition transform group-hover:translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <button x-show="visibleVideoLimit >= videos.length && videos.length > 3"
+                        @click="showLessVideos()" 
+                        class="bg-cream hover:bg-beige text-gray-500 hover:text-charcoal px-6 py-2.5 rounded-full text-xs font-medium transition inline-flex items-center gap-1.5 border border-beige cursor-pointer">
+                    <span>ย่อแสดง 1 แถว</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <div x-show="!videos || videos.length === 0" class="text-center py-12 text-gray-400 text-sm">
@@ -555,6 +577,7 @@
                 branches: [],
                 products: [],
                 videos: [],
+                visibleVideoLimit: 3,
                 siteSettings: {
                     contact_phone: '061-496-6361',
                     contact_address: 'บริษัท กัวซา เฮ้าส์ จำกัด\n199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240',
@@ -681,6 +704,18 @@
                         return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
                     }
                     return '';
+                },
+
+                get displayedVideos() {
+                    return (this.videos || []).slice(0, this.visibleVideoLimit);
+                },
+
+                showMoreVideos() {
+                    this.visibleVideoLimit += 3;
+                },
+
+                showLessVideos() {
+                    this.visibleVideoLimit = 3;
                 },
 
                 openDetailModal(item) {
