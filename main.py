@@ -1263,7 +1263,7 @@ class DocumentCreateSchema(BaseModel):
     customer_tax_id: str
     customer_phone: Optional[str] = ""
     customer_email: Optional[str] = ""
-    payment_method: str # CASH / CHEQUE
+    payment_method: str # CASH / TRANSFER / CHEQUE
     cheque_bank: Optional[str] = ""
     cheque_number: Optional[str] = ""
     cheque_date: Optional[str] = ""
@@ -1853,6 +1853,11 @@ def get_reports_summary(year: Optional[str] = None, month: Optional[str] = None,
         and_(Document.date.like(date_filter_pattern), Document.payment_method == "CASH")
     ).scalar()
     cash_sum = float(cash_sum) if cash_sum else 0.0
+
+    transfer_sum = db.query(func.sum(Document.total_amount_after_vat)).filter(
+        and_(Document.date.like(date_filter_pattern), Document.payment_method == "TRANSFER")
+    ).scalar()
+    transfer_sum = float(transfer_sum) if transfer_sum else 0.0
     
     cheque_sum = db.query(func.sum(Document.total_amount_after_vat)).filter(
         and_(Document.date.like(date_filter_pattern), Document.payment_method == "CHEQUE")
@@ -1956,6 +1961,7 @@ def get_reports_summary(year: Optional[str] = None, month: Optional[str] = None,
         "month": month or "ALL",
         "months_data": months_data,
         "cash_sales": cash_sum,
+        "transfer_sales": transfer_sum,
         "cheque_sales": cheque_sum,
         "total_sales": period_sales,
         "expenses_breakdown": expenses_breakdown,

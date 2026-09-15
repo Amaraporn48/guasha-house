@@ -255,6 +255,11 @@
                         <input type="checkbox" {% if doc.payment_method == 'CASH' %}checked{% endif %} disabled class="rounded border-gray-300 text-gray-700 w-3.5 h-3.5">
                         <span class="font-semibold text-gray-700">CASH / เงินสด</span>
                     </label>
+
+                    <label class="flex items-center gap-1.5">
+                        <input type="checkbox" {% if doc.payment_method == 'TRANSFER' %}checked{% endif %} disabled class="rounded border-gray-300 text-gray-700 w-3.5 h-3.5">
+                        <span class="font-semibold text-gray-700">TRANSFER / โอนเงิน</span>
+                    </label>
                     
                     <label class="flex items-center gap-1.5">
                         <input type="checkbox" {% if doc.payment_method == 'CHEQUE' %}checked{% endif %} disabled class="rounded border-gray-300 text-gray-700 w-3.5 h-3.5">

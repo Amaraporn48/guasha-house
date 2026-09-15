@@ -77,7 +77,7 @@ class Document(Base):
     total_amount_after_vat = Column(Float, default=0.0)
     total_amount_text = Column(String, nullable=False) # e.g. หนึ่งหมื่นบาทถ้วน
     
-    payment_method = Column(String, nullable=False) # CASH / CHEQUE
+    payment_method = Column(String, nullable=False) # CASH / TRANSFER / CHEQUE
     cheque_bank = Column(String, nullable=True)
     cheque_number = Column(String, nullable=True)
     cheque_date = Column(String, nullable=True)
