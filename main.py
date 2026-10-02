@@ -42,9 +42,13 @@ def safe_migrate_columns():
 # Initialize database safely
 try:
     init_db()
-except Exception:
-    pass
-safe_migrate_columns()
+except Exception as e:
+    print(f"init_db notice: {e}")
+
+try:
+    safe_migrate_columns()
+except Exception as e:
+    print(f"safe_migrate_columns notice: {e}")
 
 # Secret configurations for JWT
 JWT_SECRET_ENV = os.getenv("JWT_SECRET_KEY")
@@ -57,6 +61,11 @@ else:
 ALGORITHM = "HS256"
 
 app = FastAPI(title="Guasha House Billing System")
+
+@app.get("/health")
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "app": "Guasha House", "time": datetime.datetime.utcnow().isoformat()}
 
 # Base directory for reliable relative path resolution in Vercel/serverless environments
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
