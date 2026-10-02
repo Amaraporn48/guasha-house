@@ -14,13 +14,36 @@ if DATABASE_URL.startswith("postgres://"):
 
 is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("SERVERLESS"))
 
-if "sqlite" in DATABASE_URL:
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-elif is_serverless:
-    # Use NullPool on serverless to prevent connection exhaustion across ephemeral Lambdas
-    engine = create_engine(DATABASE_URL, poolclass=NullPool, pool_pre_ping=True)
-else:
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5, max_overflow=10)
+def create_robust_engine(url: str):
+    pool_kwargs = {"poolclass": NullPool, "pool_pre_ping": True} if is_serverless else {"pool_pre_ping": True, "pool_size": 5, "max_overflow": 10}
+    if "sqlite" in url:
+        return create_engine(url, connect_args={"check_same_thread": False})
+    
+    # List of candidate URLs to try if dialect driver is missing
+    candidates = [url]
+    if "postgresql+psycopg://" in url:
+        candidates.append(url.replace("postgresql+psycopg://", "postgresql+psycopg2://", 1))
+        candidates.append(url.replace("postgresql+psycopg://", "postgresql://", 1))
+    elif "postgresql+psycopg2://" in url:
+        candidates.append(url.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1))
+        candidates.append(url.replace("postgresql+psycopg2://", "postgresql://", 1))
+    elif url.startswith("postgresql://"):
+        candidates.append(url.replace("postgresql://", "postgresql+psycopg://", 1))
+        candidates.append(url.replace("postgresql://", "postgresql+psycopg2://", 1))
+        
+    last_err = None
+    for candidate_url in candidates:
+        try:
+            eng = create_engine(candidate_url, **pool_kwargs)
+            return eng
+        except Exception as e:
+            last_err = e
+            continue
+            
+    print(f"Warning: Failed to initialize database engine for {url}: {last_err}. Falling back to SQLite.")
+    return create_engine("sqlite:///./guasa_house.db", connect_args={"check_same_thread": False})
+
+engine = create_robust_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
