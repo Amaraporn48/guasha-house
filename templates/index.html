@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบคีย์ใบกำกับภาษี - Guasha House</title>
+    <title>ระบบคีย์ใบเสร็จรับเงิน - Guasha House</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -94,14 +94,14 @@
                 <div class="space-y-1 pt-2 border-t border-beige/60">
                     <p x-show="!sidebarCollapsed" x-transition.opacity class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-2">งานขายและเอกสาร / Sales & Docs</p>
                     <a href="#" @click.prevent="startCreateDocument()" 
-                       title="สร้างใบกำกับภาษี / Create"
+                       title="สร้างใบเสร็จรับเงิน / Create"
                        :class="[
                           activeView === 'create' ? 'bg-beige border-gold text-charcoal font-semibold shadow-sm' : 'text-gray-700 hover:bg-cream border-transparent',
                           sidebarCollapsed ? 'justify-center px-2 py-3.5' : 'justify-start px-4 py-3'
                        ]"
                        class="flex items-center gap-3.5 rounded-xl text-sm transition-all duration-200 border-l-4">
                         <svg class="w-5 h-5 text-gold-dark flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        <span x-show="!sidebarCollapsed" x-transition.opacity class="font-bold text-gold-dark truncate">สร้างใบกำกับภาษี / Create</span>
+                        <span x-show="!sidebarCollapsed" x-transition.opacity class="font-bold text-gold-dark truncate">สร้างใบเสร็จรับเงิน / Create</span>
                     </a>
 
                     <a href="#" @click.prevent="setView('documents')" 
@@ -645,7 +645,7 @@
                 <!-- Left 40% Form Block -->
                 <div class="lg:col-span-5 bg-white border border-beige rounded-2xl shadow-sm p-6 space-y-6">
                     <div class="flex items-center justify-between border-b border-beige pb-4">
-                        <h3 class="text-sm font-semibold tracking-wider text-charcoal uppercase" x-text="editingDocId ? 'แก้ไขใบกำกับภาษี / Edit Invoice' : 'ข้อมูลใบกำกับภาษี / Invoice Form'"></h3>
+                        <h3 class="text-sm font-semibold tracking-wider text-charcoal uppercase" x-text="editingDocId ? 'แก้ไขใบเสร็จรับเงิน / Edit Receipt' : 'ข้อมูลใบเสร็จรับเงิน / Receipt Form'"></h3>
                         <button @click="setView('documents')" class="text-xs text-gray-500 hover:text-charcoal flex items-center gap-1 font-semibold uppercase">
                             &larr; กลับ / Back
                         </button>
@@ -985,8 +985,8 @@
                                     </div>
                                 </div>
                                 <div class="text-right border-l border-gold pl-4 min-w-[150px]">
-                                    <h4 class="text-sm font-bold text-gray-800 leading-tight">ใบกำกับภาษี / ใบเสร็จรับเงิน</h4>
-                                    <h5 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">TAX INVOICE / RECEIPT</h5>
+                                    <h4 class="text-sm font-bold text-gray-800 leading-tight">ใบเสร็จรับเงิน</h4>
+                                    <h5 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">RECEIPT</h5>
                                     
                                     <div class="text-[10px] space-y-0.5 text-gray-600">
                                         <div><span class="font-bold">เลขที่ / No. :</span> <span class="font-medium text-gray-800" x-text="docForm.document_number || 'INV-2026-XXXX'"></span></div>
@@ -1060,13 +1060,9 @@
                                         <span class="text-gray-500 font-medium">ราคาสินค้า / Subtotal</span>
                                         <span class="font-bold" x-text="formatCurrency(docForm.total_amount_before_vat)">0.00</span>
                                     </div>
-                                    <div class="flex justify-between p-2">
-                                        <span class="text-gray-500 font-medium">ภาษีมูลค่าเพิ่ม VAT 7%</span>
-                                        <span class="font-bold" x-text="formatCurrency(docForm.vat_amount)">0.00</span>
-                                    </div>
                                     <div class="flex justify-between p-2 bg-beige font-semibold">
                                         <span class="text-charcoal">รวมทั้งสิ้น / Grand Total</span>
-                                        <span class="font-bold text-charcoal" x-text="formatCurrency(docForm.total_amount_after_vat)">0.00</span>
+                                        <span class="font-bold text-charcoal" x-text="formatCurrency(docForm.total_amount_before_vat)">0.00</span>
                                     </div>
                                 </div>
                             </div>
@@ -2608,8 +2604,8 @@
                             </div>
                             <div class="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l border-gold pt-2 sm:pt-0 sm:pl-4 min-w-0 sm:min-w-[150px] flex sm:block justify-between items-center">
                                 <div>
-                                    <h4 class="text-xs sm:text-sm font-bold text-gray-800 leading-tight">ใบกำกับภาษี / ใบเสร็จรับเงิน</h4>
-                                    <h5 class="text-[8.5px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">TAX INVOICE / RECEIPT</h5>
+                                    <h4 class="text-xs sm:text-sm font-bold text-gray-800 leading-tight">ใบเสร็จรับเงิน</h4>
+                                    <h5 class="text-[8.5px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">RECEIPT</h5>
                                 </div>
                                 <div class="text-[9px] sm:text-[10px] space-y-0.5 text-gray-600 text-right">
                                     <div><span class="font-bold">เลขที่ / No. :</span> <span class="font-semibold text-gray-800" x-text="viewModal.doc.document_number"></span></div>
@@ -2681,13 +2677,9 @@
                                     <span class="text-gray-500 font-medium">ราคาสินค้า / Subtotal</span>
                                     <span class="font-bold" x-text="formatCurrency(viewModal.doc.total_amount_before_vat)">0.00</span>
                                 </div>
-                                <div class="flex justify-between p-2">
-                                    <span class="text-gray-500 font-medium">ภาษีมูลค่าเพิ่ม VAT 7%</span>
-                                    <span class="font-bold" x-text="formatCurrency(viewModal.doc.vat_amount)">0.00</span>
-                                </div>
                                 <div class="flex justify-between p-2 bg-beige font-semibold">
                                     <span class="text-charcoal">รวมทั้งสิ้น / Grand Total</span>
-                                    <span class="font-bold text-charcoal" x-text="formatCurrency(viewModal.doc.total_amount_after_vat)">0.00</span>
+                                    <span class="font-bold text-charcoal" x-text="formatCurrency(viewModal.doc.total_amount_before_vat)">0.00</span>
                                 </div>
                             </div>
                         </div>
@@ -3641,7 +3633,7 @@
                     this.mobileMenuOpen = false;
                     const titles = {
                         dashboard: 'Dashboard / แดชบอร์ด',
-                        create: this.editingDocId ? 'แก้ไขใบกำกับภาษี / Edit Document' : 'สร้างใบกำกับภาษี / Create Document',
+                        create: this.editingDocId ? 'แก้ไขใบเสร็จรับเงิน / Edit Document' : 'สร้างใบเสร็จรับเงิน / Create Document',
                         documents: 'เอกสารทั้งหมด / Documents',
                         customers: 'ลูกค้า / Customers',
                         products: 'สินค้าและบริการ / Products & Services',
@@ -5152,8 +5144,8 @@
                     });
                     
                     this.docForm.total_amount_before_vat = subtotal;
-                    this.docForm.vat_amount = subtotal * 0.07;
-                    this.docForm.total_amount_after_vat = subtotal * 1.07;
+                    this.docForm.vat_amount = 0;
+                    this.docForm.total_amount_after_vat = subtotal;
                 },
 
                 thaiBahtText(num) {
@@ -5324,7 +5316,7 @@
                 },
 
                 duplicateInvoice(id) {
-                    if (!confirm('คุณต้องการคัดลอกเอกสารฉบับนี้เพื่อสร้างใบกำกับภาษีใบใหม่ใช่หรือไม่?')) return;
+                    if (!confirm('คุณต้องการคัดลอกเอกสารฉบับนี้เพื่อสร้างใบเสร็จรับเงินใบใหม่ใช่หรือไม่?')) return;
                     
                     fetch(`/api/documents/${id}/duplicate`, { method: 'POST' })
                         .then(res => {

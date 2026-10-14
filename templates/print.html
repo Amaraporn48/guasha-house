@@ -128,12 +128,12 @@
                 <img src="/static/logo.png" alt="Guasha House Logo" class="h-9 w-9 object-contain bg-white rounded-lg p-0.5">
                 <div>
                     <h1 class="text-sm font-bold text-[#c5a880] uppercase tracking-wider">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
-                    <p class="text-[11px] text-gray-300">ใบกำกับภาษี / ใบเสร็จรับเงิน ({{ doc.document_number }})</p>
+                    <p class="text-[11px] text-gray-300">ใบเสร็จรับเงิน ({{ doc.document_number }})</p>
                 </div>
             </div>
             <button onclick="window.print()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                <span>พิมพ์ใบกำกับภาษี A4 / บันทึก PDF</span>
+                <span>พิมพ์ใบเสร็จรับเงิน A4 / บันทึก PDF</span>
             </button>
         </div>
     </div>
@@ -158,8 +158,8 @@
                 </div>
                 <div class="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l-2 border-gold pt-2 sm:pt-0 sm:pl-4 min-w-0 sm:min-w-[160px] flex sm:block justify-between items-center">
                     <div>
-                        <h4 class="text-xs sm:text-sm font-bold text-gray-800 leading-tight">ใบกำกับภาษี / ใบเสร็จรับเงิน</h4>
-                        <h5 class="text-[8.5px] sm:text-[9.5px] font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">TAX INVOICE / RECEIPT</h5>
+                        <h4 class="text-xs sm:text-sm font-bold text-gray-800 leading-tight">ใบเสร็จรับเงิน</h4>
+                        <h5 class="text-[8.5px] sm:text-[9.5px] font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">RECEIPT</h5>
                     </div>
                     <div class="text-[9px] sm:text-[9.5px] space-y-0.5 text-gray-600 text-right">
                         <div><span class="font-bold">เลขที่ / No. :</span> <span class="font-medium text-gray-900">{{ doc.document_number }}</span></div>
@@ -235,13 +235,9 @@
                         <span class="text-gray-500 font-medium">ราคาสินค้า / Subtotal</span>
                         <span class="font-bold">฿{{ "{:,.2f}".format(doc.total_amount_before_vat or 0) }}</span>
                     </div>
-                    <div class="flex justify-between p-2">
-                        <span class="text-gray-500 font-medium">ภาษีมูลค่าเพิ่ม VAT 7%</span>
-                        <span class="font-bold">฿{{ "{:,.2f}".format(doc.vat_amount or 0) }}</span>
-                    </div>
                     <div class="flex justify-between p-2 bg-gray-100 font-bold">
                         <span class="text-gray-800 font-semibold">รวมทั้งสิ้น / Grand Total</span>
-                        <span class="font-bold text-gray-900">฿{{ "{:,.2f}".format(doc.total_amount_after_vat or 0) }}</span>
+                        <span class="font-bold text-gray-900">฿{{ "{:,.2f}".format(doc.total_amount_before_vat or 0) }}</span>
                     </div>
                 </div>
             </div>

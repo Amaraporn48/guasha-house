@@ -362,6 +362,32 @@ def bahttext(number: float) -> str:
             
     return result
 
+def remove_vat_from_existing_documents():
+    """
+    Since business is not VAT-registered, remove VAT 7% from existing documents,
+    set total_amount_after_vat = total_amount_before_vat, vat_amount = 0.0,
+    and update total_amount_text = bahttext(total_amount_before_vat).
+    """
+    try:
+        with SessionLocal() as db:
+            docs = db.query(Document).filter(
+                or_(Document.vat_amount > 0, Document.total_amount_after_vat != Document.total_amount_before_vat)
+            ).all()
+            for doc in docs:
+                doc.vat_amount = 0.0
+                doc.total_amount_after_vat = doc.total_amount_before_vat
+                doc.total_amount_text = bahttext(doc.total_amount_before_vat)
+            if docs:
+                db.commit()
+                print(f"Updated {len(docs)} documents to remove VAT 7%.")
+    except Exception as e:
+        print(f"remove_vat_from_existing_documents notice: {e}")
+
+try:
+    remove_vat_from_existing_documents()
+except Exception:
+    pass
+
 # Seeding database with initial data if empty
 def seed_database():
     db = SessionLocal()
@@ -1130,7 +1156,7 @@ def delete_customer(customer_id: int, request: Request, db: Session = Depends(ge
     if has_docs:
         raise HTTPException(
             status_code=400,
-            detail="ไม่สามารถลบลูกค้ารายนี้ได้ เนื่องจากมีประวัติเอกสารใบกำกับภาษีในระบบ"
+            detail="ไม่สามารถลบลูกค้ารายนี้ได้ เนื่องจากมีประวัติเอกสารในระบบ"
         )
         
     deleted_name = cust.name
@@ -1339,9 +1365,9 @@ def create_document(doc_data: DocumentCreateSchema, request: Request, db: Sessio
         })
 
     subtotal = round(subtotal, 2)
-    vat_amount = round(subtotal * 0.07, 2)
-    total_after_vat = round(subtotal + vat_amount, 2)
-    total_text = bahttext(total_after_vat)
+    vat_amount = 0.0
+    total_after_vat = subtotal
+    total_text = bahttext(subtotal)
 
     max_attempts = 10
     doc_year = "2026"
@@ -1491,9 +1517,9 @@ def get_document(doc_id: int, db: Session = Depends(get_db), current_user: User 
         "customer_phone": doc.customer_phone,
         "customer_email": doc.customer_email,
         "total_amount_before_vat": doc.total_amount_before_vat,
-        "vat_amount": doc.vat_amount,
-        "total_amount_after_vat": doc.total_amount_after_vat,
-        "total_amount_text": doc.total_amount_text,
+        "vat_amount": 0.0,
+        "total_amount_after_vat": doc.total_amount_before_vat,
+        "total_amount_text": bahttext(doc.total_amount_before_vat),
         "payment_method": doc.payment_method,
         "cheque_bank": doc.cheque_bank,
         "cheque_number": doc.cheque_number,
@@ -1544,9 +1570,9 @@ def update_document(doc_id: int, doc_data: DocumentCreateSchema, request: Reques
         })
 
     subtotal = round(subtotal, 2)
-    vat_amount = round(subtotal * 0.07, 2)
-    total_after_vat = round(subtotal + vat_amount, 2)
-    total_text = bahttext(total_after_vat)
+    vat_amount = 0.0
+    total_after_vat = subtotal
+    total_text = bahttext(subtotal)
 
     try:
         with db.begin_nested():
@@ -1658,8 +1684,8 @@ def duplicate_document(doc_id: int, request: Request, db: Session = Depends(get_
         shipping_address=old_doc.shipping_address,
         payment_slip=old_doc.payment_slip,
         total_amount_before_vat=old_doc.total_amount_before_vat,
-        vat_amount=old_doc.vat_amount,
-        total_amount_after_vat=old_doc.total_amount_after_vat,
+        vat_amount=0.0,
+        total_amount_after_vat=old_doc.total_amount_before_vat,
         items=items_list
     )
     
@@ -2418,6 +2444,10 @@ def share_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
+        
+    doc.vat_amount = 0.0
+    doc.total_amount_after_vat = doc.total_amount_before_vat
+    doc.total_amount_text = bahttext(doc.total_amount_before_vat)
     
     items = sorted(doc.items, key=lambda x: x.item_index)
     display_items = []
@@ -2751,6 +2781,10 @@ def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db), 
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="ไม่พบเอกสารที่ต้องการพิมพ์")
+        
+    doc.vat_amount = 0.0
+    doc.total_amount_after_vat = doc.total_amount_before_vat
+    doc.total_amount_text = bahttext(doc.total_amount_before_vat)
     
     # Sort items
     items = sorted(doc.items, key=lambda x: x.item_index)
