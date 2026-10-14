@@ -276,21 +276,29 @@
             <!-- Signature Lines -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 text-center text-xs mt-8 sm:mt-12 pt-4 sm:pt-6">
                 <div class="hidden sm:block"></div>
-                <div class="border-t border-gray-400 pt-3 space-y-1 max-w-[220px] mx-auto">
-                    <div class="h-5 flex items-center justify-center text-gray-500 font-serif italic text-[11px]">
-                        {% if doc.received_by %}
-                        / {{ doc.received_by }} /
+                <div class="max-w-[220px] mx-auto w-full text-center">
+                    <!-- Signature Image above/on grey line -->
+                    <div class="h-14 flex items-end justify-center -mb-2 relative z-10">
+                        {% if doc.signature_url %}
+                        <img src="{{ doc.signature_url }}" alt="ลายเซ็น" class="max-h-14 max-w-[150px] object-contain">
                         {% endif %}
                     </div>
-                    <span class="font-bold text-gray-800 block">ผู้รับเงิน / Received By</span>
-                    <span class="text-[8.5px] text-gray-400 block mb-1">Authorized Signature</span>
-                    <div class="text-[9.5px] text-gray-600">
-                        วันที่ / Date: 
-                        <span class="font-semibold text-gray-900" id="signature-date">
-                            {% if not doc.received_date %}
-                            ____________________
+                    <div class="border-t border-gray-400 pt-2 space-y-1">
+                        <div class="h-5 flex items-center justify-center text-gray-500 font-serif italic text-[11px]">
+                            {% if doc.received_by %}
+                            / {{ doc.received_by }} /
                             {% endif %}
-                        </span>
+                        </div>
+                        <span class="font-bold text-gray-800 block">ผู้รับเงิน / Received By</span>
+                        <span class="text-[8.5px] text-gray-400 block mb-1">Authorized Signature</span>
+                        <div class="text-[9.5px] text-gray-600">
+                            วันที่ / Date: 
+                            <span class="font-semibold text-gray-900" id="signature-date">
+                                {% if not doc.received_date %}
+                                ____________________
+                                {% endif %}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>

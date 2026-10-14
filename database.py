@@ -56,6 +56,7 @@ class User(Base):
     fullname = Column(String, nullable=False)
     role = Column(String, default="staff") # admin / developer / staff
     token_version = Column(Integer, default=1, nullable=False)
+    signature_url = Column(Text, nullable=True) # Base64 data URL or image path of user's signature
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Customer(Base):
@@ -112,6 +113,7 @@ class Document(Base):
     shipping_name = Column(String, nullable=True)
     shipping_address = Column(String, nullable=True)
     payment_slip = Column(String, nullable=True)
+    signature_url = Column(Text, nullable=True) # Signature image stamped on this document
     
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_by_username = Column(String, nullable=False)

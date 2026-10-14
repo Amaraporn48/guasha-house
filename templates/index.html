@@ -862,6 +862,41 @@
                             <input type="date" x-model="docForm.received_date"
                                    class="w-full bg-white border border-beige rounded-xl px-3 py-2 text-sm focus-gold">
                         </div>
+
+                        <!-- Signature Status & Quick Upload -->
+                        <div class="pt-2 border-t border-beige">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">ลายเซ็นที่จะประทับบนเอกสาร (ตรงเส้นสีเทา)</label>
+                            <template x-if="docForm.signature_url">
+                                <div class="p-2.5 bg-white border border-beige rounded-xl flex items-center justify-between gap-2 shadow-xs">
+                                    <div class="flex items-center gap-2">
+                                        <div class="h-10 w-20 bg-cream/60 border border-beige rounded flex items-center justify-center p-0.5 overflow-hidden">
+                                            <img :src="docForm.signature_url" alt="ลายเซ็น" class="max-h-full max-w-full object-contain">
+                                        </div>
+                                        <div>
+                                            <span class="text-xs font-bold text-green-700 block flex items-center gap-1">
+                                                <span>✓ พร้อมประทับลงเอกสาร</span>
+                                            </span>
+                                            <span class="text-[9px] text-gray-400">จะพิมพ์ลงตรงเส้นสีเทาอัตโนมัติ</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                                        <button type="button" @click="$refs.docSigInput.click()" class="text-[10px] text-gold-dark hover:underline font-bold">เปลี่ยน</button>
+                                        <span class="text-gray-300">|</span>
+                                        <button type="button" @click="docForm.signature_url = ''" class="text-[10px] text-red-500 hover:underline font-bold">ไม่ใส่</button>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="!docForm.signature_url">
+                                <div class="p-2.5 bg-white border border-dashed border-beige rounded-xl flex items-center justify-between gap-2">
+                                    <div class="text-xs text-gray-400">ยังไม่มีลายเซ็นในเอกสารนี้</div>
+                                    <button type="button" @click="$refs.docSigInput.click()" class="text-xs text-gold-dark hover:underline font-bold flex items-center gap-1">
+                                        <span>✍️ อัปโหลดลายเซ็น</span>
+                                    </button>
+                                </div>
+                            </template>
+                            <input type="file" x-ref="docSigInput" class="hidden" accept="image/png,image/jpeg,image/webp" 
+                                   @change="uploadDocSignature($event)">
+                        </div>
                     </div>
 
                     <!-- Shipping Details Panel -->
@@ -1099,15 +1134,23 @@
                             <!-- Signature Block -->
                             <div class="grid grid-cols-2 gap-8 text-center text-xs mt-12 pt-6">
                                 <div></div>
-                                <div class="border-t border-gray-300 pt-3 space-y-1 max-w-[220px] mx-auto">
-                                    <div class="h-6 flex items-center justify-center text-gray-400 font-serif italic text-[11px]">
-                                        <span x-text="docForm.received_by ? '/' + docForm.received_by + '/' : ''"></span>
+                                <div class="max-w-[220px] mx-auto w-full text-center">
+                                    <!-- Signature Image above/on grey line -->
+                                    <div class="h-14 flex items-end justify-center -mb-2 relative z-10 pointer-events-none">
+                                        <template x-if="docForm.signature_url">
+                                            <img :src="docForm.signature_url" alt="ลายเซ็น" class="max-h-14 max-w-[150px] object-contain">
+                                        </template>
                                     </div>
-                                    <span class="font-bold text-gray-800 block">ผู้รับเงิน / Received By</span>
-                                    <span class="text-[9px] text-gray-400 block mb-1">Authorized Signature</span>
-                                    <div class="text-[10px] text-gray-600">
-                                        วันที่ / Date: 
-                                        <span class="font-semibold text-gray-800" x-text="docForm.received_date ? formatThaiDate(docForm.received_date) : '____________________'"></span>
+                                    <div class="border-t border-gray-300 pt-2 space-y-1">
+                                        <div class="h-5 flex items-center justify-center text-gray-500 font-serif italic text-[11px]">
+                                            <span x-text="docForm.received_by ? '/' + docForm.received_by + '/' : ''"></span>
+                                        </div>
+                                        <span class="font-bold text-gray-800 block">ผู้รับเงิน / Received By</span>
+                                        <span class="text-[9px] text-gray-400 block mb-1">Authorized Signature</span>
+                                        <div class="text-[10px] text-gray-600">
+                                            วันที่ / Date: 
+                                            <span class="font-semibold text-gray-800" x-text="docForm.received_date ? formatThaiDate(docForm.received_date) : '____________________'"></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1894,6 +1937,18 @@
                                     <div>
                                         <h4 class="text-sm font-bold text-charcoal" x-text="u.fullname"></h4>
                                         <p class="text-xs text-gray-500 font-mono" x-text="'@' + u.username"></p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <template x-if="u.signature_url">
+                                                <span class="inline-flex items-center gap-1 text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-semibold">
+                                                    <span>✍️ มีลายเซ็นแล้ว</span>
+                                                </span>
+                                            </template>
+                                            <template x-if="!u.signature_url">
+                                                <span class="inline-flex items-center gap-1 text-[10px] bg-gray-50 text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full">
+                                                    <span>ยังไม่มีลายเซ็น</span>
+                                                </span>
+                                            </template>
+                                        </div>
                                     </div>
                                 </div>
                                 <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase flex-shrink-0"
@@ -2766,15 +2821,23 @@
                         <!-- Signature -->
                         <div class="grid grid-cols-2 gap-8 text-center text-xs mt-12 pt-6">
                             <div></div>
-                            <div class="border-t border-gray-300 pt-3 space-y-1 max-w-[220px] mx-auto">
-                                <div class="h-6 flex items-center justify-center text-gray-400 font-serif italic text-[11px]">
-                                    <span x-text="viewModal.doc.received_by ? '/' + viewModal.doc.received_by + '/' : ''"></span>
+                            <div class="max-w-[220px] mx-auto w-full text-center">
+                                <!-- Signature Image above/on grey line -->
+                                <div class="h-14 flex items-end justify-center -mb-2 relative z-10 pointer-events-none">
+                                    <template x-if="viewModal.doc.signature_url">
+                                        <img :src="viewModal.doc.signature_url" alt="ลายเซ็น" class="max-h-14 max-w-[150px] object-contain">
+                                    </template>
                                 </div>
-                                <span class="font-bold text-gray-800 block">ผู้รับเงิน / Received By</span>
-                                <span class="text-[9px] text-gray-400 block mb-1">Authorized Signature</span>
-                                <div class="text-[10px] text-gray-600">
-                                    วันที่ / Date: 
-                                    <span class="font-semibold text-gray-800" x-text="viewModal.doc.received_date ? formatThaiDate(viewModal.doc.received_date) : '____________________'"></span>
+                                <div class="border-t border-gray-300 pt-2 space-y-1">
+                                    <div class="h-5 flex items-center justify-center text-gray-500 font-serif italic text-[11px]">
+                                        <span x-text="viewModal.doc.received_by ? '/' + viewModal.doc.received_by + '/' : ''"></span>
+                                    </div>
+                                    <span class="font-bold text-gray-800 block">ผู้รับเงิน / Received By</span>
+                                    <span class="text-[9px] text-gray-400 block mb-1">Authorized Signature</span>
+                                    <div class="text-[10px] text-gray-600">
+                                        วันที่ / Date: 
+                                        <span class="font-semibold text-gray-800" x-text="viewModal.doc.received_date ? formatThaiDate(viewModal.doc.received_date) : '____________________'"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -3012,6 +3075,57 @@
                         <option value="staff">👤 พนักงาน (Staff)</option>
                         <option value="admin">👑 ผู้ดูแลระบบ (Admin)</option>
                     </select>
+                </div>
+
+                <!-- Signature Upload Field in User Modal -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        ลายเซ็นดิจิทัล / Digital Signature (ประทับลงเอกสารอัตโนมัติ)
+                    </label>
+
+                    <!-- Preview if signature exists -->
+                    <template x-if="userModal.signature_url">
+                        <div class="p-3 bg-cream border border-beige rounded-xl flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="h-12 w-24 bg-white border border-beige rounded-lg flex items-center justify-center p-1 overflow-hidden shadow-xs">
+                                    <img :src="userModal.signature_url" alt="ลายเซ็น" class="max-h-full max-w-full object-contain">
+                                </div>
+                                <div>
+                                    <span class="text-xs font-bold text-charcoal block">มีรูปลายเซ็นแล้ว</span>
+                                    <span class="text-[10px] text-gray-400">จะลงลายเซ็นให้อัตโนมัติตรงเส้นสีเทา</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <button type="button" @click="$refs.sigFileInput.click()" 
+                                        class="text-xs text-gold-dark hover:underline font-bold">
+                                    เปลี่ยนรูป
+                                </button>
+                                <button type="button" @click="userModal.signature_url = ''" 
+                                        class="text-xs text-red-500 hover:underline font-bold">
+                                    ลบลายเซ็น
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Upload Box if no signature -->
+                    <template x-if="!userModal.signature_url">
+                        <div class="border-2 border-dashed border-beige hover:border-gold rounded-xl p-3.5 text-center cursor-pointer bg-cream/30 hover:bg-cream/60 transition group relative"
+                             @click="$refs.sigFileInput.click()">
+                            <div class="flex flex-col items-center justify-center gap-1" x-show="!uploadingSignature">
+                                <svg class="w-6 h-6 text-gray-400 group-hover:text-gold transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                                <div class="text-xs font-semibold text-charcoal">คลิกเพื่ออัปโหลดรูปลายเซ็น (PNG/JPG)</div>
+                                <div class="text-[10px] text-gray-400">แนะนำภาพ PNG พื้นหลังโปร่งใส (จะลงลายเซ็นให้อัตโนมัติตรงเส้นสีเทา)</div>
+                            </div>
+                            <div x-show="uploadingSignature" class="text-xs font-semibold text-gold-dark py-1">
+                                กำลังอัปโหลดลายเซ็น...
+                            </div>
+                        </div>
+                    </template>
+                    <input type="file" x-ref="sigFileInput" class="hidden" accept="image/png,image/jpeg,image/webp" 
+                           @change="uploadUserSignature($event)">
                 </div>
 
                 <div>
@@ -3508,6 +3622,7 @@
                     shipping_name: '',
                     shipping_address: '',
                     payment_slip: '',
+                    signature_url: '',
                     total_amount_before_vat: 0.00,
                     vat_amount: 0.00,
                     total_amount_after_vat: 0.00,
@@ -3571,7 +3686,8 @@
                 showAddRegion: false,
                 newRegionName: '',
                 bannerModal: { open: false, id: null, title: '', subtitle: '', description: '', image_url: '', link_url: '', order_index: 1, is_active: true },
-                userModal: { open: false, id: null, username: '', fullname: '', password: '', role: 'staff' },
+                userModal: { open: false, id: null, username: '', fullname: '', password: '', role: 'staff', signature_url: '' },
+                uploadingSignature: false,
                 expenseModal: { open: false, id: null, date: new Date().toISOString().substring(0, 10), category: '', description: '', amount: 0.0 },
                 restockModal: { open: false, product_id: null, product_name: '', quantity: 10, unit_cost: '', cost_amount: '', date: new Date().toISOString().substring(0, 10) },
                 viewModal: { open: false, doc: {} },
@@ -3628,6 +3744,14 @@
                         })
                         .then(data => {
                             this.user = data;
+                            if (this.docForm && !this.editingDocId) {
+                                if (!this.docForm.received_by && this.user.fullname) {
+                                    this.docForm.received_by = this.user.fullname;
+                                }
+                                if (!this.docForm.signature_url && this.user.signature_url) {
+                                    this.docForm.signature_url = this.user.signature_url;
+                                }
+                            }
                             if (this.user && this.user.role === 'admin') {
                                 this.fetchUsers();
                             }
@@ -3924,6 +4048,7 @@
                             username: u.username,
                             fullname: u.fullname,
                             role: u.role || 'staff',
+                            signature_url: u.signature_url || '',
                             password: ''
                         };
                     } else {
@@ -3933,10 +4058,68 @@
                             username: '',
                             fullname: '',
                             role: 'staff',
+                            signature_url: '',
                             password: ''
                         };
                         this.generateRandomPassword();
                     }
+                },
+
+                uploadUserSignature(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    this.uploadingSignature = true;
+                    fetch('/api/users/upload-signature', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => {
+                        if (!res.ok) return res.json().then(err => { throw new Error(err.detail || 'เกิดข้อผิดพลาดในการอัปโหลด') });
+                        return res.json();
+                    })
+                    .then(data => {
+                        this.userModal.signature_url = data.url;
+                        this.showToast('อัปโหลดรูปลายเซ็นเรียบร้อย');
+                    })
+                    .catch(err => alert(err.message))
+                    .finally(() => {
+                        this.uploadingSignature = false;
+                        e.target.value = '';
+                    });
+                },
+
+                uploadDocSignature(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    fetch('/api/users/upload-signature', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => {
+                        if (!res.ok) return res.json().then(err => { throw new Error(err.detail || 'เกิดข้อผิดพลาดในการอัปโหลด') });
+                        return res.json();
+                    })
+                    .then(data => {
+                        this.docForm.signature_url = data.url;
+                        if (this.user) {
+                            this.user.signature_url = data.url;
+                        }
+                        // Also persist to current user's profile in backend
+                        fetch('/api/users/me/signature', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ signature_url: data.url })
+                        }).catch(() => {});
+                        this.showToast('อัปโหลดและบันทึกลายเซ็นของคุณเรียบร้อย');
+                    })
+                    .catch(err => alert(err.message))
+                    .finally(() => {
+                        e.target.value = '';
+                    });
                 },
 
                 generateRandomPassword() {
@@ -3977,6 +4160,7 @@
                             username: this.userModal.username,
                             fullname: this.userModal.fullname,
                             role: this.userModal.role,
+                            signature_url: this.userModal.signature_url || '',
                             password: this.userModal.password
                         })
                     })
@@ -3986,6 +4170,12 @@
                     })
                     .then(data => {
                         this.showToast(data.message || 'บันทึกผู้ใช้สำเร็จ');
+                        if (this.user && this.user.id === this.userModal.id) {
+                            this.user.signature_url = this.userModal.signature_url;
+                            if (this.docForm && !this.editingDocId) {
+                                this.docForm.signature_url = this.userModal.signature_url;
+                            }
+                        }
                         this.userModal.open = false;
                         this.fetchUsers();
                     })
@@ -5123,8 +5313,9 @@
                         cheque_number: '',
                         cheque_date: '',
                         cheque_branch: '',
-                        received_by: this.user.fullname || '',
+                        received_by: (this.user && this.user.fullname) ? this.user.fullname : '',
                         received_date: new Date().toISOString().substring(0, 10),
+                        signature_url: (this.user && this.user.signature_url) ? this.user.signature_url : '',
                         total_amount_before_vat: 0.00,
                         vat_amount: 0.00,
                         total_amount_after_vat: 0.00,
@@ -5281,6 +5472,7 @@
                         shipping_name: this.docForm.shipping_name || '',
                         shipping_address: this.docForm.shipping_address || '',
                         payment_slip: this.docForm.payment_slip || '',
+                        signature_url: this.docForm.signature_url || '',
                         total_amount_before_vat: this.docForm.total_amount_before_vat,
                         vat_amount: this.docForm.vat_amount,
                         total_amount_after_vat: this.docForm.total_amount_after_vat,
@@ -5346,6 +5538,7 @@
                                 shipping_name: data.shipping_name || '',
                                 shipping_address: data.shipping_address || '',
                                 payment_slip: data.payment_slip || '',
+                                signature_url: data.signature_url || '',
                                 total_amount_before_vat: data.total_amount_before_vat,
                                 vat_amount: data.vat_amount,
                                 total_amount_after_vat: data.total_amount_after_vat,

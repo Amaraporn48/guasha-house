@@ -29,6 +29,8 @@ def safe_migrate_columns():
     is_pg = "postgresql" in str(engine.url).lower()
     cols = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 1;" if is_pg else "ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS signature_url TEXT;" if is_pg else "ALTER TABLE users ADD COLUMN signature_url TEXT;",
+        "ALTER TABLE documents ADD COLUMN IF NOT EXISTS signature_url TEXT;" if is_pg else "ALTER TABLE documents ADD COLUMN signature_url TEXT;",
         "ALTER TABLE video_courses ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR;" if is_pg else "ALTER TABLE video_courses ADD COLUMN thumbnail_url VARCHAR;"
     ]
     for sql in cols:
@@ -39,16 +41,16 @@ def safe_migrate_columns():
         except Exception:
             pass
 
-# Initialize database safely
-try:
-    init_db()
-except Exception as e:
-    print(f"init_db notice: {e}")
-
+# Initialize database safely with migrations
 try:
     safe_migrate_columns()
 except Exception as e:
     print(f"safe_migrate_columns notice: {e}")
+
+try:
+    init_db()
+except Exception as e:
+    print(f"init_db notice: {e}")
 
 # Secret configurations for JWT
 JWT_SECRET_ENV = os.getenv("JWT_SECRET_KEY")
@@ -755,7 +757,8 @@ def get_me(current_user: User = Depends(get_current_user)):
         "id": current_user.id,
         "username": current_user.username,
         "fullname": current_user.fullname,
-        "role": current_user.role
+        "role": current_user.role,
+        "signature_url": current_user.signature_url or ""
     }
 
 class ChangePasswordSchema(BaseModel):
@@ -926,12 +929,34 @@ class UserCreateSchema(BaseModel):
     fullname: str
     password: str
     role: Optional[str] = "staff"
+    signature_url: Optional[str] = ""
 
 class UserUpdateSchema(BaseModel):
     username: str
     fullname: str
     password: Optional[str] = ""
     role: Optional[str] = "staff"
+    signature_url: Optional[str] = ""
+
+class UserSignatureUpdateSchema(BaseModel):
+    signature_url: Optional[str] = ""
+
+@app.post("/api/users/upload-signature")
+def upload_user_signature(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        raise HTTPException(status_code=400, detail="รูปแบบไฟล์ไม่รองรับ (รองรับเฉพาะ PNG, JPG, WEBP)")
+    try:
+        data_url = process_uploaded_image(file, max_dimension=800, quality=90)
+        return {"success": True, "url": data_url}
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการประมวลผลรูปลายเซ็น: {err}")
+
+@app.post("/api/users/me/signature")
+def update_my_signature(data: UserSignatureUpdateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    current_user.signature_url = data.signature_url.strip() if data.signature_url else None
+    db.commit()
+    return {"success": True, "message": "บันทึกลายเซ็นของคุณเรียบร้อยแล้ว", "signature_url": current_user.signature_url or ""}
 
 @app.get("/api/users")
 def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
@@ -942,6 +967,7 @@ def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_c
             "username": u.username,
             "fullname": u.fullname,
             "role": u.role or "staff",
+            "signature_url": u.signature_url or "",
             "created_at": u.created_at.strftime("%Y-%m-%d %H:%M:%S") if u.created_at else ""
         }
         for u in users
@@ -962,6 +988,7 @@ def create_user(user: UserCreateSchema, request: Request, db: Session = Depends(
         fullname=user.fullname.strip(),
         hashed_password=hash_password(user.password),
         role=role_val,
+        signature_url=user.signature_url.strip() if user.signature_url else None,
         token_version=1
     )
     db.add(new_user)
@@ -998,6 +1025,8 @@ def update_user(user_id: int, user: UserUpdateSchema, request: Request, db: Sess
     u.fullname = user.fullname.strip()
     if user.role in ["admin", "developer", "staff"]:
         u.role = user.role
+    if user.signature_url is not None:
+        u.signature_url = user.signature_url.strip() if user.signature_url else None
     
     password_changed = False
     if user.password and user.password.strip():
@@ -1308,6 +1337,7 @@ class DocumentCreateSchema(BaseModel):
     shipping_name: Optional[str] = ""
     shipping_address: Optional[str] = ""
     payment_slip: Optional[str] = ""
+    signature_url: Optional[str] = ""
     total_amount_before_vat: float
     vat_amount: float
     total_amount_after_vat: float
@@ -1406,6 +1436,7 @@ def create_document(doc_data: DocumentCreateSchema, request: Request, db: Sessio
                     shipping_name=doc_data.shipping_name,
                     shipping_address=doc_data.shipping_address,
                     payment_slip=doc_data.payment_slip,
+                    signature_url=doc_data.signature_url.strip() if (doc_data.signature_url and doc_data.signature_url.strip()) else (current_user.signature_url or None),
                     created_by_user_id=current_user.id,
                     created_by_username=current_user.fullname,
                     status="issued"
@@ -1551,6 +1582,11 @@ def get_document(doc_id: int, db: Session = Depends(get_db), current_user: User 
         "shipping_name": doc.shipping_name,
         "shipping_address": doc.shipping_address,
         "payment_slip": doc.payment_slip,
+        "signature_url": (doc.signature_url or (
+            db.query(User).filter(User.id == doc.created_by_user_id).first().signature_url 
+            if (doc.created_by_user_id and db.query(User).filter(User.id == doc.created_by_user_id).first()) 
+            else ""
+        )) or "",
         "created_by_user_id": doc.created_by_user_id,
         "created_by_username": doc.created_by_username,
         "status": doc.status,
@@ -1622,6 +1658,8 @@ def update_document(doc_id: int, doc_data: DocumentCreateSchema, request: Reques
             doc.shipping_name = doc_data.shipping_name
             doc.shipping_address = doc_data.shipping_address
             doc.payment_slip = doc_data.payment_slip
+            if hasattr(doc_data, "signature_url") and doc_data.signature_url is not None:
+                doc.signature_url = doc_data.signature_url.strip() if doc_data.signature_url else None
             
             # Restore stock from old items before deleting
             old_items = db.query(DocumentItem).filter(DocumentItem.document_id == doc.id).all()
@@ -2470,6 +2508,13 @@ def share_invoice(doc_id: int, request: Request, db: Session = Depends(get_db)):
     doc.total_amount_after_vat = doc.total_amount_before_vat
     doc.total_amount_text = bahttext(doc.total_amount_before_vat)
     
+    if not getattr(doc, "signature_url", None):
+        creator = db.query(User).filter(User.id == doc.created_by_user_id).first() if doc.created_by_user_id else None
+        if not creator and doc.received_by:
+            creator = db.query(User).filter(User.fullname == doc.received_by.strip()).first()
+        if creator and creator.signature_url:
+            doc.signature_url = creator.signature_url
+    
     items = sorted(doc.items, key=lambda x: x.item_index)
     display_items = []
     for item in items:
@@ -2852,6 +2897,13 @@ def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db), 
     doc.vat_amount = 0.0
     doc.total_amount_after_vat = doc.total_amount_before_vat
     doc.total_amount_text = bahttext(doc.total_amount_before_vat)
+    
+    if not getattr(doc, "signature_url", None):
+        creator = db.query(User).filter(User.id == doc.created_by_user_id).first() if doc.created_by_user_id else None
+        if not creator and doc.received_by:
+            creator = db.query(User).filter(User.fullname == doc.received_by.strip()).first()
+        if creator and creator.signature_url:
+            doc.signature_url = creator.signature_url
     
     # Sort items
     items = sorted(doc.items, key=lambda x: x.item_index)
