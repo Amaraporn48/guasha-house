@@ -217,6 +217,14 @@
                 </div>
             </div>
             
+            <!-- Quick Digital Signature Button for logged in user -->
+            <button type="button" @click="openSignaturePad('me')" 
+                    :title="sidebarCollapsed ? 'จัดการลายเซ็นดิจิทัล' : ''"
+                    class="w-full flex items-center justify-center gap-1.5 text-xs border border-beige hover:border-gold hover:text-gold-dark text-charcoal py-1.5 rounded-lg transition duration-200 font-semibold bg-white shadow-xs">
+                <span>✍️</span>
+                <span x-show="!sidebarCollapsed" x-transition.opacity class="truncate">ลายเซ็นดิจิทัลของฉัน</span>
+            </button>
+
             <a href="/api/auth/logout" 
                :title="sidebarCollapsed ? 'ออกจากระบบ / Logout' : ''"
                class="w-full flex items-center justify-center gap-2 text-xs border border-beige hover:border-gold hover:text-gold-dark text-gray-600 py-2 rounded-lg transition duration-200 uppercase font-semibold">
@@ -863,14 +871,15 @@
                                    class="w-full bg-white border border-beige rounded-xl px-3 py-2 text-sm focus-gold">
                         </div>
 
-                        <!-- Signature Status & Quick Upload -->
+                        <!-- Signature Status & Dual Mode Signing (Draw with mouse/finger or Upload) -->
                         <div class="pt-2 border-t border-beige">
                             <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">ลายเซ็นที่จะประทับบนเอกสาร (ตรงเส้นสีเทา)</label>
                             <template x-if="docForm.signature_url">
                                 <div class="p-2.5 bg-white border border-beige rounded-xl flex items-center justify-between gap-2 shadow-xs">
                                     <div class="flex items-center gap-2">
-                                        <div class="h-10 w-20 bg-cream/60 border border-beige rounded flex items-center justify-center p-0.5 overflow-hidden">
-                                            <img :src="docForm.signature_url" alt="ลายเซ็น" class="max-h-full max-w-full object-contain">
+                                        <div class="h-10 w-24 bg-cream/60 border border-beige rounded-lg flex items-center justify-center p-0.5 overflow-hidden relative">
+                                            <div class="absolute bottom-1.5 left-2 right-2 border-b border-gray-300 pointer-events-none"></div>
+                                            <img :src="docForm.signature_url" alt="ลายเซ็น" class="max-h-full max-w-full object-contain relative z-10">
                                         </div>
                                         <div>
                                             <span class="text-xs font-bold text-green-700 block flex items-center gap-1">
@@ -880,18 +889,32 @@
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0">
-                                        <button type="button" @click="$refs.docSigInput.click()" class="text-[10px] text-gold-dark hover:underline font-bold">เปลี่ยน</button>
+                                        <button type="button" @click="openSignaturePad('docForm')" class="text-[11px] text-gold-dark hover:underline font-bold flex items-center gap-0.5">
+                                            <span>✍️ เซ็นใหม่</span>
+                                        </button>
                                         <span class="text-gray-300">|</span>
-                                        <button type="button" @click="docForm.signature_url = ''" class="text-[10px] text-red-500 hover:underline font-bold">ไม่ใส่</button>
+                                        <button type="button" @click="$refs.docSigInput.click()" class="text-[11px] text-gray-600 hover:underline font-semibold">อัปโหลด</button>
+                                        <span class="text-gray-300">|</span>
+                                        <button type="button" @click="docForm.signature_url = ''" class="text-[11px] text-red-500 hover:underline font-semibold">ไม่ใส่</button>
                                     </div>
                                 </div>
                             </template>
                             <template x-if="!docForm.signature_url">
-                                <div class="p-2.5 bg-white border border-dashed border-beige rounded-xl flex items-center justify-between gap-2">
-                                    <div class="text-xs text-gray-400">ยังไม่มีลายเซ็นในเอกสารนี้</div>
-                                    <button type="button" @click="$refs.docSigInput.click()" class="text-xs text-gold-dark hover:underline font-bold flex items-center gap-1">
-                                        <span>✍️ อัปโหลดลายเซ็น</span>
-                                    </button>
+                                <div class="p-3 bg-white border border-dashed border-beige rounded-xl flex flex-col sm:flex-row items-center justify-between gap-2.5">
+                                    <div class="text-xs text-gray-400 text-center sm:text-left">
+                                        <span class="font-medium text-gray-600 block">ยังไม่มีลายเซ็นในเอกสารนี้</span>
+                                        <span class="text-[10px]">เลือกเซ็นสดบนหน้าจอ หรือ อัปโหลดรูปภาพ</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        <button type="button" @click="openSignaturePad('docForm')" 
+                                                class="text-xs bg-gold hover:bg-gold-dark text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 shadow-xs transition">
+                                            <span>✍️ เซ็นด้วยเมาส์/มือ</span>
+                                        </button>
+                                        <button type="button" @click="$refs.docSigInput.click()" 
+                                                class="text-xs bg-cream hover:bg-beige text-charcoal px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1 border border-beige transition">
+                                            <span>📁 อัปโหลดรูป</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                             <input type="file" x-ref="docSigInput" class="hidden" accept="image/png,image/jpeg,image/webp" 
@@ -1939,9 +1962,14 @@
                                         <p class="text-xs text-gray-500 font-mono" x-text="'@' + u.username"></p>
                                         <div class="flex items-center gap-2 mt-1">
                                             <template x-if="u.signature_url">
-                                                <span class="inline-flex items-center gap-1 text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-semibold">
-                                                    <span>✍️ มีลายเซ็นแล้ว</span>
-                                                </span>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="inline-flex items-center gap-1 text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-semibold">
+                                                        <span>✍️ มีลายเซ็นแล้ว</span>
+                                                    </span>
+                                                    <div class="h-5 w-10 bg-cream/70 border border-beige rounded flex items-center justify-center p-0.5 overflow-hidden">
+                                                        <img :src="u.signature_url" alt="ลายเซ็น" class="max-h-full max-w-full object-contain">
+                                                    </div>
+                                                </div>
                                             </template>
                                             <template x-if="!u.signature_url">
                                                 <span class="inline-flex items-center gap-1 text-[10px] bg-gray-50 text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full">
@@ -3077,18 +3105,19 @@
                     </select>
                 </div>
 
-                <!-- Signature Upload Field in User Modal -->
+                <!-- Signature Field in User Modal (Draw with mouse/finger or Upload file) -->
                 <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
                         ลายเซ็นดิจิทัล / Digital Signature (ประทับลงเอกสารอัตโนมัติ)
                     </label>
 
                     <!-- Preview if signature exists -->
                     <template x-if="userModal.signature_url">
-                        <div class="p-3 bg-cream border border-beige rounded-xl flex items-center justify-between gap-3">
+                        <div class="p-3 bg-cream border border-beige rounded-xl flex items-center justify-between gap-3 shadow-xs">
                             <div class="flex items-center gap-3">
-                                <div class="h-12 w-24 bg-white border border-beige rounded-lg flex items-center justify-center p-1 overflow-hidden shadow-xs">
-                                    <img :src="userModal.signature_url" alt="ลายเซ็น" class="max-h-full max-w-full object-contain">
+                                <div class="h-12 w-28 bg-white border border-beige rounded-lg flex items-center justify-center p-1 overflow-hidden shadow-xs relative">
+                                    <div class="absolute bottom-2 left-2 right-2 border-b border-gray-300 pointer-events-none"></div>
+                                    <img :src="userModal.signature_url" alt="ลายเซ็น" class="max-h-full max-w-full object-contain relative z-10">
                                 </div>
                                 <div>
                                     <span class="text-xs font-bold text-charcoal block">มีรูปลายเซ็นแล้ว</span>
@@ -3096,9 +3125,9 @@
                                 </div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
-                                <button type="button" @click="$refs.sigFileInput.click()" 
-                                        class="text-xs text-gold-dark hover:underline font-bold">
-                                    เปลี่ยนรูป
+                                <button type="button" @click="openSignaturePad('userModal')" 
+                                        class="text-xs text-gold-dark hover:underline font-bold flex items-center gap-1">
+                                    <span>✍️ เซ็นใหม่ / อัปโหลด</span>
                                 </button>
                                 <button type="button" @click="userModal.signature_url = ''" 
                                         class="text-xs text-red-500 hover:underline font-bold">
@@ -3108,20 +3137,21 @@
                         </div>
                     </template>
 
-                    <!-- Upload Box if no signature -->
+                    <!-- Dual buttons if no signature -->
                     <template x-if="!userModal.signature_url">
-                        <div class="border-2 border-dashed border-beige hover:border-gold rounded-xl p-3.5 text-center cursor-pointer bg-cream/30 hover:bg-cream/60 transition group relative"
-                             @click="$refs.sigFileInput.click()">
-                            <div class="flex flex-col items-center justify-center gap-1" x-show="!uploadingSignature">
-                                <svg class="w-6 h-6 text-gray-400 group-hover:text-gold transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                                <div class="text-xs font-semibold text-charcoal">คลิกเพื่ออัปโหลดรูปลายเซ็น (PNG/JPG)</div>
-                                <div class="text-[10px] text-gray-400">แนะนำภาพ PNG พื้นหลังโปร่งใส (จะลงลายเซ็นให้อัตโนมัติตรงเส้นสีเทา)</div>
-                            </div>
-                            <div x-show="uploadingSignature" class="text-xs font-semibold text-gold-dark py-1">
-                                กำลังอัปโหลดลายเซ็น...
-                            </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <button type="button" @click="openSignaturePad('userModal')" 
+                                    class="border-2 border-dashed border-gold/40 hover:border-gold rounded-xl p-3 text-center bg-gold/5 hover:bg-gold/15 transition group flex flex-col items-center justify-center gap-1">
+                                <span class="text-xl group-hover:scale-110 transition">✍️</span>
+                                <span class="text-xs font-bold text-charcoal">เซ็นบนหน้าจอ</span>
+                                <span class="text-[10px] text-gray-400">ใช้เมาส์ หรือ นิ้วมือเซ็น</span>
+                            </button>
+                            <button type="button" @click="$refs.sigFileInput.click()" 
+                                    class="border-2 border-dashed border-beige hover:border-gold rounded-xl p-3 text-center bg-cream/40 hover:bg-cream/80 transition group flex flex-col items-center justify-center gap-1">
+                                <span class="text-xl group-hover:scale-110 transition">📁</span>
+                                <span class="text-xs font-bold text-charcoal">อัปโหลดไฟล์รูป</span>
+                                <span class="text-[10px] text-gray-400">PNG / JPG พื้นหลังโปร่งใส</span>
+                            </button>
                         </div>
                     </template>
                     <input type="file" x-ref="sigFileInput" class="hidden" accept="image/png,image/jpeg,image/webp" 
@@ -3158,6 +3188,181 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- DIGITAL SIGNATURE PAD MODAL (Draw with mouse/finger or Upload image) -->
+    <div x-show="sigPadModal.open" 
+         class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 no-print overflow-y-auto" 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 transform scale-95"
+         x-transition:enter-end="opacity-100 transform scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 transform scale-100"
+         x-transition:leave-end="opacity-0 transform scale-95"
+         @keydown.escape.window="if (sigPadModal.open) sigPadModal.open = false">
+        
+        <div class="bg-white border border-beige rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden relative my-auto flex flex-col" @click.away="sigPadModal.open = false">
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b border-beige bg-cream/70 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gold/20 border border-gold/40 flex items-center justify-center text-lg shadow-xs flex-shrink-0">
+                        ✍️
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-charcoal">ลงลายเซ็นดิจิทัล / Digital Signature</h3>
+                        <p class="text-xs text-gray-500">เซ็นด้วยเมาส์ หรือ นิ้วมือ/สไตลัสบนหน้าจอ หรือ อัปโหลดรูปภาพ</p>
+                    </div>
+                </div>
+                <button type="button" @click="sigPadModal.open = false" 
+                        class="text-gray-400 hover:text-charcoal text-2xl font-bold w-8 h-8 rounded-lg hover:bg-cream transition flex items-center justify-center">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex border-b border-beige bg-cream/30 p-2 gap-2">
+                <button type="button" 
+                        @click="sigPadModal.activeTab = 'draw'; $nextTick(() => { setTimeout(() => initSigCanvas(), 60); })"
+                        class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                        :class="sigPadModal.activeTab === 'draw' ? 'bg-charcoal text-white shadow-sm' : 'bg-transparent text-gray-600 hover:bg-white'">
+                    <span>✍️ เซ็นบนหน้าจอ (เมาส์ / สัมผัสมือ)</span>
+                </button>
+                <button type="button" 
+                        @click="sigPadModal.activeTab = 'upload'"
+                        class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                        :class="sigPadModal.activeTab === 'upload' ? 'bg-charcoal text-white shadow-sm' : 'bg-transparent text-gray-600 hover:bg-white'">
+                    <span>📁 อัปโหลดไฟล์รูปภาพ</span>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-4 sm:p-5 space-y-4">
+                
+                <!-- TAB 1: DRAW CANVAS -->
+                <div x-show="sigPadModal.activeTab === 'draw'" class="space-y-3">
+                    
+                    <!-- Canvas Toolbar: Colors, Width, Clear -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 bg-cream/50 p-2.5 rounded-xl border border-beige">
+                        <!-- Color Selector -->
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] font-bold text-gray-500 mr-1">สีหมึก:</span>
+                            <button type="button" @click="changeSigColor('#0f2b5c')" 
+                                    class="w-6 h-6 rounded-full border-2 transition flex items-center justify-center"
+                                    :class="sigPadModal.color === '#0f2b5c' ? 'border-charcoal ring-2 ring-gold/50 scale-110' : 'border-white opacity-80 hover:opacity-100'"
+                                    style="background-color: #0f2b5c;" title="หมึกน้ำเงินเข้ม (สีกรมท่า)">
+                                <span x-show="sigPadModal.color === '#0f2b5c'" class="text-[9px] text-white font-bold">✓</span>
+                            </button>
+                            <button type="button" @click="changeSigColor('#111827')" 
+                                    class="w-6 h-6 rounded-full border-2 transition flex items-center justify-center"
+                                    :class="sigPadModal.color === '#111827' ? 'border-charcoal ring-2 ring-gold/50 scale-110' : 'border-white opacity-80 hover:opacity-100'"
+                                    style="background-color: #111827;" title="หมึกสีดำ">
+                                <span x-show="sigPadModal.color === '#111827'" class="text-[9px] text-white font-bold">✓</span>
+                            </button>
+                        </div>
+
+                        <!-- Width Selector -->
+                        <div class="flex items-center gap-1">
+                            <span class="text-[11px] font-bold text-gray-500 mr-1">ขนาดเส้น:</span>
+                            <button type="button" @click="changeSigLineWidth(2)" 
+                                    class="px-2 py-0.5 rounded text-[10px] font-semibold transition"
+                                    :class="sigPadModal.lineWidth === 2 ? 'bg-white shadow-xs text-charcoal font-bold border border-beige' : 'text-gray-500 hover:text-charcoal'">
+                                เส้นบาง
+                            </button>
+                            <button type="button" @click="changeSigLineWidth(3)" 
+                                    class="px-2 py-0.5 rounded text-[10px] font-semibold transition"
+                                    :class="sigPadModal.lineWidth === 3 ? 'bg-white shadow-xs text-charcoal font-bold border border-beige' : 'text-gray-500 hover:text-charcoal'">
+                                ปกติ
+                            </button>
+                            <button type="button" @click="changeSigLineWidth(4.5)" 
+                                    class="px-2 py-0.5 rounded text-[10px] font-semibold transition"
+                                    :class="sigPadModal.lineWidth === 4.5 ? 'bg-white shadow-xs text-charcoal font-bold border border-beige' : 'text-gray-500 hover:text-charcoal'">
+                                เส้นหนา
+                            </button>
+                        </div>
+
+                        <!-- Clear Canvas Button -->
+                        <button type="button" @click="clearSigCanvas()" 
+                                class="text-xs text-red-600 hover:text-red-700 font-bold flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            <span>ล้าง / เซ็นใหม่</span>
+                        </button>
+                    </div>
+
+                    <!-- Canvas Container with signature baseline -->
+                    <div class="relative bg-white border-2 border-dashed border-gray-300 hover:border-gold rounded-2xl overflow-hidden transition shadow-inner">
+                        <!-- Dotted Baseline Guide -->
+                        <div class="absolute bottom-9 left-6 right-6 border-b border-dashed border-gray-300 pointer-events-none flex justify-between items-center text-[10px] text-gray-400 select-none">
+                            <span class="bg-white/80 px-1 font-semibold">✕ จุดลงลายมือชื่อ</span>
+                            <span class="bg-white/80 px-1">เส้นบรรทัด</span>
+                        </div>
+
+                        <!-- HTML5 Canvas for Mouse / Touch / Stylus -->
+                        <canvas id="signature-pad-canvas" 
+                                class="w-full h-56 block touch-none cursor-crosshair relative z-10"
+                                style="touch-action: none;"></canvas>
+                    </div>
+
+                    <div class="flex items-center justify-between text-[11px] text-gray-400">
+                        <span class="flex items-center gap-1">
+                            <span>💡 เซ็นด้วยเมาส์ หรือ สัมผัสนิ้วมือ/ปากกาได้ทันที</span>
+                        </span>
+                        <span class="text-green-600 font-medium" x-show="sigPadModal.hasDrawn">✓ บันทึกลายเส้นแล้ว</span>
+                    </div>
+                </div>
+
+                <!-- TAB 2: UPLOAD IMAGE FILE -->
+                <div x-show="sigPadModal.activeTab === 'upload'" class="space-y-3">
+                    <div class="border-2 border-dashed border-beige hover:border-gold rounded-2xl p-6 text-center cursor-pointer bg-cream/30 hover:bg-cream/60 transition group"
+                         @click="$refs.sigPadFileInput.click()">
+                        
+                        <div x-show="!sigPadModal.uploadedUrl && !uploadingSignature" class="flex flex-col items-center justify-center gap-2">
+                            <div class="w-12 h-12 rounded-full bg-gold/15 text-gold-dark flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                                📁
+                            </div>
+                            <div class="text-sm font-bold text-charcoal">คลิกเพื่อเลือกไฟล์รูปลายเซ็น (PNG / JPG / WEBP)</div>
+                            <div class="text-xs text-gray-400 max-w-sm">แนะนำให้ใช้ภาพลายเซ็นที่มี <span class="font-bold text-gray-600">พื้นหลังโปร่งใส (Transparent PNG)</span> เพื่อให้ลายเซ็นประทับลงบนเส้นสีเทาได้อย่างแนบเนียนเสมือนจริง</div>
+                        </div>
+
+                        <div x-show="uploadingSignature" class="py-6 text-sm font-bold text-gold-dark flex flex-col items-center gap-2">
+                            <svg class="animate-spin h-6 w-6 text-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <span>กำลังอัปโหลดและประมวลผลลายเซ็น...</span>
+                        </div>
+
+                        <div x-show="sigPadModal.uploadedUrl && !uploadingSignature" class="space-y-3">
+                            <div class="h-28 max-w-xs mx-auto bg-white border border-beige rounded-xl p-2 flex items-center justify-center relative shadow-sm">
+                                <div class="absolute bottom-3 left-4 right-4 border-b border-gray-300"></div>
+                                <img :src="sigPadModal.uploadedUrl" alt="ตัวอย่างลายเซ็น" class="max-h-full max-w-full object-contain relative z-10">
+                            </div>
+                            <div class="text-xs font-bold text-green-700">✓ อัปโหลดรูปลายเซ็นเรียบร้อยแล้ว</div>
+                            <button type="button" @click.stop="$refs.sigPadFileInput.click()" class="text-xs text-gold-dark hover:underline font-bold">เลือกรูปอื่นใหม่</button>
+                        </div>
+                    </div>
+                    <input type="file" x-ref="sigPadFileInput" class="hidden" accept="image/png,image/jpeg,image/webp" 
+                           @change="uploadInSigPad($event)">
+                </div>
+
+                <!-- Auto-save to User Profile checkbox -->
+                <div x-show="sigPadModal.target === 'docForm' && user" class="p-3 bg-cream/60 rounded-xl border border-beige flex items-center gap-2.5">
+                    <input type="checkbox" id="sig-save-profile" x-model="sigPadModal.saveToProfile" 
+                           class="w-4 h-4 text-gold rounded border-beige focus-gold">
+                    <label for="sig-save-profile" class="text-xs text-charcoal font-medium cursor-pointer">
+                        บันทึกลายเซ็นนี้เป็น <span class="font-bold text-gold-dark">ลายเซ็นประจำตัวของฉัน</span> ด้วย (ออกบิลครั้งต่อไปจะลงลายเซ็นให้อัตโนมัติทันที)
+                    </label>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 sm:p-5 border-t border-beige bg-cream/40 flex items-center justify-end gap-3">
+                <button type="button" @click="sigPadModal.open = false" 
+                        class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-5 py-3 rounded-xl border border-beige transition">
+                    ยกเลิก
+                </button>
+                <button type="button" @click="saveSignaturePad()" 
+                        class="bg-charcoal hover:bg-gold-dark text-white text-xs font-bold px-6 py-3 rounded-xl shadow-md transition flex items-center gap-1.5 uppercase tracking-wider">
+                    <span>✓ ยืนยันและใช้งานลายเซ็น</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -3688,6 +3893,24 @@
                 bannerModal: { open: false, id: null, title: '', subtitle: '', description: '', image_url: '', link_url: '', order_index: 1, is_active: true },
                 userModal: { open: false, id: null, username: '', fullname: '', password: '', role: 'staff', signature_url: '' },
                 uploadingSignature: false,
+                sigPadModal: {
+                    open: false,
+                    target: 'docForm',
+                    activeTab: 'draw',
+                    color: '#0f2b5c',
+                    lineWidth: 3,
+                    hasDrawn: false,
+                    saveToProfile: true,
+                    uploadedUrl: ''
+                },
+                sigPadState: {
+                    isDrawing: false,
+                    lastX: 0,
+                    lastY: 0,
+                    canvas: null,
+                    ctx: null,
+                    points: []
+                },
                 expenseModal: { open: false, id: null, date: new Date().toISOString().substring(0, 10), category: '', description: '', amount: 0.0 },
                 restockModal: { open: false, product_id: null, product_name: '', quantity: 10, unit_cost: '', cost_amount: '', date: new Date().toISOString().substring(0, 10) },
                 viewModal: { open: false, doc: {} },
@@ -4063,6 +4286,280 @@
                         };
                         this.generateRandomPassword();
                     }
+                },
+
+                openSignaturePad(target = 'docForm') {
+                    this.sigPadModal.target = target;
+                    this.sigPadModal.open = true;
+                    this.sigPadModal.activeTab = 'draw';
+                    this.sigPadModal.hasDrawn = false;
+                    this.sigPadModal.uploadedUrl = '';
+                    if (target === 'docForm' && this.docForm.signature_url) {
+                        this.sigPadModal.uploadedUrl = this.docForm.signature_url;
+                    } else if (target === 'userModal' && this.userModal.signature_url) {
+                        this.sigPadModal.uploadedUrl = this.userModal.signature_url;
+                    } else if (target === 'me' && this.user && this.user.signature_url) {
+                        this.sigPadModal.uploadedUrl = this.user.signature_url;
+                    }
+
+                    this.$nextTick(() => {
+                        setTimeout(() => {
+                            this.initSigCanvas();
+                        }, 60);
+                    });
+                },
+
+                initSigCanvas() {
+                    const canvas = document.getElementById('signature-pad-canvas');
+                    if (!canvas) return;
+
+                    const rect = canvas.getBoundingClientRect();
+                    const width = rect.width > 0 ? rect.width : (canvas.parentElement ? canvas.parentElement.clientWidth : 500);
+                    const height = rect.height > 0 ? rect.height : 220;
+                    const dpr = window.devicePixelRatio || 1;
+
+                    canvas.width = Math.round(width * dpr);
+                    canvas.height = Math.round(height * dpr);
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    ctx.scale(dpr, dpr);
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.strokeStyle = this.sigPadModal.color || '#0f2b5c';
+                    ctx.lineWidth = this.sigPadModal.lineWidth || 3;
+
+                    this.sigPadState.canvas = canvas;
+                    this.sigPadState.ctx = ctx;
+                    this.sigPadState.isDrawing = false;
+                    this.sigPadState.points = [];
+                    ctx.clearRect(0, 0, width, height);
+                    this.sigPadModal.hasDrawn = false;
+
+                    if (!canvas._hasSigEvents) {
+                        canvas._hasSigEvents = true;
+
+                        const startStroke = (e) => {
+                            e.preventDefault();
+                            try { canvas.setPointerCapture(e.pointerId); } catch(err) {}
+                            this.sigPadState.isDrawing = true;
+                            const r = canvas.getBoundingClientRect();
+                            const x = e.clientX - r.left;
+                            const y = e.clientY - r.top;
+                            this.sigPadState.lastX = x;
+                            this.sigPadState.lastY = y;
+                            this.sigPadState.points = [{ x, y }];
+
+                            const c = this.sigPadState.ctx;
+                            c.lineWidth = this.sigPadModal.lineWidth || 3;
+                            c.strokeStyle = this.sigPadModal.color || '#0f2b5c';
+                            c.beginPath();
+                            c.arc(x, y, (this.sigPadModal.lineWidth || 3) / 2, 0, Math.PI * 2);
+                            c.fillStyle = this.sigPadModal.color || '#0f2b5c';
+                            c.fill();
+                            this.sigPadModal.hasDrawn = true;
+                        };
+
+                        const moveStroke = (e) => {
+                            if (!this.sigPadState.isDrawing) return;
+                            e.preventDefault();
+                            const r = canvas.getBoundingClientRect();
+                            const x = e.clientX - r.left;
+                            const y = e.clientY - r.top;
+
+                            const pts = this.sigPadState.points;
+                            pts.push({ x, y });
+
+                            const c = this.sigPadState.ctx;
+                            c.lineWidth = this.sigPadModal.lineWidth || 3;
+                            c.strokeStyle = this.sigPadModal.color || '#0f2b5c';
+                            c.lineCap = 'round';
+                            c.lineJoin = 'round';
+
+                            if (pts.length > 2) {
+                                const p1 = pts[pts.length - 2];
+                                const p2 = pts[pts.length - 1];
+                                const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+                                c.beginPath();
+                                c.moveTo(this.sigPadState.lastX, this.sigPadState.lastY);
+                                c.quadraticCurveTo(p1.x, p1.y, mid.x, mid.y);
+                                c.stroke();
+                                this.sigPadState.lastX = mid.x;
+                                this.sigPadState.lastY = mid.y;
+                            } else {
+                                c.beginPath();
+                                c.moveTo(this.sigPadState.lastX, this.sigPadState.lastY);
+                                c.lineTo(x, y);
+                                c.stroke();
+                                this.sigPadState.lastX = x;
+                                this.sigPadState.lastY = y;
+                            }
+                            this.sigPadModal.hasDrawn = true;
+                        };
+
+                        const stopStroke = (e) => {
+                            if (this.sigPadState.isDrawing) {
+                                try { canvas.releasePointerCapture(e.pointerId); } catch(err) {}
+                                this.sigPadState.isDrawing = false;
+                                this.sigPadState.points = [];
+                            }
+                        };
+
+                        canvas.addEventListener('pointerdown', startStroke);
+                        canvas.addEventListener('pointermove', moveStroke);
+                        canvas.addEventListener('pointerup', stopStroke);
+                        canvas.addEventListener('pointercancel', stopStroke);
+                        canvas.addEventListener('pointerleave', stopStroke);
+                    }
+                },
+
+                clearSigCanvas() {
+                    const canvas = this.sigPadState.canvas || document.getElementById('signature-pad-canvas');
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    this.sigPadModal.hasDrawn = false;
+                    this.sigPadState.points = [];
+                    this.sigPadState.isDrawing = false;
+                },
+
+                changeSigColor(color) {
+                    this.sigPadModal.color = color;
+                    if (this.sigPadState.ctx) {
+                        this.sigPadState.ctx.strokeStyle = color;
+                    }
+                },
+
+                changeSigLineWidth(width) {
+                    this.sigPadModal.lineWidth = width;
+                    if (this.sigPadState.ctx) {
+                        this.sigPadState.ctx.lineWidth = width;
+                    }
+                },
+
+                cropSignatureCanvas(canvas) {
+                    const dpr = window.devicePixelRatio || 1;
+                    const ctx = canvas.getContext('2d');
+                    const width = canvas.width;
+                    const height = canvas.height;
+                    const imgData = ctx.getImageData(0, 0, width, height);
+                    const data = imgData.data;
+
+                    let minX = width, minY = height, maxX = 0, maxY = 0;
+                    let hasPixels = false;
+
+                    for (let y = 0; y < height; y++) {
+                        for (let x = 0; x < width; x++) {
+                            const alpha = data[(y * width + x) * 4 + 3];
+                            if (alpha > 15) {
+                                if (x < minX) minX = x;
+                                if (x > maxX) maxX = x;
+                                if (y < minY) minY = y;
+                                if (y > maxY) maxY = y;
+                                hasPixels = true;
+                            }
+                        }
+                    }
+
+                    if (!hasPixels) return null;
+
+                    const margin = Math.round(18 * dpr);
+                    minX = Math.max(0, minX - margin);
+                    minY = Math.max(0, minY - margin);
+                    maxX = Math.min(width, maxX + margin);
+                    maxY = Math.min(height, maxY + margin);
+
+                    const cropW = maxX - minX;
+                    const cropH = maxY - minY;
+
+                    const cropCanvas = document.createElement('canvas');
+                    cropCanvas.width = cropW;
+                    cropCanvas.height = cropH;
+                    const cropCtx = cropCanvas.getContext('2d');
+
+                    cropCtx.drawImage(canvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+                    return cropCanvas.toDataURL('image/png');
+                },
+
+                uploadInSigPad(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    this.uploadingSignature = true;
+                    fetch('/api/users/upload-signature', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => {
+                        if (!res.ok) return res.json().then(err => { throw new Error(err.detail || 'เกิดข้อผิดพลาดในการอัปโหลด') });
+                        return res.json();
+                    })
+                    .then(data => {
+                        this.sigPadModal.uploadedUrl = data.url;
+                        this.showToast('อัปโหลดไฟล์รูปลายเซ็นเรียบร้อย');
+                    })
+                    .catch(err => alert(err.message))
+                    .finally(() => {
+                        this.uploadingSignature = false;
+                        e.target.value = '';
+                    });
+                },
+
+                saveSignaturePad() {
+                    let finalUrl = '';
+                    if (this.sigPadModal.activeTab === 'draw') {
+                        if (!this.sigPadModal.hasDrawn) {
+                            alert('กรุณาเซ็นชื่อบนพื้นที่วาดลายเซ็นก่อนบันทึก หรือเลือกแท็บอัปโหลดรูปภาพ');
+                            return;
+                        }
+                        const canvas = this.sigPadState.canvas || document.getElementById('signature-pad-canvas');
+                        if (!canvas) return;
+                        finalUrl = this.cropSignatureCanvas(canvas);
+                        if (!finalUrl) {
+                            alert('ไม่พบลายเส้น กรุณาลองเซ็นใหม่อีกครั้ง');
+                            return;
+                        }
+                    } else {
+                        if (!this.sigPadModal.uploadedUrl) {
+                            alert('กรุณาเลือกไฟล์รูปลายเซ็นที่ต้องการใช้งาน');
+                            return;
+                        }
+                        finalUrl = this.sigPadModal.uploadedUrl;
+                    }
+
+                    if (this.sigPadModal.target === 'userModal') {
+                        this.userModal.signature_url = finalUrl;
+                        this.showToast('เพิ่มลายเซ็นในแบบฟอร์มผู้ใช้งานเรียบร้อย');
+                    } else if (this.sigPadModal.target === 'docForm') {
+                        this.docForm.signature_url = finalUrl;
+                        if (this.sigPadModal.saveToProfile && this.user) {
+                            this.user.signature_url = finalUrl;
+                            fetch('/api/users/me/signature', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ signature_url: finalUrl })
+                            }).catch(() => {});
+                            this.showToast('ประทับลายเซ็นลงเอกสาร และบันทึกเป็นลายเซ็นประจำตัวของคุณแล้ว');
+                        } else {
+                            this.showToast('ประทับลายเซ็นลงเอกสารเรียบร้อย (จะพิมพ์ลงตรงเส้นสีเทา)');
+                        }
+                    } else if (this.sigPadModal.target === 'me') {
+                        if (this.user) {
+                            this.user.signature_url = finalUrl;
+                        }
+                        if (this.docForm && !this.editingDocId) {
+                            this.docForm.signature_url = finalUrl;
+                        }
+                        fetch('/api/users/me/signature', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ signature_url: finalUrl })
+                        }).catch(() => {});
+                        this.showToast('บันทึกลายเซ็นประจำตัวของคุณเรียบร้อยแล้ว');
+                    }
+
+                    this.sigPadModal.open = false;
                 },
 
                 uploadUserSignature(e) {
