@@ -1203,6 +1203,10 @@
                                 <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                                 <span x-text="selectedDocIds.length > 0 ? `พิมพ์ที่เลือก (${selectedDocIds.length} รายการ)` : 'พิมพ์รายงานตารางเอกสาร'"></span>
                             </button>
+                            <button @click="exportDocumentsExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 justify-center">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span x-text="selectedDocIds.length > 0 ? `Excel ที่เลือก (${selectedDocIds.length})` : 'ส่งออก Excel สรุปเอกสาร'"></span>
+                            </button>
                         </div>
                     </div>
                     
@@ -1329,6 +1333,9 @@
                                                 <button @click="viewInvoice(doc.id)" class="text-xs bg-cream hover:bg-beige text-charcoal px-2.5 py-1.5 rounded-lg border border-beige transition font-medium">ดู</button>
                                                 <button @click="loadInvoiceForEdit(doc.id)" class="text-xs bg-cream hover:bg-beige text-blue-600 px-2.5 py-1.5 rounded-lg border border-beige transition font-medium">แก้ไข</button>
                                                 <button @click="printInvoice(doc.id)" class="text-xs bg-charcoal hover:bg-gold-dark text-white px-2.5 py-1.5 rounded-lg transition font-medium">พิมพ์ / PDF</button>
+                                                <a :href="'/api/documents/' + doc.id + '/export-excel'" title="ดาวน์โหลด Excel (.xlsx)" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-1.5 rounded-lg transition font-medium flex items-center gap-0.5">
+                                                    <span>Excel</span>
+                                                </a>
                                                 <button @click="confirmDeleteInvoice(doc.id)" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg border border-red-100 transition font-medium">ลบ</button>
                                             </div>
                                         </td>
@@ -2694,6 +2701,11 @@
                             พิมพ์ใบปะหน้า / Label
                         </button>
                     </template>
+                    <a :href="'/api/documents/' + viewModal.doc.id + '/export-excel'" 
+                       class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 uppercase tracking-wider no-print">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>ดาวน์โหลด Excel</span>
+                    </a>
                     <button @click="printInvoice(viewModal.doc.id)" class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-4 py-2 rounded-lg transition uppercase tracking-wider">
                         พิมพ์เอกสาร / Print A4
                     </button>
@@ -6105,6 +6117,21 @@
                         if (this.docFilter.payment_method) params.set('payment_method', this.docFilter.payment_method);
                     }
                     window.open(`/print/summary/list?${params.toString()}`, '_blank');
+                },
+
+                exportDocumentsExcel() {
+                    const params = new URLSearchParams();
+                    if (this.selectedDocIds && this.selectedDocIds.length > 0) {
+                        params.set('ids', this.selectedDocIds.join(','));
+                    } else {
+                        if (this.docFilter.query) params.set('query', this.docFilter.query);
+                        if (this.docFilter.year) params.set('year', this.docFilter.year);
+                        if (this.docFilter.start_month) params.set('start_month', this.docFilter.start_month);
+                        if (this.docFilter.end_month) params.set('end_month', this.docFilter.end_month);
+                        else if (this.docFilter.month) params.set('month', this.docFilter.month);
+                        if (this.docFilter.payment_method) params.set('payment_method', this.docFilter.payment_method);
+                    }
+                    window.location.href = `/api/documents/export-excel?${params.toString()}`;
                 },
 
                 printExpensesSummary() {
