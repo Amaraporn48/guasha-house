@@ -1474,14 +1474,23 @@ def list_documents(
         )
         q = q.filter(search_filter)
         
-    if date:
-        q = q.filter(Document.date == date)
-        
-    if month:
-        q = q.filter(Document.date.like(f"%-{month}-%"))
-        
-    if year:
-        q = q.filter(Document.date.like(f"{year}-%"))
+    if date and date.strip():
+        q = q.filter(Document.date == date.strip())
+    elif year and year.strip() and year.strip() != "ALL":
+        if month and month.strip() and month.strip() != "ALL":
+            try:
+                pattern = f"{year.strip()}-{int(month.strip()):02d}-%"
+            except ValueError:
+                pattern = f"{year.strip()}-%"
+        else:
+            pattern = f"{year.strip()}-%"
+        q = q.filter(Document.date.like(pattern))
+    elif month and month.strip() and month.strip() != "ALL":
+        try:
+            pattern = f"%-{int(month.strip()):02d}-%"
+            q = q.filter(Document.date.like(pattern))
+        except ValueError:
+            pass
         
     if customer_id:
         q = q.filter(Document.customer_id == customer_id)
@@ -2484,8 +2493,8 @@ def print_documents_summary_list(
     try:
         stmt = db.query(Document)
         
-        if year and year.strip():
-            if month and month.strip() and month != "ALL":
+        if year and year.strip() and year.strip() != "ALL":
+            if month and month.strip() and month.strip() != "ALL":
                 try:
                     pattern = f"{year.strip()}-{int(month.strip()):02d}-%"
                 except ValueError:
@@ -2493,11 +2502,17 @@ def print_documents_summary_list(
             else:
                 pattern = f"{year.strip()}-%"
             stmt = stmt.filter(Document.date.like(pattern))
+        elif month and month.strip() and month.strip() != "ALL":
+            try:
+                pattern = f"%-{int(month.strip()):02d}-%"
+                stmt = stmt.filter(Document.date.like(pattern))
+            except ValueError:
+                pass
             
-        if payment_method and payment_method.strip():
+        if payment_method and payment_method.strip() and payment_method.strip() != "ALL":
             stmt = stmt.filter(Document.payment_method == payment_method.strip())
             
-        raw_documents = stmt.order_by(Document.date.desc(), Document.id.desc()).all()
+        raw_documents = stmt.all()
         
         # Filter by query string if provided
         if query and query.strip():
@@ -2507,13 +2522,24 @@ def print_documents_summary_list(
                 if q_clean in (d.document_number or "").lower() or q_clean in (d.customer_name or "").lower()
             ]
             
+        # Sort documents sequentially by document number (0001, 0002, 0003, ...)
+        def doc_sort_key(d):
+            doc_num = d.document_number or ""
+            m = re.search(r'(\d+)$', doc_num)
+            if m:
+                prefix = doc_num[:m.start()]
+                return (prefix, int(m.group(1)))
+            return (doc_num, 0)
+            
+        raw_documents = sorted(raw_documents, key=doc_sort_key)
+            
         # Format dates & build safe dictionary list
         months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
         doc_list = []
         total_sum = 0.0
 
         for doc in raw_documents:
-            amt = float(doc.total_amount_after_vat or 0.0)
+            amt = float(doc.total_amount_before_vat or doc.total_amount_after_vat or 0.0)
             total_sum += amt
             
             formatted_date = "-"
@@ -2546,9 +2572,20 @@ def print_documents_summary_list(
         print_date = f"{today.day} {months_th[today.month - 1]} {today.year + 543}"
         
         filter_parts = []
-        if year and year.strip(): filter_parts.append(f"ปี {year.strip()}")
-        if month and month.strip(): filter_parts.append(f"เดือน {month.strip()}")
-        if payment_method and payment_method.strip(): filter_parts.append(f"วิธีชำระเงิน: {payment_method.strip()}")
+        if year and year.strip() and year.strip() != "ALL": filter_parts.append(f"ปี {year.strip()}")
+        if month and month.strip() and month.strip() != "ALL":
+            try:
+                m_int = int(month.strip())
+                if 1 <= m_int <= 12:
+                    filter_parts.append(f"เดือน {months_th[m_int - 1]} ({m_int:02d})")
+                else:
+                    filter_parts.append(f"เดือน {month.strip()}")
+            except ValueError:
+                filter_parts.append(f"เดือน {month.strip()}")
+        if payment_method and payment_method.strip() and payment_method.strip() != "ALL":
+            pm = payment_method.strip()
+            pm_th = "เงินสด" if pm == "CASH" else "โอนเงิน" if pm == "TRANSFER" else "เช็ค" if pm == "CHEQUE" else pm
+            filter_parts.append(f"วิธีชำระเงิน: {pm_th}")
         if query and query.strip(): filter_parts.append(f"คำค้นหา: '{query.strip()}'")
         filter_desc = " | ".join(filter_parts) if filter_parts else "ทั้งหมด"
 
