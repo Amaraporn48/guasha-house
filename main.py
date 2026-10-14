@@ -1611,22 +1611,40 @@ def generate_single_invoice_excel(doc: Document) -> bytes:
         bottom=Side(style='double', color=COLOR_PRIMARY)
     )
 
-    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['A'].width = 10
     ws.column_dimensions['B'].width = 42
     ws.column_dimensions['C'].width = 14
     ws.column_dimensions['D'].width = 18
     ws.column_dimensions['E'].width = 20
 
-    ws.merge_cells('A1:C1'); ws['A1'] = "บริษัท กัวซา เฮ้าส์ จำกัด"; ws['A1'].font = font_co_th
+    ws.row_dimensions[1].height = 22
+    ws.row_dimensions[2].height = 16
+    ws.row_dimensions[3].height = 15
+    ws.row_dimensions[4].height = 15
+
+    # Embed Guasha House logo if exists
+    import os
+    from openpyxl.drawing.image import Image as XLImage
+    logo_path = "static/logo.png"
+    if os.path.exists(logo_path):
+        try:
+            img = XLImage(logo_path)
+            img.width = 58
+            img.height = 46
+            ws.add_image(img, 'A1')
+        except Exception:
+            pass
+
+    ws.merge_cells('B1:C1'); ws['B1'] = "บริษัท กัวซา เฮ้าส์ จำกัด"; ws['B1'].font = font_co_th
     ws.merge_cells('D1:E1'); ws['D1'] = "ใบเสร็จรับเงิน"; ws['D1'].font = font_title_th; ws['D1'].alignment = Alignment(horizontal='right')
 
-    ws.merge_cells('A2:C2'); ws['A2'] = "GUASHA HOUSE CO., LTD."; ws['A2'].font = font_co_en
+    ws.merge_cells('B2:C2'); ws['B2'] = "GUASHA HOUSE CO., LTD."; ws['B2'].font = font_co_en
     ws.merge_cells('D2:E2'); ws['D2'] = "RECEIPT"; ws['D2'].font = font_title_en; ws['D2'].alignment = Alignment(horizontal='right')
 
-    ws.merge_cells('A3:C3'); ws['A3'] = "199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพมหานคร 10240"; ws['A3'].font = font_co_detail
+    ws.merge_cells('B3:C3'); ws['B3'] = "199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพมหานคร 10240"; ws['B3'].font = font_co_detail
     ws.merge_cells('D3:E3'); ws['D3'] = f"เลขที่ / No. : {doc.document_number}"; ws['D3'].font = font_meta_bold; ws['D3'].alignment = Alignment(horizontal='right')
 
-    ws.merge_cells('A4:C4'); ws['A4'] = "โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษีอากร: 0105565028948"; ws['A4'].font = font_co_detail
+    ws.merge_cells('B4:C4'); ws['B4'] = "โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษีอากร: 0105565028948"; ws['B4'].font = font_co_detail
     thai_date = format_thai_date(doc.date)
     ws.merge_cells('D4:E4'); ws['D4'] = f"วันที่ / Date : {thai_date}"; ws['D4'].font = font_meta; ws['D4'].alignment = Alignment(horizontal='right')
 
@@ -1830,7 +1848,7 @@ def generate_documents_summary_excel(docs: List[Document], title_subtitle: str =
         bottom=Side(style='double', color=COLOR_PRIMARY)
     )
 
-    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['A'].width = 10
     ws.column_dimensions['B'].width = 18
     ws.column_dimensions['C'].width = 14
     ws.column_dimensions['D'].width = 28
@@ -1840,28 +1858,54 @@ def generate_documents_summary_excel(docs: List[Document], title_subtitle: str =
     ws.column_dimensions['H'].width = 16
     ws.column_dimensions['I'].width = 18
 
-    ws.merge_cells('A1:I1')
-    ws['A1'] = "บริษัท กัวซา เฮ้าส์ จำกัด - รายงานสรุปรายการเอกสาร"
-    ws['A1'].font = font_title
-    ws['A1'].alignment = Alignment(horizontal='left', vertical='center')
+    ws.row_dimensions[1].height = 10
+    ws.row_dimensions[2].height = 22
+    ws.row_dimensions[3].height = 18
+    ws.row_dimensions[4].height = 18
+    ws.row_dimensions[5].height = 10
 
-    ws.merge_cells('A2:I2')
-    ws['A2'] = f"พิมพ์รายงาน ณ วันที่: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')} {title_subtitle}"
-    ws['A2'].font = font_subtitle
-    ws['A2'].alignment = Alignment(horizontal='left', vertical='center')
+    # Embed Guasha House logo if exists
+    import os
+    from openpyxl.drawing.image import Image as XLImage
+    logo_path = "static/logo.png"
+    if os.path.exists(logo_path):
+        try:
+            img = XLImage(logo_path)
+            img.width = 62
+            img.height = 50
+            ws.add_image(img, 'A2')
+        except Exception:
+            pass
+
+    font_sub_brand = Font(name=FONT_FAMILY, size=10, bold=True, color="B39268")
+
+    ws.merge_cells('B2:I2')
+    ws['B2'] = "บริษัท กัวซา เฮ้าส์ จำกัด"
+    ws['B2'].font = font_title
+    ws['B2'].alignment = Alignment(horizontal='left', vertical='center')
+
+    ws.merge_cells('B3:I3')
+    ws['B3'] = "GUASHA HOUSE CO., LTD.  |  รายงานตารางรายการเอกสาร (DOCUMENTS LIST REPORT)"
+    ws['B3'].font = font_sub_brand
+    ws['B3'].alignment = Alignment(horizontal='left', vertical='center')
+
+    ws.merge_cells('B4:I4')
+    ws['B4'] = f"พิมพ์รายงาน ณ วันที่: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')} {title_subtitle}"
+    ws['B4'].font = font_subtitle
+    ws['B4'].alignment = Alignment(horizontal='left', vertical='center')
 
     headers = [
-        ('A4', 'ลำดับ', Alignment(horizontal='center', vertical='center')),
-        ('B4', 'เลขที่เอกสาร', Alignment(horizontal='center', vertical='center')),
-        ('C4', 'วันที่', Alignment(horizontal='center', vertical='center')),
-        ('D4', 'ชื่อลูกค้า', Alignment(horizontal='left', vertical='center')),
-        ('E4', 'รายการสินค้า', Alignment(horizontal='left', vertical='center')),
-        ('F4', 'จำนวนรวม', Alignment(horizontal='center', vertical='center')),
-        ('G4', 'ยอดเงินรวม (บาท)', Alignment(horizontal='right', vertical='center')),
-        ('H4', 'วิธีชำระเงิน', Alignment(horizontal='center', vertical='center')),
-        ('I4', 'ผู้รับเงิน', Alignment(horizontal='left', vertical='center')),
+        ('A6', 'ลำดับ', Alignment(horizontal='center', vertical='center')),
+        ('B6', 'เลขที่เอกสาร', Alignment(horizontal='center', vertical='center')),
+        ('C6', 'วันที่', Alignment(horizontal='center', vertical='center')),
+        ('D6', 'ชื่อลูกค้า', Alignment(horizontal='left', vertical='center')),
+        ('E6', 'รายการสินค้า', Alignment(horizontal='left', vertical='center')),
+        ('F6', 'จำนวนรวม', Alignment(horizontal='center', vertical='center')),
+        ('G6', 'ยอดเงินรวม (บาท)', Alignment(horizontal='right', vertical='center')),
+        ('H6', 'วิธีชำระเงิน', Alignment(horizontal='center', vertical='center')),
+        ('I6', 'ผู้รับเงิน', Alignment(horizontal='left', vertical='center')),
     ]
-    ws.row_dimensions[4].height = 24
+    ws.row_dimensions[6].height = 24
     for cell_id, text_val, align in headers:
         c = ws[cell_id]
         c.value = text_val
@@ -1870,7 +1914,7 @@ def generate_documents_summary_excel(docs: List[Document], title_subtitle: str =
         c.alignment = align
         c.border = border_thin
 
-    curr_row = 5
+    curr_row = 7
     total_sales = 0.0
     for idx, d in enumerate(docs, 1):
         ws.row_dimensions[curr_row].height = 20
