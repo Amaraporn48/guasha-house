@@ -1344,10 +1344,55 @@ class DocumentCreateSchema(BaseModel):
     total_amount_after_vat: float
     items: List[DocumentItemSchema]
 
+def resequence_documents(db: Session, year: Optional[str] = None):
+    """
+    Resequence invoice numbers strictly chronologically by date.
+    Sort order: date ASC, created_at ASC, id ASC.
+    - If a document is entered with a past/retroactive date, it automatically slots in,
+      and subsequent documents shift up.
+    - If a document is deleted, the remaining documents re-sequence continuously
+      without gaps (0001, 0002, 0003...).
+    """
+    import uuid
+    from sqlalchemy import func, or_
+    if year:
+        target_years = [str(year)]
+    else:
+        years_query = db.query(func.substr(Document.date, 1, 4)).distinct().all()
+        target_years = sorted(list({y[0] for y in years_query if y[0] and len(y[0]) == 4 and y[0].isdigit()}))
+        if not target_years:
+            target_years = [str(datetime.date.today().year)]
+
+    for yr in target_years:
+        docs = db.query(Document).filter(
+            or_(
+                Document.date.like(f"{yr}-%"),
+                Document.document_number.like(f"INV-{yr}-%"),
+                Document.document_number.like(f"TEMP-{yr}-%")
+            )
+        ).all()
+        if not docs:
+            continue
+
+        def sort_key(d):
+            d_date = (d.date or "9999-99-99").strip()
+            d_created = d.created_at.isoformat() if d.created_at else d_date
+            return (d_date, d_created, d.id or 0)
+
+        sorted_docs = sorted(docs, key=sort_key)
+
+        # Pass 1: Give temporary unique numbers to avoid unique constraint violations
+        for d in sorted_docs:
+            d.document_number = f"TEMP-{yr}-{d.id}-{uuid.uuid4().hex[:6]}"
+        db.flush()
+
+        # Pass 2: Assign continuous chronological sequence: INV-YYYY-0001, INV-YYYY-0002, ...
+        for seq, d in enumerate(sorted_docs, start=1):
+            d.document_number = f"INV-{yr}-{seq:04d}"
+        db.flush()
+
 def generate_invoice_number(db: Session, year: str) -> str:
-    # Run immediate transaction queries to find max document number for this year.
     prefix = f"INV-{year}-"
-    # Find the document with the maximum invoice number for the year.
     result = db.execute(
         text("SELECT document_number FROM documents WHERE document_number LIKE :prefix ORDER BY document_number DESC LIMIT 1"),
         {"prefix": f"{prefix}%"}
@@ -1371,7 +1416,7 @@ def create_document(doc_data: DocumentCreateSchema, request: Request, db: Sessio
     if not doc_data.items or len(doc_data.items) == 0:
         raise HTTPException(status_code=400, detail="กรุณาระบุรายการสินค้าอย่างน้อย 1 รายการ")
     
-    # 2. Re-calculate all amounts on Backend (Never trust client calculations directly)
+    # 2. Re-calculate all amounts on Backend
     validated_items = []
     subtotal = 0.0
     for idx, item in enumerate(doc_data.items, 1):
@@ -1400,91 +1445,97 @@ def create_document(doc_data: DocumentCreateSchema, request: Request, db: Sessio
     total_after_vat = subtotal
     total_text = bahttext(subtotal)
 
-    max_attempts = 10
     doc_year = "2026"
     if doc_data.date and len(doc_data.date) >= 4:
         doc_year = doc_data.date[:4]
-        
-    for attempt in range(max_attempts):
-        try:
-            with db.begin_nested():
-                doc_num = generate_invoice_number(db, doc_year)
-                
-                existing = db.query(Document).filter(Document.document_number == doc_num).first()
-                if existing:
-                    raise IntegrityError("Collision detected", params=None, orig=None)
-                
-                new_doc = Document(
-                    document_number=doc_num,
-                    date=doc_data.date,
-                    customer_id=doc_data.customer_id,
-                    customer_name=doc_data.customer_name.strip(),
-                    customer_address=doc_data.customer_address.strip(),
-                    customer_tax_id=doc_data.customer_tax_id.strip(),
-                    customer_phone=doc_data.customer_phone,
-                    customer_email=doc_data.customer_email,
-                    total_amount_before_vat=subtotal,
-                    vat_amount=vat_amount,
-                    total_amount_after_vat=total_after_vat,
-                    total_amount_text=total_text,
-                    payment_method=doc_data.payment_method,
-                    cheque_bank=doc_data.cheque_bank if doc_data.payment_method == "CHEQUE" else None,
-                    cheque_number=doc_data.cheque_number if doc_data.payment_method == "CHEQUE" else None,
-                    cheque_date=doc_data.cheque_date if doc_data.payment_method == "CHEQUE" else None,
-                    cheque_branch=doc_data.cheque_branch if doc_data.payment_method == "CHEQUE" else None,
-                    received_by=doc_data.received_by,
-                    received_date=doc_data.received_date,
-                    shipping_name=doc_data.shipping_name,
-                    shipping_address=doc_data.shipping_address,
-                    payment_slip=doc_data.payment_slip,
-                    signature_url=doc_data.signature_url.strip() if (doc_data.signature_url and doc_data.signature_url.strip()) else (current_user.signature_url or None),
-                    created_by_user_id=current_user.id,
-                    created_by_username=current_user.fullname,
-                    status="issued"
-                )
-                
-                db.add(new_doc)
-                db.flush()
-                
-                for v_item in validated_items:
-                    new_item = DocumentItem(
-                         document_id=new_doc.id,
-                         item_index=v_item["item_index"],
-                         description=v_item["description"],
-                         quantity=v_item["quantity"],
-                         unit_price=v_item["unit_price"],
-                         amount=v_item["amount"]
-                    )
-                    db.add(new_item)
-                    
-                    # Stock deduction logic
-                    prod = db.query(Product).filter(Product.name == v_item["description"]).first()
-                    if prod and not prod.is_service:
-                        prod.stock_quantity = max(0, (prod.stock_quantity or 0) - int(v_item["quantity"]))
-                
-            db.commit()
-            create_audit_log(
-                db=db,
-                action="CREATE_DOCUMENT",
-                target_type="document",
-                target_id=doc_num,
-                result="success",
-                details=json.dumps({"total": total_after_vat, "customer": new_doc.customer_name}),
-                user=current_user,
-                request=request
+
+    import uuid
+    try:
+        with db.begin_nested():
+            placeholder_num = f"TEMP-{doc_year}-{uuid.uuid4().hex}"
+            new_doc = Document(
+                document_number=placeholder_num,
+                date=doc_data.date,
+                customer_id=doc_data.customer_id,
+                customer_name=doc_data.customer_name.strip(),
+                customer_address=doc_data.customer_address.strip(),
+                customer_tax_id=doc_data.customer_tax_id.strip(),
+                customer_phone=doc_data.customer_phone,
+                customer_email=doc_data.customer_email,
+                total_amount_before_vat=subtotal,
+                vat_amount=vat_amount,
+                total_amount_after_vat=total_after_vat,
+                total_amount_text=total_text,
+                payment_method=doc_data.payment_method,
+                cheque_bank=doc_data.cheque_bank if doc_data.payment_method == "CHEQUE" else None,
+                cheque_number=doc_data.cheque_number if doc_data.payment_method == "CHEQUE" else None,
+                cheque_date=doc_data.cheque_date if doc_data.payment_method == "CHEQUE" else None,
+                cheque_branch=doc_data.cheque_branch if doc_data.payment_method == "CHEQUE" else None,
+                received_by=doc_data.received_by,
+                received_date=doc_data.received_date,
+                shipping_name=doc_data.shipping_name,
+                shipping_address=doc_data.shipping_address,
+                payment_slip=doc_data.payment_slip,
+                signature_url=doc_data.signature_url.strip() if (doc_data.signature_url and doc_data.signature_url.strip()) else ((current_user.signature_url or None) if current_user and hasattr(current_user, 'signature_url') else None),
+                created_by_user_id=current_user.id if current_user else 1,
+                created_by_username=current_user.fullname if current_user else "System",
+                status="issued"
             )
-            return {"success": True, "document_id": new_doc.id, "document_number": doc_num}
-        except IntegrityError:
-            db.rollback()
-            if attempt == max_attempts - 1:
-                raise HTTPException(status_code=500, detail="ไม่สามารถสร้างเลขที่เอกสารแบบไม่ซ้ำกันได้เนื่องจากการใช้งานที่หนาแน่น กรุณาลองใหม่อีกครั้ง")
-            continue
-        except HTTPException:
-            raise
-        except Exception as e:
-            db.rollback()
-            print(f"Error creating document: {e}")
-            raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการบันทึกเอกสาร กรุณาลองใหม่อีกครั้ง")
+            
+            db.add(new_doc)
+            db.flush()
+            
+            for v_item in validated_items:
+                new_item = DocumentItem(
+                    document_id=new_doc.id,
+                    item_index=v_item["item_index"],
+                    description=v_item["description"],
+                    quantity=v_item["quantity"],
+                    unit_price=v_item["unit_price"],
+                    amount=v_item["amount"]
+                )
+                db.add(new_item)
+                
+                prod = db.query(Product).filter(Product.name == v_item["description"]).first()
+                if prod and not prod.is_service:
+                    prod.stock_quantity = max(0, (prod.stock_quantity or 0) - int(v_item["quantity"]))
+            
+            db.flush()
+            # Resequence documents chronologically so retroactive dates slot in cleanly
+            resequence_documents(db, doc_year)
+
+        db.commit()
+        db.refresh(new_doc)
+        doc_num = new_doc.document_number
+
+        create_audit_log(
+            db=db,
+            action="CREATE_DOCUMENT",
+            target_type="document",
+            target_id=doc_num,
+            result="success",
+            details=json.dumps({"total": total_after_vat, "customer": new_doc.customer_name}),
+            user=current_user,
+            request=request
+        )
+        return {"success": True, "document_id": new_doc.id, "document_number": doc_num}
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating document: {e}")
+        raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการบันทึกเอกสาร กรุณาลองใหม่อีกครั้ง")
+
+@app.post("/api/documents/resequence")
+def resequence_all_documents_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        resequence_documents(db)
+        db.commit()
+        return {"success": True, "message": "จัดเรียงเลขที่เอกสารตามวันที่และรันเลขต่อเนื่องเรียบร้อยแล้ว"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการจัดเรียงเลขที่เอกสาร: {e}")
 
 @app.get("/api/documents")
 def list_documents(
@@ -2263,6 +2314,15 @@ def update_document(doc_id: int, doc_data: DocumentCreateSchema, request: Reques
                 
         db.commit()
         
+        # Resequence documents chronologically in case date was modified
+        try:
+            doc_year = doc.date[:4] if doc.date and len(doc.date) >= 4 else "2026"
+            resequence_documents(db, doc_year)
+            db.commit()
+            db.refresh(doc)
+        except Exception as e_res:
+            print(f"Resequence update warning: {e_res}")
+        
         create_audit_log(
             db=db,
             action="UPDATE_DOCUMENT",
@@ -2329,6 +2389,7 @@ def delete_document(doc_id: int, request: Request, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="ไม่พบเอกสาร")
     
     doc_num = doc.document_number
+    doc_year = doc.date[:4] if doc.date and len(doc.date) >= 4 else "2026"
     try:
         with db.begin_nested():
             # Restore inventory stock for non-service items
@@ -2339,6 +2400,9 @@ def delete_document(doc_id: int, request: Request, db: Session = Depends(get_db)
                         prod.stock_quantity = (prod.stock_quantity or 0) + int(item.quantity)
             
             db.delete(doc)
+            db.flush()
+            # Resequence remaining documents so numbers run continuously without gaps
+            resequence_documents(db, doc_year)
         db.commit()
         
         create_audit_log(
@@ -2352,7 +2416,7 @@ def delete_document(doc_id: int, request: Request, db: Session = Depends(get_db)
             request=request
         )
         
-        return {"success": True, "message": "ลบเอกสารและคืนสต็อกสินค้าสำเร็จ"}
+        return {"success": True, "message": "ลบเอกสารและจัดเรียงเลขที่เอกสารใหม่ต่อเนื่องสำเร็จ"}
     except Exception as e:
         db.rollback()
         print(f"Error deleting document: {e}")
@@ -3954,6 +4018,19 @@ def update_admin_settings(payload: SiteSettingsUpdate, request: Request, db: Ses
     rows = db.query(SiteSetting).all()
     return {"success": True, "message": "บันทึกการตั้งค่าเว็บไซต์สำเร็จ", "settings": {row.key: row.value for row in rows}}
 
+@app.on_event("startup")
+def startup_resequence_all():
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        resequence_documents(db)
+        db.commit()
+        db.close()
+        print("✅ Automatically resequenced all documents by date on startup.")
+    except Exception as e:
+        print("Startup resequence notice:", e)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+
