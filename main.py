@@ -1459,13 +1459,22 @@ def list_documents(
     query: Optional[str] = None,
     date: Optional[str] = None,
     month: Optional[str] = None,
+    start_month: Optional[str] = None,
+    end_month: Optional[str] = None,
     year: Optional[str] = None,
     customer_id: Optional[int] = None,
     payment_method: Optional[str] = None,
+    ids: Optional[str] = None,
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
     q = db.query(Document)
+    
+    if ids and ids.strip():
+        id_list = [int(x.strip()) for x in ids.split(',') if x.strip().isdigit()]
+        if id_list:
+            q = q.filter(Document.id.in_(id_list))
+            return q.order_by(Document.document_number.asc()).all()
     
     if query:
         search_filter = or_(
@@ -1476,27 +1485,30 @@ def list_documents(
         
     if date and date.strip():
         q = q.filter(Document.date == date.strip())
-    elif year and year.strip() and year.strip() != "ALL":
-        if month and month.strip() and month.strip() != "ALL":
+    else:
+        s_m = start_month or month
+        e_m = end_month or s_m
+        if s_m and s_m.strip() and s_m.strip() != "ALL":
             try:
-                pattern = f"{year.strip()}-{int(month.strip()):02d}-%"
+                s_val = int(s_m.strip())
+                e_val = int(e_m.strip()) if (e_m and e_m.strip() and e_m.strip() != "ALL") else s_val
+                if s_val > e_val:
+                    s_val, e_val = e_val, s_val
+                allowed_months = [f"{m:02d}" for m in range(s_val, e_val + 1)]
+                if year and year.strip() and year.strip() != "ALL":
+                    q = q.filter(or_(*[Document.date.like(f"{year.strip()}-{m}-%") for m in allowed_months]))
+                else:
+                    q = q.filter(or_(*[Document.date.like(f"%-{m}-%") for m in allowed_months]))
             except ValueError:
-                pattern = f"{year.strip()}-%"
-        else:
-            pattern = f"{year.strip()}-%"
-        q = q.filter(Document.date.like(pattern))
-    elif month and month.strip() and month.strip() != "ALL":
-        try:
-            pattern = f"%-{int(month.strip()):02d}-%"
-            q = q.filter(Document.date.like(pattern))
-        except ValueError:
-            pass
+                pass
+        elif year and year.strip() and year.strip() != "ALL":
+            q = q.filter(Document.date.like(f"{year.strip()}-%"))
         
     if customer_id:
         q = q.filter(Document.customer_id == customer_id)
         
-    if payment_method:
-        q = q.filter(Document.payment_method == payment_method)
+    if payment_method and payment_method.strip() and payment_method.strip() != "ALL":
+        q = q.filter(Document.payment_method == payment_method.strip())
         
     return q.order_by(Document.document_number.desc()).all()
 
@@ -2484,7 +2496,10 @@ def print_documents_summary_list(
     query: Optional[str] = None,
     year: Optional[str] = None,
     month: Optional[str] = None,
+    start_month: Optional[str] = None,
+    end_month: Optional[str] = None,
     payment_method: Optional[str] = None,
+    ids: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_from_cookie)
 ):
@@ -2492,26 +2507,57 @@ def print_documents_summary_list(
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     try:
         stmt = db.query(Document)
-        
-        if year and year.strip() and year.strip() != "ALL":
-            if month and month.strip() and month.strip() != "ALL":
+        filter_parts = []
+        months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+
+        # If specific IDs are selected by user
+        if ids and ids.strip():
+            id_list = [int(x.strip()) for x in ids.split(',') if x.strip().isdigit()]
+            if id_list:
+                stmt = stmt.filter(Document.id.in_(id_list))
+                filter_parts.append(f"รายการที่เลือกเฉพาะ ({len(id_list)} รายการ)")
+        else:
+            s_m = start_month or month
+            e_m = end_month or s_m
+            if s_m and s_m.strip() and s_m.strip() != "ALL":
                 try:
-                    pattern = f"{year.strip()}-{int(month.strip()):02d}-%"
+                    s_val = int(s_m.strip())
+                    e_val = int(e_m.strip()) if (e_m and e_m.strip() and e_m.strip() != "ALL") else s_val
+                    if s_val > e_val:
+                        s_val, e_val = e_val, s_val
+                    allowed_months = [f"{m:02d}" for m in range(s_val, e_val + 1)]
+                    
+                    if year and year.strip() and year.strip() != "ALL":
+                        stmt = stmt.filter(or_(*[Document.date.like(f"{year.strip()}-{m}-%") for m in allowed_months]))
+                    else:
+                        stmt = stmt.filter(or_(*[Document.date.like(f"%-{m}-%") for m in allowed_months]))
+                        
+                    if s_val == e_val:
+                        filter_parts.append(f"เดือน {months_th[s_val - 1]} ({s_val:02d})")
+                    else:
+                        filter_parts.append(f"ช่วงเดือน {months_th[s_val - 1]} - {months_th[e_val - 1]}")
                 except ValueError:
-                    pattern = f"{year.strip()}-%"
-            else:
-                pattern = f"{year.strip()}-%"
-            stmt = stmt.filter(Document.date.like(pattern))
-        elif month and month.strip() and month.strip() != "ALL":
-            try:
-                pattern = f"%-{int(month.strip()):02d}-%"
-                stmt = stmt.filter(Document.date.like(pattern))
-            except ValueError:
-                pass
-            
-        if payment_method and payment_method.strip() and payment_method.strip() != "ALL":
-            stmt = stmt.filter(Document.payment_method == payment_method.strip())
-            
+                    pass
+            elif year and year.strip() and year.strip() != "ALL":
+                stmt = stmt.filter(Document.date.like(f"{year.strip()}-%"))
+                
+            if year and year.strip() and year.strip() != "ALL": 
+                filter_parts.insert(0, f"ปี {year.strip()}")
+
+            if payment_method and payment_method.strip() and payment_method.strip() != "ALL":
+                stmt = stmt.filter(Document.payment_method == payment_method.strip())
+                pm = payment_method.strip()
+                pm_th = "เงินสด" if pm == "CASH" else "โอนเงิน" if pm == "TRANSFER" else "เช็ค" if pm == "CHEQUE" else pm
+                filter_parts.append(f"วิธีชำระเงิน: {pm_th}")
+                
+            if query and query.strip():
+                q_clean = query.strip().lower()
+                stmt = stmt.filter(or_(
+                    Document.document_number.like(f"%{query.strip()}%"),
+                    Document.customer_name.like(f"%{query.strip()}%")
+                ))
+                filter_parts.append(f"คำค้นหา: '{query.strip()}'")
+
         raw_documents = stmt.all()
         
         # Filter by query string if provided
@@ -2571,22 +2617,6 @@ def print_documents_summary_list(
         today = datetime.date.today()
         print_date = f"{today.day} {months_th[today.month - 1]} {today.year + 543}"
         
-        filter_parts = []
-        if year and year.strip() and year.strip() != "ALL": filter_parts.append(f"ปี {year.strip()}")
-        if month and month.strip() and month.strip() != "ALL":
-            try:
-                m_int = int(month.strip())
-                if 1 <= m_int <= 12:
-                    filter_parts.append(f"เดือน {months_th[m_int - 1]} ({m_int:02d})")
-                else:
-                    filter_parts.append(f"เดือน {month.strip()}")
-            except ValueError:
-                filter_parts.append(f"เดือน {month.strip()}")
-        if payment_method and payment_method.strip() and payment_method.strip() != "ALL":
-            pm = payment_method.strip()
-            pm_th = "เงินสด" if pm == "CASH" else "โอนเงิน" if pm == "TRANSFER" else "เช็ค" if pm == "CHEQUE" else pm
-            filter_parts.append(f"วิธีชำระเงิน: {pm_th}")
-        if query and query.strip(): filter_parts.append(f"คำค้นหา: '{query.strip()}'")
         filter_desc = " | ".join(filter_parts) if filter_parts else "ทั้งหมด"
 
         return templates.TemplateResponse(

@@ -1127,14 +1127,21 @@
                             <h3 class="text-sm font-semibold tracking-wider text-charcoal uppercase">ค้นหาและกรองข้อมูลเอกสาร / Search & Filters</h3>
                             <p class="text-xs text-gray-400">ค้นหา กรอง และสั่งพิมพ์สรุปตารางรายการเอกสารทั้งหมดในระบบ</p>
                         </div>
-                        <button @click="printDocumentsSummary()" class="bg-charcoal hover:bg-gold-dark text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2 self-stretch sm:self-auto justify-center">
-                            <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                            <span>พิมพ์รายงานตารางเอกสาร / Print List</span>
-                        </button>
+                        <div class="flex items-center gap-2 self-stretch sm:self-auto">
+                            <template x-if="selectedDocIds.length > 0">
+                                <button @click="selectedDocIds = []" class="text-xs text-gray-500 hover:text-red-500 underline px-2 py-1 transition font-medium">
+                                    ล้างที่เลือก (<span x-text="selectedDocIds.length"></span>)
+                                </button>
+                            </template>
+                            <button @click="printDocumentsSummary()" class="bg-charcoal hover:bg-gold-dark text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2 justify-center">
+                                <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                                <span x-text="selectedDocIds.length > 0 ? `พิมพ์ที่เลือก (${selectedDocIds.length} รายการ)` : 'พิมพ์รายงานตารางเอกสาร'"></span>
+                            </button>
+                        </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        <div class="md:col-span-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <div class="sm:col-span-2 lg:col-span-2">
                             <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">ค้นหาจากเลขที่เอกสาร หรือ ชื่อลูกค้า</label>
                             <input type="text" x-model="docFilter.query" @input="filterDocuments()"
                                    placeholder="ค้นหา..." class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold">
@@ -1151,8 +1158,28 @@
                         </div>
 
                         <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">เดือน / Month</label>
-                            <select x-model="docFilter.month" @change="filterDocuments()"
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">ตั้งแต่เดือน / From Month</label>
+                            <select x-model="docFilter.start_month" @change="filterDocuments()"
+                                    class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold">
+                                <option value="">ทั้งหมด / All</option>
+                                <option value="01">มกราคม (Jan)</option>
+                                <option value="02">กุมภาพันธ์ (Feb)</option>
+                                <option value="03">มีนาคม (Mar)</option>
+                                <option value="04">เมษายน (Apr)</option>
+                                <option value="05">พฤษภาคม (May)</option>
+                                <option value="06">มิถุนายน (Jun)</option>
+                                <option value="07">กรกฎาคม (Jul)</option>
+                                <option value="08">สิงหาคม (Aug)</option>
+                                <option value="09">กันยายน (Sep)</option>
+                                <option value="10">ตุลาคม (Oct)</option>
+                                <option value="11">พฤศจิกายน (Nov)</option>
+                                <option value="12">ธันวาคม (Dec)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">ถึงเดือน / To Month</label>
+                            <select x-model="docFilter.end_month" @change="filterDocuments()"
                                     class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold">
                                 <option value="">ทั้งหมด / All</option>
                                 <option value="01">มกราคม (Jan)</option>
@@ -1203,6 +1230,9 @@
                         <table class="w-full text-left text-sm">
                             <thead>
                                 <tr class="bg-cream border-b border-beige text-xs text-gray-500 uppercase font-semibold">
+                                    <th class="px-4 py-4 w-12 text-center">
+                                        <input type="checkbox" :checked="isAllDocsSelected()" @change="toggleSelectAllDocs($event)" class="rounded border-gray-300 text-gold focus:ring-gold cursor-pointer w-4 h-4">
+                                    </th>
                                     <th class="px-6 py-4">เลขที่ / No.</th>
                                     <th class="px-6 py-4">วันที่ / Date</th>
                                     <th class="px-6 py-4">ลูกค้า / Customer</th>
@@ -1215,6 +1245,9 @@
                             <tbody>
                                 <template x-for="doc in documents" :key="doc.id">
                                     <tr class="border-b border-beige hover:bg-cream/50 transition">
+                                        <td class="px-4 py-4 text-center">
+                                            <input type="checkbox" :value="doc.id" x-model="selectedDocIds" class="rounded border-gray-300 text-gold focus:ring-gold cursor-pointer w-4 h-4">
+                                        </td>
                                         <td class="px-6 py-4 font-semibold text-charcoal" x-text="doc.document_number"></td>
                                         <td class="px-6 py-4 text-gray-600" x-text="formatThaiDate(doc.date)"></td>
                                         <td class="px-6 py-4 font-medium text-gray-800" x-text="doc.customer_name"></td>
@@ -1222,7 +1255,7 @@
                                         <td class="px-6 py-4">
                                             <span class="text-xs px-2.5 py-1 rounded-full font-medium"
                                                   :class="doc.payment_method === 'CASH' ? 'bg-green-50 text-green-700 border border-green-200' : (doc.payment_method === 'TRANSFER' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-blue-50 text-blue-700 border border-blue-200')"
-                                                  x-text="doc.payment_method === 'CASH' ? 'เงินสด / CASH' : (doc.payment_method === 'TRANSFER' ? 'โอนเงิน / TRANSFER' : 'เช็ค / CHEQUE')"></span>
+                                                  x-text="doc.payment_method === 'CASH' ? 'เงินสด' : (doc.payment_method === 'TRANSFER' ? 'โอนเงิน' : 'เช็ค')"></span>
                                         </td>
                                         <td class="px-6 py-4 text-xs text-gray-500" x-text="doc.created_by_username"></td>
                                         <td class="px-6 py-4 text-right">
@@ -1237,7 +1270,7 @@
                                 </template>
                                 <template x-if="documents.length === 0">
                                     <tr>
-                                        <td colspan="7" class="px-6 py-16 text-center text-gray-400">ไม่พบเอกสารตรงตามเงื่อนไขที่กำหนด</td>
+                                        <td colspan="8" class="px-6 py-16 text-center text-gray-400">ไม่พบเอกสารตรงตามเงื่อนไขที่กำหนด</td>
                                     </tr>
                                 </template>
                             </tbody>
@@ -3520,10 +3553,13 @@
                 expenseFilterYear: 'ALL',
                 expenseFilterMonth: 'ALL',
                 expenseFilterCategory: 'ALL',
+                selectedDocIds: [],
                 docFilter: {
                     query: '',
                     year: '',
                     month: '',
+                    start_month: '',
+                    end_month: '',
                     payment_method: ''
                 },
 
@@ -3842,12 +3878,20 @@
                     const params = [];
                     if (this.docFilter.query) params.push(`query=${encodeURIComponent(this.docFilter.query)}`);
                     if (this.docFilter.year) params.push(`year=${this.docFilter.year}`);
-                    if (this.docFilter.month) params.push(`month=${this.docFilter.month}`);
+                    if (this.docFilter.start_month) params.push(`start_month=${this.docFilter.start_month}`);
+                    if (this.docFilter.end_month) params.push(`end_month=${this.docFilter.end_month}`);
+                    else if (this.docFilter.month) params.push(`month=${this.docFilter.month}`);
                     if (this.docFilter.payment_method) params.push(`payment_method=${this.docFilter.payment_method}`);
                     
                     fetch(url + params.join('&'))
                         .then(res => res.json())
-                        .then(data => this.documents = data);
+                        .then(data => {
+                            this.documents = data;
+                            if (this.selectedDocIds && this.selectedDocIds.length > 0) {
+                                const validIds = new Set(data.map(d => d.id));
+                                this.selectedDocIds = this.selectedDocIds.filter(id => validIds.has(id));
+                            }
+                        });
                 },
 
                 fetchReportsData() {
@@ -5346,13 +5390,30 @@
                     window.open(`/print/${id}`, '_blank');
                 },
 
+                toggleSelectAllDocs(e) {
+                    if (e.target.checked) {
+                        this.selectedDocIds = this.documents.map(d => d.id);
+                    } else {
+                        this.selectedDocIds = [];
+                    }
+                },
+
+                isAllDocsSelected() {
+                    return this.documents.length > 0 && this.selectedDocIds.length === this.documents.length;
+                },
+
                 printDocumentsSummary() {
-                    const params = new URLSearchParams({
-                        query: this.docFilter.query || '',
-                        year: this.docFilter.year || '',
-                        month: this.docFilter.month || '',
-                        payment_method: this.docFilter.payment_method || ''
-                    });
+                    const params = new URLSearchParams();
+                    if (this.selectedDocIds && this.selectedDocIds.length > 0) {
+                        params.set('ids', this.selectedDocIds.join(','));
+                    } else {
+                        if (this.docFilter.query) params.set('query', this.docFilter.query);
+                        if (this.docFilter.year) params.set('year', this.docFilter.year);
+                        if (this.docFilter.start_month) params.set('start_month', this.docFilter.start_month);
+                        if (this.docFilter.end_month) params.set('end_month', this.docFilter.end_month);
+                        else if (this.docFilter.month) params.set('month', this.docFilter.month);
+                        if (this.docFilter.payment_method) params.set('payment_method', this.docFilter.payment_method);
+                    }
                     window.open(`/print/summary/list?${params.toString()}`, '_blank');
                 },
 
