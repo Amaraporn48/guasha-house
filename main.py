@@ -1544,6 +1544,533 @@ def list_documents(
         
     return q.order_by(Document.document_number.desc()).all()
 
+def format_thai_date(date_str: Optional[str]) -> str:
+    if not date_str:
+        return "-"
+    try:
+        parts = str(date_str).split("-")
+        if len(parts) != 3:
+            return str(date_str)
+        year = int(parts[0]) + 543
+        month_idx = int(parts[1]) - 1
+        day = int(parts[2])
+        months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+        if 0 <= month_idx < 12:
+            return f"{day} {months[month_idx]} {year}"
+        return f"{day}/{parts[1]}/{year}"
+    except Exception:
+        return str(date_str)
+
+def generate_single_invoice_excel(doc: Document) -> bytes:
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from io import BytesIO
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    doc_number = doc.document_number or "RECEIPT"
+    ws.title = f"{doc_number}"[:31]
+    ws.views.sheetView[0].showGridLines = True
+
+    FONT_FAMILY = "Tahoma"
+    COLOR_PRIMARY = "1A1A1A"
+    COLOR_GRAY_TEXT = "555555"
+    COLOR_LIGHT_BG = "F7F5F0"
+    COLOR_TOTAL_BG = "EFECE6"
+    COLOR_BORDER = "D4CFC7"
+
+    font_co_th = Font(name=FONT_FAMILY, size=15, bold=True, color=COLOR_PRIMARY)
+    font_co_en = Font(name=FONT_FAMILY, size=9, bold=True, color=COLOR_GRAY_TEXT)
+    font_co_detail = Font(name=FONT_FAMILY, size=8.5, color="444444")
+
+    font_title_th = Font(name=FONT_FAMILY, size=16, bold=True, color=COLOR_PRIMARY)
+    font_title_en = Font(name=FONT_FAMILY, size=9.5, bold=True, color="777777")
+    font_meta_bold = Font(name=FONT_FAMILY, size=10, bold=True, color=COLOR_PRIMARY)
+    font_meta = Font(name=FONT_FAMILY, size=9.5, color=COLOR_PRIMARY)
+
+    font_box_header = Font(name=FONT_FAMILY, size=9.5, bold=True, color=COLOR_PRIMARY)
+    font_tbl_hdr = Font(name=FONT_FAMILY, size=10, bold=True, color=COLOR_PRIMARY)
+    font_cell = Font(name=FONT_FAMILY, size=9.5, color="222222")
+    font_cell_bold = Font(name=FONT_FAMILY, size=10, bold=True, color=COLOR_PRIMARY)
+    font_cell_italic = Font(name=FONT_FAMILY, size=9, italic=True, color="666666")
+
+    fill_brand_light = PatternFill(start_color=COLOR_LIGHT_BG, end_color=COLOR_LIGHT_BG, fill_type="solid")
+    fill_box_header = PatternFill(start_color="F2EFE9", end_color="F2EFE9", fill_type="solid")
+    fill_total = PatternFill(start_color=COLOR_TOTAL_BG, end_color=COLOR_TOTAL_BG, fill_type="solid")
+
+    border_thin_all = Border(
+        left=Side(style='thin', color=COLOR_BORDER),
+        right=Side(style='thin', color=COLOR_BORDER),
+        top=Side(style='thin', color=COLOR_BORDER),
+        bottom=Side(style='thin', color=COLOR_BORDER)
+    )
+    border_double_bottom = Border(
+        left=Side(style='thin', color=COLOR_BORDER),
+        right=Side(style='thin', color=COLOR_BORDER),
+        top=Side(style='thin', color=COLOR_BORDER),
+        bottom=Side(style='double', color=COLOR_PRIMARY)
+    )
+
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 42
+    ws.column_dimensions['C'].width = 14
+    ws.column_dimensions['D'].width = 18
+    ws.column_dimensions['E'].width = 20
+
+    ws.merge_cells('A1:C1'); ws['A1'] = "บริษัท กัวซา เฮ้าส์ จำกัด"; ws['A1'].font = font_co_th
+    ws.merge_cells('D1:E1'); ws['D1'] = "ใบเสร็จรับเงิน"; ws['D1'].font = font_title_th; ws['D1'].alignment = Alignment(horizontal='right')
+
+    ws.merge_cells('A2:C2'); ws['A2'] = "GUASHA HOUSE CO., LTD."; ws['A2'].font = font_co_en
+    ws.merge_cells('D2:E2'); ws['D2'] = "RECEIPT"; ws['D2'].font = font_title_en; ws['D2'].alignment = Alignment(horizontal='right')
+
+    ws.merge_cells('A3:C3'); ws['A3'] = "199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพมหานคร 10240"; ws['A3'].font = font_co_detail
+    ws.merge_cells('D3:E3'); ws['D3'] = f"เลขที่ / No. : {doc.document_number}"; ws['D3'].font = font_meta_bold; ws['D3'].alignment = Alignment(horizontal='right')
+
+    ws.merge_cells('A4:C4'); ws['A4'] = "โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษีอากร: 0105565028948"; ws['A4'].font = font_co_detail
+    thai_date = format_thai_date(doc.date)
+    ws.merge_cells('D4:E4'); ws['D4'] = f"วันที่ / Date : {thai_date}"; ws['D4'].font = font_meta; ws['D4'].alignment = Alignment(horizontal='right')
+
+    ws.merge_cells('A6:E6')
+    ws['A6'] = "ข้อมูลลูกค้า / CUSTOMER INFORMATION"
+    ws['A6'].font = font_box_header
+    ws['A6'].fill = fill_box_header
+    for col in ['A', 'B', 'C', 'D', 'E']:
+        ws[f'{col}6'].border = border_thin_all
+
+    ws.merge_cells('A7:C7')
+    ws['A7'] = f"ชื่อลูกค้า: {doc.customer_name or '-'}"
+    ws['A7'].font = font_cell_bold
+    ws.merge_cells('D7:E7')
+    ws['D7'] = f"เลขประจำตัวผู้เสียภาษี: {doc.customer_tax_id or '-'}"
+    ws['D7'].font = font_cell
+    for col in ['A', 'B', 'C', 'D', 'E']:
+        ws[f'{col}7'].border = border_thin_all
+
+    ws.merge_cells('A8:C8')
+    ws['A8'] = f"ที่อยู่: {doc.customer_address or '-'}"
+    ws['A8'].font = font_cell
+    ws.merge_cells('D8:E8')
+    ws['D8'] = f"เบอร์โทรศัพท์: {doc.customer_phone or '-'}"
+    ws['D8'].font = font_cell
+    for col in ['A', 'B', 'C', 'D', 'E']:
+        ws[f'{col}8'].border = border_thin_all
+
+    headers = [
+        ('A10', 'ลำดับ\nItem', Alignment(horizontal='center', vertical='center', wrap_text=True)),
+        ('B10', 'รายการสินค้า / บริการ\nDescription', Alignment(horizontal='left', vertical='center', wrap_text=True)),
+        ('C10', 'จำนวน\nQuantity', Alignment(horizontal='center', vertical='center', wrap_text=True)),
+        ('D10', 'ราคาต่อหน่วย\nUnit Price', Alignment(horizontal='right', vertical='center', wrap_text=True)),
+        ('E10', 'จำนวนเงิน\nAmount', Alignment(horizontal='right', vertical='center', wrap_text=True)),
+    ]
+    ws.row_dimensions[10].height = 26
+    for cell_id, text_val, align in headers:
+        cell = ws[cell_id]
+        cell.value = text_val
+        cell.font = font_tbl_hdr
+        cell.fill = fill_brand_light
+        cell.alignment = align
+        cell.border = border_thin_all
+
+    items = sorted(doc.items, key=lambda x: x.item_index) if doc.items else []
+    curr_row = 11
+    for idx, it in enumerate(items, 1):
+        ws.row_dimensions[curr_row].height = 22
+        
+        c_idx = ws[f'A{curr_row}']
+        c_idx.value = idx
+        c_idx.font = font_cell
+        c_idx.alignment = Alignment(horizontal='center', vertical='center')
+        c_idx.border = border_thin_all
+
+        c_name = ws[f'B{curr_row}']
+        c_name.value = it.description or ""
+        c_name.font = font_cell
+        c_name.alignment = Alignment(horizontal='left', vertical='center')
+        c_name.border = border_thin_all
+
+        c_qty = ws[f'C{curr_row}']
+        c_qty.value = int(it.quantity) if it.quantity == int(it.quantity) else it.quantity
+        c_qty.font = font_cell
+        c_qty.number_format = '#,##0'
+        c_qty.alignment = Alignment(horizontal='center', vertical='center')
+        c_qty.border = border_thin_all
+
+        c_price = ws[f'D{curr_row}']
+        c_price.value = float(it.unit_price or 0)
+        c_price.font = font_cell
+        c_price.number_format = '฿#,##0.00'
+        c_price.alignment = Alignment(horizontal='right', vertical='center')
+        c_price.border = border_thin_all
+
+        c_total = ws[f'E{curr_row}']
+        c_total.value = float(it.amount or 0)
+        c_total.font = font_cell_bold
+        c_total.number_format = '฿#,##0.00'
+        c_total.alignment = Alignment(horizontal='right', vertical='center')
+        c_total.border = border_thin_all
+
+        curr_row += 1
+
+    if len(items) < 5:
+        for _ in range(5 - len(items)):
+            ws.row_dimensions[curr_row].height = 20
+            for col in ['A', 'B', 'C', 'D', 'E']:
+                ws[f'{col}{curr_row}'].border = border_thin_all
+            curr_row += 1
+
+    total_val = float(doc.total_amount_before_vat or 0)
+    total_words = doc.total_amount_text or bahttext(total_val)
+
+    ws.merge_cells(f'A{curr_row}:C{curr_row}')
+    ws[f'A{curr_row}'] = f"จำนวนเงินตัวอักษร / Total In Words:\n{total_words}"
+    ws[f'A{curr_row}'].font = font_cell_bold
+    ws[f'A{curr_row}'].alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    ws[f'A{curr_row}'].fill = fill_brand_light
+    for col in ['A', 'B', 'C']:
+        ws[f'{col}{curr_row}'].border = border_thin_all
+
+    ws[f'D{curr_row}'] = "ราคาสินค้า / Subtotal"
+    ws[f'D{curr_row}'].font = font_cell
+    ws[f'D{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
+    ws[f'D{curr_row}'].border = border_thin_all
+
+    ws[f'E{curr_row}'] = total_val
+    ws[f'E{curr_row}'].font = font_cell_bold
+    ws[f'E{curr_row}'].number_format = '฿#,##0.00'
+    ws[f'E{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
+    ws[f'E{curr_row}'].border = border_thin_all
+    curr_row += 1
+
+    pay_method_th = "เงินสด (CASH)" if doc.payment_method == "CASH" else ("โอนเงิน (TRANSFER)" if doc.payment_method == "TRANSFER" else "เช็ค (CHEQUE)")
+    ws.merge_cells(f'A{curr_row}:C{curr_row}')
+    ws[f'A{curr_row}'] = f"ได้รับเงินแล้ว / PAYMENT RECEIVED: {pay_method_th}"
+    ws[f'A{curr_row}'].font = font_cell_bold
+    ws[f'A{curr_row}'].alignment = Alignment(horizontal='left', vertical='center')
+    for col in ['A', 'B', 'C']:
+        ws[f'{col}{curr_row}'].border = border_thin_all
+
+    ws[f'D{curr_row}'] = "รวมทั้งสิ้น / Grand Total"
+    ws[f'D{curr_row}'].font = font_cell_bold
+    ws[f'D{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
+    ws[f'D{curr_row}'].fill = fill_total
+    ws[f'D{curr_row}'].border = border_double_bottom
+
+    ws[f'E{curr_row}'] = total_val
+    ws[f'E{curr_row}'].font = font_cell_bold
+    ws[f'E{curr_row}'].number_format = '฿#,##0.00'
+    ws[f'E{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
+    ws[f'E{curr_row}'].fill = fill_total
+    ws[f'E{curr_row}'].border = border_double_bottom
+    curr_row += 2
+
+    ws.merge_cells(f'D{curr_row}:E{curr_row}')
+    receiver_name = doc.received_by or ""
+    ws[f'D{curr_row}'] = f"/ {receiver_name} /" if receiver_name else "____________________"
+    ws[f'D{curr_row}'].font = font_cell_italic
+    ws[f'D{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
+    curr_row += 1
+
+    ws.merge_cells(f'D{curr_row}:E{curr_row}')
+    ws[f'D{curr_row}'] = "ผู้รับเงิน / Received By"
+    ws[f'D{curr_row}'].font = font_cell_bold
+    ws[f'D{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
+    curr_row += 1
+
+    ws.merge_cells(f'D{curr_row}:E{curr_row}')
+    ws[f'D{curr_row}'] = "Authorized Signature"
+    ws[f'D{curr_row}'].font = font_co_detail
+    ws[f'D{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
+    curr_row += 1
+
+    ws.merge_cells(f'D{curr_row}:E{curr_row}')
+    rec_date_str = format_thai_date(doc.received_date) if doc.received_date else "____________________"
+    ws[f'D{curr_row}'] = f"วันที่ / Date: {rec_date_str}"
+    ws[f'D{curr_row}'].font = font_cell
+    ws[f'D{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
+
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+def generate_documents_summary_excel(docs: List[Document], title_subtitle: str = "") -> bytes:
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from io import BytesIO
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "รายงานสรุปเอกสาร"
+    ws.views.sheetView[0].showGridLines = True
+
+    FONT_FAMILY = "Tahoma"
+    COLOR_PRIMARY = "1A1A1A"
+    COLOR_LIGHT_BG = "F7F5F0"
+    COLOR_TOTAL_BG = "EFECE6"
+    COLOR_BORDER = "D4CFC7"
+
+    font_title = Font(name=FONT_FAMILY, size=15, bold=True, color=COLOR_PRIMARY)
+    font_subtitle = Font(name=FONT_FAMILY, size=9.5, color="555555")
+    font_tbl_hdr = Font(name=FONT_FAMILY, size=10, bold=True, color=COLOR_PRIMARY)
+    font_cell = Font(name=FONT_FAMILY, size=9.5, color="222222")
+    font_cell_bold = Font(name=FONT_FAMILY, size=9.5, bold=True, color=COLOR_PRIMARY)
+
+    fill_hdr = PatternFill(start_color=COLOR_LIGHT_BG, end_color=COLOR_LIGHT_BG, fill_type="solid")
+    fill_total = PatternFill(start_color=COLOR_TOTAL_BG, end_color=COLOR_TOTAL_BG, fill_type="solid")
+
+    border_thin = Border(
+        left=Side(style='thin', color=COLOR_BORDER),
+        right=Side(style='thin', color=COLOR_BORDER),
+        top=Side(style='thin', color=COLOR_BORDER),
+        bottom=Side(style='thin', color=COLOR_BORDER)
+    )
+    border_double_bottom = Border(
+        left=Side(style='thin', color=COLOR_BORDER),
+        right=Side(style='thin', color=COLOR_BORDER),
+        top=Side(style='thin', color=COLOR_BORDER),
+        bottom=Side(style='double', color=COLOR_PRIMARY)
+    )
+
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 18
+    ws.column_dimensions['C'].width = 14
+    ws.column_dimensions['D'].width = 28
+    ws.column_dimensions['E'].width = 36
+    ws.column_dimensions['F'].width = 12
+    ws.column_dimensions['G'].width = 18
+    ws.column_dimensions['H'].width = 16
+    ws.column_dimensions['I'].width = 18
+
+    ws.merge_cells('A1:I1')
+    ws['A1'] = "บริษัท กัวซา เฮ้าส์ จำกัด - รายงานสรุปรายการเอกสาร"
+    ws['A1'].font = font_title
+    ws['A1'].alignment = Alignment(horizontal='left', vertical='center')
+
+    ws.merge_cells('A2:I2')
+    ws['A2'] = f"พิมพ์รายงาน ณ วันที่: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')} {title_subtitle}"
+    ws['A2'].font = font_subtitle
+    ws['A2'].alignment = Alignment(horizontal='left', vertical='center')
+
+    headers = [
+        ('A4', 'ลำดับ', Alignment(horizontal='center', vertical='center')),
+        ('B4', 'เลขที่เอกสาร', Alignment(horizontal='center', vertical='center')),
+        ('C4', 'วันที่', Alignment(horizontal='center', vertical='center')),
+        ('D4', 'ชื่อลูกค้า', Alignment(horizontal='left', vertical='center')),
+        ('E4', 'รายการสินค้า', Alignment(horizontal='left', vertical='center')),
+        ('F4', 'จำนวนรวม', Alignment(horizontal='center', vertical='center')),
+        ('G4', 'ยอดเงินรวม (บาท)', Alignment(horizontal='right', vertical='center')),
+        ('H4', 'วิธีชำระเงิน', Alignment(horizontal='center', vertical='center')),
+        ('I4', 'ผู้รับเงิน', Alignment(horizontal='left', vertical='center')),
+    ]
+    ws.row_dimensions[4].height = 24
+    for cell_id, text_val, align in headers:
+        c = ws[cell_id]
+        c.value = text_val
+        c.font = font_tbl_hdr
+        c.fill = fill_hdr
+        c.alignment = align
+        c.border = border_thin
+
+    curr_row = 5
+    total_sales = 0.0
+    for idx, d in enumerate(docs, 1):
+        ws.row_dimensions[curr_row].height = 20
+
+        item_names = [f"{it.description} (x{int(it.quantity) if it.quantity == int(it.quantity) else it.quantity})" for it in (d.items or [])]
+        items_str = ", ".join(item_names) if item_names else "-"
+        total_items_qty = sum(it.quantity or 0 for it in (d.items or []))
+        amount = float(d.total_amount_after_vat or d.total_amount_before_vat or 0)
+        total_sales += amount
+
+        pay_th = "เงินสด" if d.payment_method == "CASH" else ("โอนเงิน" if d.payment_method == "TRANSFER" else "เช็ค")
+
+        ws[f'A{curr_row}'].value = idx
+        ws[f'A{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
+
+        ws[f'B{curr_row}'].value = d.document_number or ""
+        ws[f'B{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
+        ws[f'B{curr_row}'].font = font_cell_bold
+
+        ws[f'C{curr_row}'].value = format_thai_date(d.date)
+        ws[f'C{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
+
+        ws[f'D{curr_row}'].value = d.customer_name or "-"
+        ws[f'D{curr_row}'].alignment = Alignment(horizontal='left', vertical='center')
+
+        ws[f'E{curr_row}'].value = items_str
+        ws[f'E{curr_row}'].alignment = Alignment(horizontal='left', vertical='center')
+
+        ws[f'F{curr_row}'].value = total_items_qty
+        ws[f'F{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
+        ws[f'F{curr_row}'].number_format = '#,##0'
+
+        ws[f'G{curr_row}'].value = amount
+        ws[f'G{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
+        ws[f'G{curr_row}'].number_format = '฿#,##0.00'
+
+        ws[f'H{curr_row}'].value = pay_th
+        ws[f'H{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
+
+        ws[f'I{curr_row}'].value = d.received_by or d.created_by_username or "-"
+        ws[f'I{curr_row}'].alignment = Alignment(horizontal='left', vertical='center')
+
+        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']:
+            c = ws[f'{col}{curr_row}']
+            c.font = font_cell if col != 'B' and col != 'G' else font_cell_bold
+            c.border = border_thin
+
+        curr_row += 1
+
+    ws.row_dimensions[curr_row].height = 24
+    ws.merge_cells(f'A{curr_row}:F{curr_row}')
+    ws[f'A{curr_row}'] = f"รวมทั้งสิ้น ({len(docs)} รายการ)"
+    ws[f'A{curr_row}'].font = font_tbl_hdr
+    ws[f'A{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
+    ws[f'A{curr_row}'].fill = fill_total
+
+    for col in ['A', 'B', 'C', 'D', 'E', 'F']:
+        ws[f'{col}{curr_row}'].border = border_double_bottom
+
+    ws[f'G{curr_row}'].value = total_sales
+    ws[f'G{curr_row}'].font = font_tbl_hdr
+    ws[f'G{curr_row}'].number_format = '฿#,##0.00'
+    ws[f'G{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
+    ws[f'G{curr_row}'].fill = fill_total
+    ws[f'G{curr_row}'].border = border_double_bottom
+
+    ws[f'H{curr_row}'].border = border_double_bottom
+    ws[f'H{curr_row}'].fill = fill_total
+    ws[f'I{curr_row}'].border = border_double_bottom
+    ws[f'I{curr_row}'].fill = fill_total
+
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+@app.get("/api/documents/export-excel")
+@app.get("/api/documents/export/excel")
+@app.get("/print/summary/excel")
+def export_documents_summary_excel_endpoint(
+    ids: Optional[str] = None,
+    query: Optional[str] = None,
+    year: Optional[str] = None,
+    month: Optional[str] = None,
+    start_month: Optional[str] = None,
+    end_month: Optional[str] = None,
+    payment_method: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_from_cookie)
+):
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+
+    q = db.query(Document)
+    subtitle_parts = []
+
+    if ids and ids.strip():
+        id_list = [int(x.strip()) for x in ids.split(',') if x.strip().isdigit()]
+        if id_list:
+            q = q.filter(Document.id.in_(id_list))
+            subtitle_parts.append(f"รายการที่เลือก {len(id_list)} รายการ")
+    else:
+        if query and query.strip():
+            search_filter = or_(
+                Document.document_number.like(f"%{query.strip()}%"),
+                Document.customer_name.like(f"%{query.strip()}%")
+            )
+            q = q.filter(search_filter)
+            subtitle_parts.append(f"ค้นหา: {query.strip()}")
+
+        s_m = start_month or month
+        e_m = end_month or s_m
+        if s_m and s_m.strip() and s_m.strip() != "ALL":
+            try:
+                s_val = int(s_m.strip())
+                e_val = int(e_m.strip()) if (e_m and e_m.strip() and e_m.strip() != "ALL") else s_val
+                if s_val > e_val:
+                    s_val, e_val = e_val, s_val
+                allowed_months = [f"{m:02d}" for m in range(s_val, e_val + 1)]
+                if year and year.strip() and year.strip() != "ALL":
+                    q = q.filter(or_(*[Document.date.like(f"{year.strip()}-{m}-%") for m in allowed_months]))
+                    subtitle_parts.append(f"เดือน {s_val:02d}-{e_val:02d} ปี {int(year.strip())+543}")
+                else:
+                    q = q.filter(or_(*[Document.date.like(f"%-{m}-%") for m in allowed_months]))
+                    subtitle_parts.append(f"เดือน {s_val:02d}-{e_val:02d}")
+            except ValueError:
+                pass
+        elif year and year.strip() and year.strip() != "ALL":
+            q = q.filter(Document.date.like(f"{year.strip()}-%"))
+            subtitle_parts.append(f"ประจำปี {int(year.strip())+543}")
+
+        if payment_method and payment_method.strip() and payment_method.strip() != "ALL":
+            q = q.filter(Document.payment_method == payment_method.strip())
+            pay_name = "เงินสด" if payment_method.strip() == "CASH" else ("โอนเงิน" if payment_method.strip() == "TRANSFER" else "เช็ค")
+            subtitle_parts.append(f"วิธีชำระ: {pay_name}")
+
+    docs = q.all()
+
+    def doc_sort_key(d):
+        try:
+            parts = (d.document_number or '').split('-')
+            if len(parts) >= 3:
+                return (int(parts[1]), int(parts[2]))
+        except Exception:
+            pass
+        return (0, d.id or 0)
+
+    docs.sort(key=doc_sort_key)
+
+    subtitle_str = " | ".join(subtitle_parts)
+    if subtitle_str:
+        subtitle_str = f"({subtitle_str})"
+
+    excel_bytes = generate_documents_summary_excel(docs, subtitle_str)
+    filename = f"รายงานสรุปเอกสาร_กัวซาเฮ้าส์_{datetime.datetime.now().strftime('%Y%m%d')}.xlsx"
+    encoded_filename = quote(filename)
+
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"documents_report.xlsx\"; filename*=UTF-8''{encoded_filename}",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+        }
+    )
+
+@app.get("/api/documents/{doc_id}/export-excel")
+@app.get("/print/{doc_id}/excel")
+def export_invoice_excel(
+    doc_id: int, 
+    token: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    current_user: Optional[User] = Depends(get_current_user_from_cookie)
+):
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="ไม่พบเอกสารที่ต้องการส่งออก")
+        
+    if not current_user:
+        if not token or token != doc.share_token:
+            return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+
+    doc.vat_amount = 0.0
+    doc.total_amount_after_vat = doc.total_amount_before_vat
+    doc.total_amount_text = bahttext(doc.total_amount_before_vat)
+
+    excel_bytes = generate_single_invoice_excel(doc)
+    doc_num = doc.document_number or f"INV_{doc.id}"
+    filename = f"ใบเสร็จรับเงิน_{doc_num}.xlsx"
+    encoded_filename = quote(filename)
+
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"invoice_{doc.id}.xlsx\"; filename*=UTF-8''{encoded_filename}",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+        }
+    )
+
+
 @app.get("/api/documents/{doc_id}")
 def get_document(doc_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     doc = db.query(Document).filter(Document.id == doc_id).first()
@@ -2928,529 +3455,8 @@ def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db), 
         }
     )
 
-def format_thai_date(date_str: Optional[str]) -> str:
-    if not date_str:
-        return "-"
-    try:
-        parts = str(date_str).split("-")
-        if len(parts) != 3:
-            return str(date_str)
-        year = int(parts[0]) + 543
-        month_idx = int(parts[1]) - 1
-        day = int(parts[2])
-        months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
-        if 0 <= month_idx < 12:
-            return f"{day} {months[month_idx]} {year}"
-        return f"{day}/{parts[1]}/{year}"
-    except Exception:
-        return str(date_str)
 
-def generate_single_invoice_excel(doc: Document) -> bytes:
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    from io import BytesIO
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    doc_number = doc.document_number or "RECEIPT"
-    ws.title = f"{doc_number}"[:31]
-    ws.views.sheetView[0].showGridLines = True
-
-    FONT_FAMILY = "Tahoma"
-    COLOR_PRIMARY = "1A1A1A"
-    COLOR_GRAY_TEXT = "555555"
-    COLOR_LIGHT_BG = "F7F5F0"
-    COLOR_TOTAL_BG = "EFECE6"
-    COLOR_BORDER = "D4CFC7"
-
-    font_co_th = Font(name=FONT_FAMILY, size=15, bold=True, color=COLOR_PRIMARY)
-    font_co_en = Font(name=FONT_FAMILY, size=9, bold=True, color=COLOR_GRAY_TEXT)
-    font_co_detail = Font(name=FONT_FAMILY, size=8.5, color="444444")
-
-    font_title_th = Font(name=FONT_FAMILY, size=16, bold=True, color=COLOR_PRIMARY)
-    font_title_en = Font(name=FONT_FAMILY, size=9.5, bold=True, color="777777")
-    font_meta_bold = Font(name=FONT_FAMILY, size=10, bold=True, color=COLOR_PRIMARY)
-    font_meta = Font(name=FONT_FAMILY, size=9.5, color=COLOR_PRIMARY)
-
-    font_box_header = Font(name=FONT_FAMILY, size=9.5, bold=True, color=COLOR_PRIMARY)
-    font_tbl_hdr = Font(name=FONT_FAMILY, size=10, bold=True, color=COLOR_PRIMARY)
-    font_cell = Font(name=FONT_FAMILY, size=9.5, color="222222")
-    font_cell_bold = Font(name=FONT_FAMILY, size=10, bold=True, color=COLOR_PRIMARY)
-    font_cell_italic = Font(name=FONT_FAMILY, size=9, italic=True, color="666666")
-
-    fill_brand_light = PatternFill(start_color=COLOR_LIGHT_BG, end_color=COLOR_LIGHT_BG, fill_type="solid")
-    fill_box_header = PatternFill(start_color="F2EFE9", end_color="F2EFE9", fill_type="solid")
-    fill_total = PatternFill(start_color=COLOR_TOTAL_BG, end_color=COLOR_TOTAL_BG, fill_type="solid")
-
-    border_thin_all = Border(
-        left=Side(style='thin', color=COLOR_BORDER),
-        right=Side(style='thin', color=COLOR_BORDER),
-        top=Side(style='thin', color=COLOR_BORDER),
-        bottom=Side(style='thin', color=COLOR_BORDER)
-    )
-    border_double_bottom = Border(
-        left=Side(style='thin', color=COLOR_BORDER),
-        right=Side(style='thin', color=COLOR_BORDER),
-        top=Side(style='thin', color=COLOR_BORDER),
-        bottom=Side(style='double', color=COLOR_PRIMARY)
-    )
-
-    ws.column_dimensions['A'].width = 8
-    ws.column_dimensions['B'].width = 42
-    ws.column_dimensions['C'].width = 14
-    ws.column_dimensions['D'].width = 18
-    ws.column_dimensions['E'].width = 20
-
-    ws.merge_cells('A1:C1'); ws['A1'] = "บริษัท กัวซา เฮ้าส์ จำกัด"; ws['A1'].font = font_co_th
-    ws.merge_cells('D1:E1'); ws['D1'] = "ใบเสร็จรับเงิน"; ws['D1'].font = font_title_th; ws['D1'].alignment = Alignment(horizontal='right')
-
-    ws.merge_cells('A2:C2'); ws['A2'] = "GUASHA HOUSE CO., LTD."; ws['A2'].font = font_co_en
-    ws.merge_cells('D2:E2'); ws['D2'] = "RECEIPT"; ws['D2'].font = font_title_en; ws['D2'].alignment = Alignment(horizontal='right')
-
-    ws.merge_cells('A3:C3'); ws['A3'] = "199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพมหานคร 10240"; ws['A3'].font = font_co_detail
-    ws.merge_cells('D3:E3'); ws['D3'] = f"เลขที่ / No. : {doc.document_number}"; ws['D3'].font = font_meta_bold; ws['D3'].alignment = Alignment(horizontal='right')
-
-    ws.merge_cells('A4:C4'); ws['A4'] = "โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษีอากร: 0105565028948"; ws['A4'].font = font_co_detail
-    thai_date = format_thai_date(doc.date)
-    ws.merge_cells('D4:E4'); ws['D4'] = f"วันที่ / Date : {thai_date}"; ws['D4'].font = font_meta; ws['D4'].alignment = Alignment(horizontal='right')
-
-    ws.merge_cells('A6:E6')
-    ws['A6'] = "ข้อมูลลูกค้า / CUSTOMER INFORMATION"
-    ws['A6'].font = font_box_header
-    ws['A6'].fill = fill_box_header
-    for col in ['A', 'B', 'C', 'D', 'E']:
-        ws[f'{col}6'].border = border_thin_all
-
-    ws.merge_cells('A7:C7')
-    ws['A7'] = f"ชื่อลูกค้า: {doc.customer_name or '-'}"
-    ws['A7'].font = font_cell_bold
-    ws.merge_cells('D7:E7')
-    ws['D7'] = f"เลขประจำตัวผู้เสียภาษี: {doc.customer_tax_id or '-'}"
-    ws['D7'].font = font_cell
-    for col in ['A', 'B', 'C', 'D', 'E']:
-        ws[f'{col}7'].border = border_thin_all
-
-    ws.merge_cells('A8:C8')
-    ws['A8'] = f"ที่อยู่: {doc.customer_address or '-'}"
-    ws['A8'].font = font_cell
-    ws.merge_cells('D8:E8')
-    ws['D8'] = f"เบอร์โทรศัพท์: {doc.customer_phone or '-'}"
-    ws['D8'].font = font_cell
-    for col in ['A', 'B', 'C', 'D', 'E']:
-        ws[f'{col}8'].border = border_thin_all
-
-    headers = [
-        ('A10', 'ลำดับ\nItem', Alignment(horizontal='center', vertical='center', wrap_text=True)),
-        ('B10', 'รายการสินค้า / บริการ\nDescription', Alignment(horizontal='left', vertical='center', wrap_text=True)),
-        ('C10', 'จำนวน\nQuantity', Alignment(horizontal='center', vertical='center', wrap_text=True)),
-        ('D10', 'ราคาต่อหน่วย\nUnit Price', Alignment(horizontal='right', vertical='center', wrap_text=True)),
-        ('E10', 'จำนวนเงิน\nAmount', Alignment(horizontal='right', vertical='center', wrap_text=True)),
-    ]
-    ws.row_dimensions[10].height = 26
-    for cell_id, text_val, align in headers:
-        cell = ws[cell_id]
-        cell.value = text_val
-        cell.font = font_tbl_hdr
-        cell.fill = fill_brand_light
-        cell.alignment = align
-        cell.border = border_thin_all
-
-    items = sorted(doc.items, key=lambda x: x.item_index) if doc.items else []
-    curr_row = 11
-    for idx, it in enumerate(items, 1):
-        ws.row_dimensions[curr_row].height = 22
-        
-        c_idx = ws[f'A{curr_row}']
-        c_idx.value = idx
-        c_idx.font = font_cell
-        c_idx.alignment = Alignment(horizontal='center', vertical='center')
-        c_idx.border = border_thin_all
-
-        c_name = ws[f'B{curr_row}']
-        c_name.value = it.description or ""
-        c_name.font = font_cell
-        c_name.alignment = Alignment(horizontal='left', vertical='center')
-        c_name.border = border_thin_all
-
-        c_qty = ws[f'C{curr_row}']
-        c_qty.value = int(it.quantity) if it.quantity == int(it.quantity) else it.quantity
-        c_qty.font = font_cell
-        c_qty.number_format = '#,##0'
-        c_qty.alignment = Alignment(horizontal='center', vertical='center')
-        c_qty.border = border_thin_all
-
-        c_price = ws[f'D{curr_row}']
-        c_price.value = float(it.unit_price or 0)
-        c_price.font = font_cell
-        c_price.number_format = '฿#,##0.00'
-        c_price.alignment = Alignment(horizontal='right', vertical='center')
-        c_price.border = border_thin_all
-
-        c_total = ws[f'E{curr_row}']
-        c_total.value = float(it.amount or 0)
-        c_total.font = font_cell_bold
-        c_total.number_format = '฿#,##0.00'
-        c_total.alignment = Alignment(horizontal='right', vertical='center')
-        c_total.border = border_thin_all
-
-        curr_row += 1
-
-    if len(items) < 5:
-        for _ in range(5 - len(items)):
-            ws.row_dimensions[curr_row].height = 20
-            for col in ['A', 'B', 'C', 'D', 'E']:
-                ws[f'{col}{curr_row}'].border = border_thin_all
-            curr_row += 1
-
-    total_val = float(doc.total_amount_before_vat or 0)
-    total_words = doc.total_amount_text or bahttext(total_val)
-
-    ws.merge_cells(f'A{curr_row}:C{curr_row}')
-    ws[f'A{curr_row}'] = f"จำนวนเงินตัวอักษร / Total In Words:\n{total_words}"
-    ws[f'A{curr_row}'].font = font_cell_bold
-    ws[f'A{curr_row}'].alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
-    ws[f'A{curr_row}'].fill = fill_brand_light
-    for col in ['A', 'B', 'C']:
-        ws[f'{col}{curr_row}'].border = border_thin_all
-
-    ws[f'D{curr_row}'] = "ราคาสินค้า / Subtotal"
-    ws[f'D{curr_row}'].font = font_cell
-    ws[f'D{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
-    ws[f'D{curr_row}'].border = border_thin_all
-
-    ws[f'E{curr_row}'] = total_val
-    ws[f'E{curr_row}'].font = font_cell_bold
-    ws[f'E{curr_row}'].number_format = '฿#,##0.00'
-    ws[f'E{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
-    ws[f'E{curr_row}'].border = border_thin_all
-    curr_row += 1
-
-    pay_method_th = "เงินสด (CASH)" if doc.payment_method == "CASH" else ("โอนเงิน (TRANSFER)" if doc.payment_method == "TRANSFER" else "เช็ค (CHEQUE)")
-    ws.merge_cells(f'A{curr_row}:C{curr_row}')
-    ws[f'A{curr_row}'] = f"ได้รับเงินแล้ว / PAYMENT RECEIVED: {pay_method_th}"
-    ws[f'A{curr_row}'].font = font_cell_bold
-    ws[f'A{curr_row}'].alignment = Alignment(horizontal='left', vertical='center')
-    for col in ['A', 'B', 'C']:
-        ws[f'{col}{curr_row}'].border = border_thin_all
-
-    ws[f'D{curr_row}'] = "รวมทั้งสิ้น / Grand Total"
-    ws[f'D{curr_row}'].font = font_cell_bold
-    ws[f'D{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
-    ws[f'D{curr_row}'].fill = fill_total
-    ws[f'D{curr_row}'].border = border_double_bottom
-
-    ws[f'E{curr_row}'] = total_val
-    ws[f'E{curr_row}'].font = font_cell_bold
-    ws[f'E{curr_row}'].number_format = '฿#,##0.00'
-    ws[f'E{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
-    ws[f'E{curr_row}'].fill = fill_total
-    ws[f'E{curr_row}'].border = border_double_bottom
-    curr_row += 2
-
-    ws.merge_cells(f'D{curr_row}:E{curr_row}')
-    receiver_name = doc.received_by or ""
-    ws[f'D{curr_row}'] = f"/ {receiver_name} /" if receiver_name else "____________________"
-    ws[f'D{curr_row}'].font = font_cell_italic
-    ws[f'D{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
-    curr_row += 1
-
-    ws.merge_cells(f'D{curr_row}:E{curr_row}')
-    ws[f'D{curr_row}'] = "ผู้รับเงิน / Received By"
-    ws[f'D{curr_row}'].font = font_cell_bold
-    ws[f'D{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
-    curr_row += 1
-
-    ws.merge_cells(f'D{curr_row}:E{curr_row}')
-    ws[f'D{curr_row}'] = "Authorized Signature"
-    ws[f'D{curr_row}'].font = font_co_detail
-    ws[f'D{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
-    curr_row += 1
-
-    ws.merge_cells(f'D{curr_row}:E{curr_row}')
-    rec_date_str = format_thai_date(doc.received_date) if doc.received_date else "____________________"
-    ws[f'D{curr_row}'] = f"วันที่ / Date: {rec_date_str}"
-    ws[f'D{curr_row}'].font = font_cell
-    ws[f'D{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
-
-    buf = BytesIO()
-    wb.save(buf)
-    return buf.getvalue()
-
-def generate_documents_summary_excel(docs: List[Document], title_subtitle: str = "") -> bytes:
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    from io import BytesIO
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "รายงานสรุปเอกสาร"
-    ws.views.sheetView[0].showGridLines = True
-
-    FONT_FAMILY = "Tahoma"
-    COLOR_PRIMARY = "1A1A1A"
-    COLOR_LIGHT_BG = "F7F5F0"
-    COLOR_TOTAL_BG = "EFECE6"
-    COLOR_BORDER = "D4CFC7"
-
-    font_title = Font(name=FONT_FAMILY, size=15, bold=True, color=COLOR_PRIMARY)
-    font_subtitle = Font(name=FONT_FAMILY, size=9.5, color="555555")
-    font_tbl_hdr = Font(name=FONT_FAMILY, size=10, bold=True, color=COLOR_PRIMARY)
-    font_cell = Font(name=FONT_FAMILY, size=9.5, color="222222")
-    font_cell_bold = Font(name=FONT_FAMILY, size=9.5, bold=True, color=COLOR_PRIMARY)
-
-    fill_hdr = PatternFill(start_color=COLOR_LIGHT_BG, end_color=COLOR_LIGHT_BG, fill_type="solid")
-    fill_total = PatternFill(start_color=COLOR_TOTAL_BG, end_color=COLOR_TOTAL_BG, fill_type="solid")
-
-    border_thin = Border(
-        left=Side(style='thin', color=COLOR_BORDER),
-        right=Side(style='thin', color=COLOR_BORDER),
-        top=Side(style='thin', color=COLOR_BORDER),
-        bottom=Side(style='thin', color=COLOR_BORDER)
-    )
-    border_double_bottom = Border(
-        left=Side(style='thin', color=COLOR_BORDER),
-        right=Side(style='thin', color=COLOR_BORDER),
-        top=Side(style='thin', color=COLOR_BORDER),
-        bottom=Side(style='double', color=COLOR_PRIMARY)
-    )
-
-    ws.column_dimensions['A'].width = 8
-    ws.column_dimensions['B'].width = 18
-    ws.column_dimensions['C'].width = 14
-    ws.column_dimensions['D'].width = 28
-    ws.column_dimensions['E'].width = 36
-    ws.column_dimensions['F'].width = 12
-    ws.column_dimensions['G'].width = 18
-    ws.column_dimensions['H'].width = 16
-    ws.column_dimensions['I'].width = 18
-
-    ws.merge_cells('A1:I1')
-    ws['A1'] = "บริษัท กัวซา เฮ้าส์ จำกัด - รายงานสรุปรายการเอกสาร"
-    ws['A1'].font = font_title
-    ws['A1'].alignment = Alignment(horizontal='left', vertical='center')
-
-    ws.merge_cells('A2:I2')
-    ws['A2'] = f"พิมพ์รายงาน ณ วันที่: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')} {title_subtitle}"
-    ws['A2'].font = font_subtitle
-    ws['A2'].alignment = Alignment(horizontal='left', vertical='center')
-
-    headers = [
-        ('A4', 'ลำดับ', Alignment(horizontal='center', vertical='center')),
-        ('B4', 'เลขที่เอกสาร', Alignment(horizontal='center', vertical='center')),
-        ('C4', 'วันที่', Alignment(horizontal='center', vertical='center')),
-        ('D4', 'ชื่อลูกค้า', Alignment(horizontal='left', vertical='center')),
-        ('E4', 'รายการสินค้า', Alignment(horizontal='left', vertical='center')),
-        ('F4', 'จำนวนรวม', Alignment(horizontal='center', vertical='center')),
-        ('G4', 'ยอดเงินรวม (บาท)', Alignment(horizontal='right', vertical='center')),
-        ('H4', 'วิธีชำระเงิน', Alignment(horizontal='center', vertical='center')),
-        ('I4', 'ผู้รับเงิน', Alignment(horizontal='left', vertical='center')),
-    ]
-    ws.row_dimensions[4].height = 24
-    for cell_id, text_val, align in headers:
-        c = ws[cell_id]
-        c.value = text_val
-        c.font = font_tbl_hdr
-        c.fill = fill_hdr
-        c.alignment = align
-        c.border = border_thin
-
-    curr_row = 5
-    total_sales = 0.0
-    for idx, d in enumerate(docs, 1):
-        ws.row_dimensions[curr_row].height = 20
-
-        item_names = [f"{it.description} (x{int(it.quantity) if it.quantity == int(it.quantity) else it.quantity})" for it in (d.items or [])]
-        items_str = ", ".join(item_names) if item_names else "-"
-        total_items_qty = sum(it.quantity or 0 for it in (d.items or []))
-        amount = float(d.total_amount_after_vat or d.total_amount_before_vat or 0)
-        total_sales += amount
-
-        pay_th = "เงินสด" if d.payment_method == "CASH" else ("โอนเงิน" if d.payment_method == "TRANSFER" else "เช็ค")
-
-        ws[f'A{curr_row}'].value = idx
-        ws[f'A{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
-
-        ws[f'B{curr_row}'].value = d.document_number or ""
-        ws[f'B{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
-
-        ws[f'C{curr_row}'].value = format_thai_date(d.date)
-        ws[f'C{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
-
-        ws[f'D{curr_row}'].value = d.customer_name or "-"
-        ws[f'D{curr_row}'].alignment = Alignment(horizontal='left', vertical='center')
-
-        ws[f'E{curr_row}'].value = items_str
-        ws[f'E{curr_row}'].alignment = Alignment(horizontal='left', vertical='center')
-
-        ws[f'F{curr_row}'].value = total_items_qty
-        ws[f'F{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
-        ws[f'F{curr_row}'].number_format = '#,##0'
-
-        ws[f'G{curr_row}'].value = amount
-        ws[f'G{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
-        ws[f'G{curr_row}'].number_format = '฿#,##0.00'
-
-        ws[f'H{curr_row}'].value = pay_th
-        ws[f'H{curr_row}'].alignment = Alignment(horizontal='center', vertical='center')
-
-        ws[f'I{curr_row}'].value = d.received_by or d.created_by_username or "-"
-        ws[f'I{curr_row}'].alignment = Alignment(horizontal='left', vertical='center')
-
-        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']:
-            c = ws[f'{col}{curr_row}']
-            c.font = font_cell if col != 'B' and col != 'G' else font_cell_bold
-            c.border = border_thin
-
-        curr_row += 1
-
-    ws.row_dimensions[curr_row].height = 24
-    ws.merge_cells(f'A{curr_row}:F{curr_row}')
-    ws[f'A{curr_row}'] = f"รวมทั้งสิ้น ({len(docs)} รายการ)"
-    ws[f'A{curr_row}'].font = font_tbl_hdr
-    ws[f'A{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
-    ws[f'A{curr_row}'].fill = fill_total
-
-    for col in ['A', 'B', 'C', 'D', 'E', 'F']:
-        ws[f'{col}{curr_row}'].border = border_double_bottom
-
-    ws[f'G{curr_row}'].value = total_sales
-    ws[f'G{curr_row}'].font = font_tbl_hdr
-    ws[f'G{curr_row}'].number_format = '฿#,##0.00'
-    ws[f'G{curr_row}'].alignment = Alignment(horizontal='right', vertical='center')
-    ws[f'G{curr_row}'].fill = fill_total
-    ws[f'G{curr_row}'].border = border_double_bottom
-
-    ws[f'H{curr_row}'].border = border_double_bottom
-    ws[f'H{curr_row}'].fill = fill_total
-    ws[f'I{curr_row}'].border = border_double_bottom
-    ws[f'I{curr_row}'].fill = fill_total
-
-    buf = BytesIO()
-    wb.save(buf)
-    return buf.getvalue()
-
-@app.get("/api/documents/{doc_id}/export-excel")
-@app.get("/print/{doc_id}/excel")
-def export_invoice_excel(
-    doc_id: int, 
-    token: Optional[str] = None,
-    db: Session = Depends(get_db), 
-    current_user: Optional[User] = Depends(get_current_user_from_cookie)
-):
-    doc = db.query(Document).filter(Document.id == doc_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="ไม่พบเอกสารที่ต้องการส่งออก")
-        
-    if not current_user:
-        if not token or token != doc.share_token:
-            return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
-    doc.vat_amount = 0.0
-    doc.total_amount_after_vat = doc.total_amount_before_vat
-    doc.total_amount_text = bahttext(doc.total_amount_before_vat)
-
-    excel_bytes = generate_single_invoice_excel(doc)
-    doc_num = doc.document_number or f"INV_{doc.id}"
-    filename = f"ใบเสร็จรับเงิน_{doc_num}.xlsx"
-    encoded_filename = quote(filename)
-
-    return Response(
-        content=excel_bytes,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": f"attachment; filename=\"invoice_{doc.id}.xlsx\"; filename*=UTF-8''{encoded_filename}",
-            "Cache-Control": "no-cache, no-store, must-revalidate"
-        }
-    )
-
-@app.get("/api/documents/export-excel")
-def export_documents_summary_excel_endpoint(
-    ids: Optional[str] = None,
-    query: Optional[str] = None,
-    year: Optional[str] = None,
-    month: Optional[str] = None,
-    start_month: Optional[str] = None,
-    end_month: Optional[str] = None,
-    payment_method: Optional[str] = None,
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_from_cookie)
-):
-    if not current_user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
-    q = db.query(Document)
-    subtitle_parts = []
-
-    if ids and ids.strip():
-        id_list = [int(x.strip()) for x in ids.split(',') if x.strip().isdigit()]
-        if id_list:
-            q = q.filter(Document.id.in_(id_list))
-            subtitle_parts.append(f"รายการที่เลือก {len(id_list)} รายการ")
-    else:
-        if query and query.strip():
-            search_filter = or_(
-                Document.document_number.like(f"%{query.strip()}%"),
-                Document.customer_name.like(f"%{query.strip()}%")
-            )
-            q = q.filter(search_filter)
-            subtitle_parts.append(f"ค้นหา: {query.strip()}")
-
-        s_m = start_month or month
-        e_m = end_month or s_m
-        if s_m and s_m.strip() and s_m.strip() != "ALL":
-            try:
-                s_val = int(s_m.strip())
-                e_val = int(e_m.strip()) if (e_m and e_m.strip() and e_m.strip() != "ALL") else s_val
-                if s_val > e_val:
-                    s_val, e_val = e_val, s_val
-                allowed_months = [f"{m:02d}" for m in range(s_val, e_val + 1)]
-                if year and year.strip() and year.strip() != "ALL":
-                    q = q.filter(or_(*[Document.date.like(f"{year.strip()}-{m}-%") for m in allowed_months]))
-                    subtitle_parts.append(f"เดือน {s_val:02d}-{e_val:02d} ปี {int(year.strip())+543}")
-                else:
-                    q = q.filter(or_(*[Document.date.like(f"%-{m}-%") for m in allowed_months]))
-                    subtitle_parts.append(f"เดือน {s_val:02d}-{e_val:02d}")
-            except ValueError:
-                pass
-        elif year and year.strip() and year.strip() != "ALL":
-            q = q.filter(Document.date.like(f"{year.strip()}-%"))
-            subtitle_parts.append(f"ประจำปี {int(year.strip())+543}")
-
-        if payment_method and payment_method.strip() and payment_method.strip() != "ALL":
-            q = q.filter(Document.payment_method == payment_method.strip())
-            pay_name = "เงินสด" if payment_method.strip() == "CASH" else ("โอนเงิน" if payment_method.strip() == "TRANSFER" else "เช็ค")
-            subtitle_parts.append(f"วิธีชำระ: {pay_name}")
-
-    docs = q.all()
-
-    def doc_sort_key(d):
-        try:
-            parts = (d.document_number or '').split('-')
-            if len(parts) >= 3:
-                return (int(parts[1]), int(parts[2]))
-        except Exception:
-            pass
-        return (0, d.id or 0)
-
-    docs.sort(key=doc_sort_key)
-
-    subtitle_str = " | ".join(subtitle_parts)
-    if subtitle_str:
-        subtitle_str = f"({subtitle_str})"
-
-    excel_bytes = generate_documents_summary_excel(docs, subtitle_str)
-    filename = f"รายงานสรุปเอกสาร_กัวซาเฮ้าส์_{datetime.datetime.now().strftime('%Y%m%d')}.xlsx"
-    encoded_filename = quote(filename)
-
-    return Response(
-        content=excel_bytes,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": f"attachment; filename=\"documents_report.xlsx\"; filename*=UTF-8''{encoded_filename}",
-            "Cache-Control": "no-cache, no-store, must-revalidate"
-        }
-    )
-
+@app.get("/print/shipping/{doc_id}", response_class=HTMLResponse)
 def print_shipping_label(doc_id: int, request: Request, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_from_cookie)):
     if not current_user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)

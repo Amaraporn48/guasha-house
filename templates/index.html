@@ -6131,7 +6131,7 @@
                         else if (this.docFilter.month) params.set('month', this.docFilter.month);
                         if (this.docFilter.payment_method) params.set('payment_method', this.docFilter.payment_method);
                     }
-                    window.location.href = `/api/documents/export-excel?${params.toString()}`;
+                    window.location.href = `/api/documents/export/excel?${params.toString()}`;
                 },
 
                 printExpensesSummary() {
