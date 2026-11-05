@@ -1346,22 +1346,23 @@ class DocumentCreateSchema(BaseModel):
 
 def resequence_documents(db: Session, year: Optional[str] = None):
     """
-    Resequence invoice numbers strictly chronologically by date.
-    Sort order: date ASC, created_at ASC, id ASC.
+    Resequence invoice numbers strictly chronologically by date in monthly format:
+    INV-YYYY-MMSS (e.g. Month 08: INV-2026-0801, INV-2026-0802... Month 11: INV-2026-1101...).
+    Sort order within month: date ASC, created_at ASC, id ASC.
     - If a document is entered with a past/retroactive date, it automatically slots in,
-      and subsequent documents shift up.
-    - If a document is deleted, the remaining documents re-sequence continuously
-      without gaps (0001, 0002, 0003...).
+      and subsequent documents in that month shift up.
+    - If a document is deleted, the remaining documents in that month re-sequence continuously
+      without gaps.
     """
     import uuid
+    from collections import defaultdict
     from sqlalchemy import func, or_
+    years_query = db.query(func.substr(Document.date, 1, 4)).distinct().all()
+    target_years = sorted(list({y[0] for y in years_query if y[0] and len(y[0]) == 4 and y[0].isdigit()}))
+    if not target_years:
+        target_years = [str(datetime.date.today().year)]
     if year:
-        target_years = [str(year)]
-    else:
-        years_query = db.query(func.substr(Document.date, 1, 4)).distinct().all()
-        target_years = sorted(list({y[0] for y in years_query if y[0] and len(y[0]) == 4 and y[0].isdigit()}))
-        if not target_years:
-            target_years = [str(datetime.date.today().year)]
+        target_years = sorted(list(set(target_years + [str(year)])))
 
     for yr in target_years:
         docs = db.query(Document).filter(
@@ -1374,42 +1375,52 @@ def resequence_documents(db: Session, year: Optional[str] = None):
         if not docs:
             continue
 
-        def sort_key(d):
-            d_date = (d.date or "9999-99-99").strip()
-            d_created = d.created_at.isoformat() if d.created_at else d_date
-            return (d_date, d_created, d.id or 0)
-
-        sorted_docs = sorted(docs, key=sort_key)
+        # Group by month
+        month_groups = defaultdict(list)
+        for d in docs:
+            d_date = (d.date or "").strip().split('T')[0]
+            parts = d_date.split('-')
+            m_str = f"{int(parts[1]):02d}" if len(parts) >= 2 and parts[1].isdigit() else "01"
+            month_groups[m_str].append(d)
 
         # Pass 1: Give temporary unique numbers to avoid unique constraint violations
-        for d in sorted_docs:
+        for d in docs:
             d.document_number = f"TEMP-{yr}-{d.id}-{uuid.uuid4().hex[:6]}"
         db.flush()
 
-        # Pass 2: Assign continuous chronological sequence: INV-YYYY-0001, INV-YYYY-0002, ...
-        for seq, d in enumerate(sorted_docs, start=1):
-            d.document_number = f"INV-{yr}-{seq:04d}"
-        db.flush()
+        # Pass 2: Assign continuous chronological sequence per month: INV-YYYY-MM01, INV-YYYY-MM02, ...
+        for m_str in sorted(month_groups.keys()):
+            m_docs = month_groups[m_str]
+            def sort_key(d):
+                d_date = (d.date or "9999-99-99").strip().split('T')[0]
+                d_created = d.created_at.isoformat() if d.created_at else d_date
+                return (d_date, d_created, d.id or 0)
+
+            sorted_m_docs = sorted(m_docs, key=sort_key)
+            for seq, d in enumerate(sorted_m_docs, start=1):
+                d.document_number = f"INV-{yr}-{m_str}{seq:02d}"
+            db.flush()
 
 def resequence_expenses(db: Session, year: Optional[str] = None):
     """
-    Resequence payment voucher numbers (PV-YYYY-XXXX) strictly chronologically by date.
-    Sort order: date ASC, created_at ASC, id ASC.
+    Resequence payment voucher numbers strictly chronologically by date in monthly format:
+    PV-YYYY-MMSS (e.g. Month 08: PV-2026-0801, Month 09: PV-2026-0901, Month 11: PV-2026-1101...).
+    Sort order within month: date ASC, created_at ASC, id ASC.
     - If an expense is entered with a past/retroactive date, it automatically slots in,
-      and subsequent expenses shift up.
-    - If an expense is deleted, the remaining expenses re-sequence continuously
-      without gaps (0001, 0002, 0003...).
+      and subsequent expenses in that month shift up.
+    - If an expense is deleted, the remaining expenses in that month re-sequence continuously
+      without gaps.
     """
     import uuid
+    from collections import defaultdict
     from database import Expense
     from sqlalchemy import func, or_
+    years_query = db.query(func.substr(Expense.date, 1, 4)).distinct().all()
+    target_years = sorted(list({y[0] for y in years_query if y[0] and len(y[0]) == 4 and y[0].isdigit()}))
+    if not target_years:
+        target_years = [str(datetime.date.today().year)]
     if year:
-        target_years = [str(year)]
-    else:
-        years_query = db.query(func.substr(Expense.date, 1, 4)).distinct().all()
-        target_years = sorted(list({y[0] for y in years_query if y[0] and len(y[0]) == 4 and y[0].isdigit()}))
-        if not target_years:
-            target_years = [str(datetime.date.today().year)]
+        target_years = sorted(list(set(target_years + [str(year)])))
 
     for yr in target_years:
         exps = db.query(Expense).filter(
@@ -1422,25 +1433,35 @@ def resequence_expenses(db: Session, year: Optional[str] = None):
         if not exps:
             continue
 
-        def sort_key(e):
-            e_date = (e.date or "9999-99-99").strip().split('T')[0]
-            e_created = e.created_at.isoformat() if e.created_at else e_date
-            return (e_date, e_created, e.id or 0)
-
-        sorted_exps = sorted(exps, key=sort_key)
+        # Group by month
+        month_groups = defaultdict(list)
+        for e in exps:
+            e_date = (e.date or "").strip().split('T')[0]
+            parts = e_date.split('-')
+            m_str = f"{int(parts[1]):02d}" if len(parts) >= 2 and parts[1].isdigit() else "01"
+            month_groups[m_str].append(e)
 
         # Pass 1: Give temporary unique numbers to avoid conflict
-        for e in sorted_exps:
+        for e in exps:
             e.voucher_number = f"TEMP-PV-{yr}-{e.id}-{uuid.uuid4().hex[:6]}"
         db.flush()
 
-        # Pass 2: Assign continuous chronological sequence: PV-YYYY-0001, PV-YYYY-0002, ...
-        for seq, e in enumerate(sorted_exps, start=1):
-            e.voucher_number = f"PV-{yr}-{seq:04d}"
-        db.flush()
+        # Pass 2: Assign continuous chronological sequence per month: PV-YYYY-MM01, PV-YYYY-MM02, ...
+        for m_str in sorted(month_groups.keys()):
+            m_exps = month_groups[m_str]
+            def sort_key(e):
+                e_date = (e.date or "9999-99-99").strip().split('T')[0]
+                e_created = e.created_at.isoformat() if e.created_at else e_date
+                return (e_date, e_created, e.id or 0)
 
-def generate_invoice_number(db: Session, year: str) -> str:
-    prefix = f"INV-{year}-"
+            sorted_m_exps = sorted(m_exps, key=sort_key)
+            for seq, e in enumerate(sorted_m_exps, start=1):
+                e.voucher_number = f"PV-{yr}-{m_str}{seq:02d}"
+            db.flush()
+
+def generate_invoice_number(db: Session, year: str, month: str = "01") -> str:
+    m_str = f"{int(month):02d}" if month and month.isdigit() else "01"
+    prefix = f"INV-{year}-{m_str}"
     result = db.execute(
         text("SELECT document_number FROM documents WHERE document_number LIKE :prefix ORDER BY document_number DESC LIMIT 1"),
         {"prefix": f"{prefix}%"}
@@ -1449,14 +1470,14 @@ def generate_invoice_number(db: Session, year: str) -> str:
     if result:
         last_num = result[0]
         try:
-            serial_part = last_num.split('-')[-1]
+            serial_part = last_num[len(prefix):]
             next_serial = int(serial_part) + 1
         except (ValueError, IndexError):
             next_serial = 1
     else:
         next_serial = 1
         
-    return f"INV-{year}-{next_serial:04d}"
+    return f"INV-{year}-{m_str}{next_serial:02d}"
 
 @app.post("/api/documents")
 def create_document(doc_data: DocumentCreateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
