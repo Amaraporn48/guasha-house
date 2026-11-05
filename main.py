@@ -3793,7 +3793,8 @@ def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(g
         context={
             "exp": exp,
             "items": items,
-            "padding_rows": padding_rows
+            "padding_rows": padding_rows,
+            "user": current_user
         }
     )
 
