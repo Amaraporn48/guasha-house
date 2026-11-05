@@ -27,9 +27,10 @@
     <link rel="stylesheet" href="/static/css/style.css">
     
     <style>
+        /* A4 Portrait: Voucher takes the TOP HALF of A4, leaving bottom half for cutting */
         @page {
-            size: landscape;
-            margin: 6mm 8mm;
+            size: A4 portrait;
+            margin: 0;
         }
 
         * {
@@ -48,11 +49,11 @@
             .screen-wrapper {
                 padding: 2rem 1rem 3rem 1rem;
                 display: flex;
-                justify-content: center;
+                flex-direction: column;
                 align-items: center;
-                min-height: calc(100vh - 70px);
+                gap: 1.5rem;
             }
-            .voucher-container {
+            .voucher-card {
                 width: 210mm;
                 height: 148.5mm;
                 max-width: 100%;
@@ -60,24 +61,36 @@
                 box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16), 0 3px 8px rgba(0, 0, 0, 0.08);
                 border: 1.5px solid #222 !important;
                 border-radius: 6px;
-                padding: 7mm 9mm 6mm 9mm;
+                padding: 6mm 8mm 5mm 8mm;
                 box-sizing: border-box;
-                margin: 0 auto;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
             }
+            .cut-guide {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 210mm;
+                max-width: 100%;
+                color: #888;
+                font-size: 9.5px;
+                font-weight: 500;
+                user-select: none;
+            }
+            .cut-guide::before, .cut-guide::after {
+                content: '';
+                flex: 1;
+                border-bottom: 1.5px dashed #aaa;
+                margin: 0 12px;
+            }
         }
 
-        /* Print Preview - Fills the Landscape Sheet 100% with Perfect Borders & Padding */
+        /* Print Preview - Half A4 (Top Half of A4 Sheet) */
         @media print {
-            @page {
-                size: landscape;
-                margin: 6mm 8mm;
-            }
             html, body {
-                width: 100% !important;
-                height: 100% !important;
+                width: 210mm !important;
+                height: 297mm !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white !important;
@@ -88,31 +101,46 @@
                 display: none !important;
             }
             .screen-wrapper {
-                width: 100% !important;
-                height: 100% !important;
+                width: 210mm !important;
+                height: 297mm !important;
                 padding: 0 !important;
                 margin: 0 !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: center !important;
+                display: block !important;
             }
-            .voucher-container {
-                width: 100% !important;
-                height: 100% !important;
-                min-height: 98% !important;
-                max-width: 100% !important;
-                margin: 0 auto !important;
-                padding: 6mm 10mm 5mm 10mm !important;
+            .voucher-card {
+                width: 200mm !important;
+                height: 140mm !important;
+                max-width: 200mm !important;
+                max-height: 140mm !important;
+                margin: 4mm auto 0 auto !important;
+                padding: 5mm 7mm 4mm 7mm !important;
                 background-color: white !important;
                 box-shadow: none !important;
                 border: 1.5px solid #222 !important;
                 border-radius: 6px !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
                 box-sizing: border-box !important;
                 display: flex !important;
                 flex-direction: column !important;
                 justify-content: space-between !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .cut-guide {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 200mm !important;
+                margin: 3mm auto 0 auto !important;
+                color: #888 !important;
+                font-size: 8.5px !important;
+                font-weight: 500 !important;
+                user-select: none !important;
+            }
+            .cut-guide::before, .cut-guide::after {
+                content: '' !important;
+                flex: 1 !important;
+                border-bottom: 1.5px dashed #999 !important;
+                margin: 0 10px !important;
             }
         }
     </style>
@@ -134,23 +162,24 @@
 
             <button onclick="window.print()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                <span>สั่งพิมพ์ / บันทึก PDF</span>
+                <span>สั่งพิมพ์ใบสำคัญจ่าย / บันทึก PDF</span>
             </button>
         </div>
     </div>
 
-    <!-- SCREEN WRAPPER -->
+    <!-- SCREEN & PRINT WRAPPER -->
     <div class="screen-wrapper">
-        <div class="voucher-container">
+        <!-- VOUCHER CARD (Top Half of A4) -->
+        <div class="voucher-card">
             
             <!-- 1. HEADER SECTION -->
-            <div class="flex items-start justify-between border-b-2 border-gray-800 pb-2 mb-2">
+            <div class="flex items-start justify-between border-b-2 border-gray-800 pb-2 mb-1.5">
                 <!-- Company Info -->
                 <div class="flex items-start gap-2.5 flex-1 min-w-0">
                     <img src="/static/logo.png" alt="Guasha House Logo" class="h-11 w-11 object-contain flex-shrink-0 mt-0.5">
                     <div class="flex-1 min-w-0 leading-tight">
                         <h2 class="text-[13px] sm:text-[14px] font-bold text-gray-900 uppercase font-serif tracking-tight">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
-                        <h3 class="text-[9px] sm:text-[10px] font-semibold text-gray-600 uppercase tracking-wider">GUASHA HOUSE CO., LTD.</h3>
+                        <h3 class="text-[9px] sm:text-[9.5px] font-semibold text-gray-600 uppercase tracking-wider">GUASHA HOUSE CO., LTD.</h3>
                         <p class="text-[8px] sm:text-[8.5px] text-gray-600 mt-0.5 leading-normal">
                             199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240<br>
                             โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษี: 0105565028948
@@ -173,7 +202,7 @@
             </div>
 
             <!-- 2. PAYEE & PAYMENT METHOD DETAILS -->
-            <div class="border border-gray-400 rounded bg-gray-50/50 p-2 mb-2 flex items-center justify-between gap-4 text-[9px] sm:text-[9.5px]">
+            <div class="border border-gray-400 rounded bg-gray-50/50 p-2 mb-1.5 flex items-center justify-between gap-4 text-[9px] sm:text-[9.5px]">
                 <div class="flex-1 min-w-0 leading-tight">
                     <div class="flex items-baseline gap-1.5">
                         <span class="font-bold text-gray-800 uppercase flex-shrink-0">จ่ายให้แก่ / Pay To:</span>
@@ -200,30 +229,30 @@
             </div>
 
             <!-- 3. LINE ITEMS TABLE -->
-            <div class="flex-1 mb-2 flex flex-col justify-start">
+            <div class="flex-1 mb-1.5 flex flex-col justify-start">
                 <table class="w-full border-collapse border border-gray-400 text-[9.5px] sm:text-[10px]">
                     <thead>
                         <tr class="bg-gray-100 text-gray-800 border-b border-gray-400 text-center font-bold">
-                            <th class="border-r border-gray-400 py-1.5 px-2 w-12">ลำดับ<br><span class="text-[7.5px] font-normal block leading-none">Item</span></th>
-                            <th class="border-r border-gray-400 py-1.5 px-3 text-left">รายการค่าใช้จ่าย / รายละเอียด<br><span class="text-[7.5px] font-normal block leading-none">Expense Description</span></th>
-                            <th class="border-r border-gray-400 py-1.5 px-2 w-16">จำนวน<br><span class="text-[7.5px] font-normal block leading-none">Qty</span></th>
-                            <th class="py-1.5 px-3 text-right w-32">จำนวนเงิน (บาท)<br><span class="text-[7.5px] font-normal block leading-none">Amount (THB)</span></th>
+                            <th class="border-r border-gray-400 py-1 px-2 w-12">ลำดับ<br><span class="text-[7.5px] font-normal block leading-none">Item</span></th>
+                            <th class="border-r border-gray-400 py-1 px-3 text-left">รายการค่าใช้จ่าย / รายละเอียด<br><span class="text-[7.5px] font-normal block leading-none">Expense Description</span></th>
+                            <th class="border-r border-gray-400 py-1 px-2 w-16">จำนวน<br><span class="text-[7.5px] font-normal block leading-none">Qty</span></th>
+                            <th class="py-1 px-3 text-right w-32">จำนวนเงิน (บาท)<br><span class="text-[7.5px] font-normal block leading-none">Amount (THB)</span></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in items %}
                         <tr class="border-b border-gray-300">
-                            <td class="border-r border-gray-400 py-2 px-2 text-center text-gray-600">{{ loop.index }}</td>
-                            <td class="border-r border-gray-400 py-2 px-3 font-medium text-gray-900">{{ item.description }}</td>
-                            <td class="border-r border-gray-400 py-2 px-2 text-center text-gray-700 font-mono">{{ item.quantity }}</td>
-                            <td class="py-2 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(item.amount) }}</td>
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">{{ loop.index }}</td>
+                            <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ item.description }}</td>
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">{{ item.quantity }}</td>
+                            <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(item.amount) }}</td>
                         </tr>
                         {% else %}
                         <tr class="border-b border-gray-300">
-                            <td class="border-r border-gray-400 py-2 px-2 text-center text-gray-600">1</td>
-                            <td class="border-r border-gray-400 py-2 px-3 font-medium text-gray-900">{{ exp.description or exp.category }}</td>
-                            <td class="border-r border-gray-400 py-2 px-2 text-center text-gray-700 font-mono">1</td>
-                            <td class="py-2 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">1</td>
+                            <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ exp.description or exp.category }}</td>
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">1</td>
+                            <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
                         </tr>
                         {% endfor %}
 
@@ -232,10 +261,10 @@
                         {% set pad_rows = 4 if total_items == 1 else (3 if total_items == 2 else 1) %}
                         {% for i in range(pad_rows) %}
                         <tr class="border-b border-gray-200">
-                            <td class="border-r border-gray-400 py-2 px-2 text-center text-transparent select-none">-</td>
-                            <td class="border-r border-gray-400 py-2 px-3 text-transparent select-none">-</td>
-                            <td class="border-r border-gray-400 py-2 px-2 text-center text-transparent select-none">-</td>
-                            <td class="py-2 px-3 text-right text-transparent select-none">-</td>
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
+                            <td class="border-r border-gray-400 py-1.5 px-3 text-transparent select-none">-</td>
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
+                            <td class="py-1.5 px-3 text-right text-transparent select-none">-</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -243,7 +272,7 @@
             </div>
 
             <!-- 4. TOTALS & REMARKS SECTION -->
-            <div class="border border-gray-400 rounded flex mb-2 text-[9px] sm:text-[9.5px]">
+            <div class="border border-gray-400 rounded flex mb-1.5 text-[9px] sm:text-[9.5px]">
                 <!-- Remarks -->
                 <div class="flex-1 p-2 bg-gray-50/60 border-r border-gray-400 flex flex-col justify-between">
                     <div>
@@ -254,17 +283,17 @@
 
                 <!-- Summary Figures -->
                 <div class="w-64 divide-y divide-gray-300 flex-shrink-0 text-[9.5px] sm:text-[10px]">
-                    <div class="flex justify-between px-3 py-1.5 text-gray-700">
+                    <div class="flex justify-between px-3 py-1 text-gray-700">
                         <span>รวมเป็นเงิน / Subtotal:</span>
                         <span class="font-bold font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</span>
                     </div>
                     {% if exp.withholding_tax_amount and exp.withholding_tax_amount > 0 %}
-                    <div class="flex justify-between px-3 py-1.5 text-red-700 bg-red-50/40">
+                    <div class="flex justify-between px-3 py-1 text-red-700 bg-red-50/40">
                         <span>หัก ณ ที่จ่าย 3% / WHT 3%:</span>
                         <span class="font-bold font-mono">- ฿{{ "{:,.2f}".format(exp.withholding_tax_amount) }}</span>
                     </div>
                     {% endif %}
-                    <div class="flex justify-between px-3 py-2 bg-gray-100 font-extrabold text-gray-900 border-t border-gray-400">
+                    <div class="flex justify-between px-3 py-1.5 bg-gray-100 font-extrabold text-gray-900 border-t border-gray-400">
                         <span class="uppercase tracking-tight">ยอดจ่ายสุทธิ / Net Amount:</span>
                         <span class="font-mono text-[11px] sm:text-[12px]">฿{{ "{:,.2f}".format(exp.net_amount or exp.amount) }}</span>
                     </div>
@@ -275,16 +304,16 @@
             <div class="grid grid-cols-2 gap-12 pt-1 text-[9px] sm:text-[9.5px] text-center border-t border-gray-300">
                 <!-- Payee Signature -->
                 <div class="space-y-0.5">
-                    <div class="h-9 flex items-end justify-center"></div>
+                    <div class="h-8 flex items-end justify-center"></div>
                     <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">ผู้รับเงิน / Payee Signature</div>
                     <div class="text-[7.5px] sm:text-[8px] text-gray-500">วันที่ / Date: _____ / _____ / _____</div>
                 </div>
 
                 <!-- Paid By Signature -->
                 <div class="space-y-0.5">
-                    <div class="h-9 flex items-end justify-center relative">
+                    <div class="h-8 flex items-end justify-center relative">
                         {% if user and user.signature_url %}
-                        <img src="{{ user.signature_url }}" alt="ลายเซ็นผู้จ่ายเงิน" class="max-h-9 max-w-[120px] object-contain -mb-1">
+                        <img src="{{ user.signature_url }}" alt="ลายเซ็นผู้จ่ายเงิน" class="max-h-8 max-w-[120px] object-contain -mb-1">
                         {% endif %}
                     </div>
                     <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">
@@ -296,7 +325,11 @@
                     <div class="text-[7.5px] sm:text-[8px] text-gray-500">วันที่ / Date: {{ exp.formatted_date }}</div>
                 </div>
             </div>
+        </div>
 
+        <!-- Cut Guide at Exact Half of A4 (148.5mm mark) -->
+        <div class="cut-guide">
+            <span>✂️ ตัดตามรอยประ (ครึ่งแผ่น A4)</span>
         </div>
     </div>
 
