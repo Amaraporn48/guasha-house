@@ -28,8 +28,8 @@
     
     <style>
         @page {
-            size: A4 portrait;
-            margin: 6mm 0;
+            size: A5 landscape;
+            margin: 5mm 6mm;
         }
 
         * {
@@ -46,44 +46,32 @@
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             }
             .screen-wrapper {
-                padding: 1.5rem 1rem 3rem 1rem;
+                padding: 2rem 1rem 3rem 1rem;
                 display: flex;
-                flex-direction: column;
+                justify-content: center;
                 align-items: center;
-                gap: 1.5rem;
+                min-height: calc(100vh - 70px);
             }
             .voucher-container {
                 width: 200mm;
-                height: 140mm;
+                height: 138mm;
                 max-width: 100%;
                 background-color: white !important;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08);
+                box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16), 0 3px 8px rgba(0, 0, 0, 0.08);
                 border: 1.5px solid #222 !important;
                 border-radius: 6px;
                 padding: 6mm 8mm;
                 box-sizing: border-box;
-            }
-            .cut-guide {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 200mm;
-                max-width: 100%;
-                color: #888;
-                font-size: 10px;
-                font-weight: 500;
-                user-select: none;
-            }
-            .cut-guide::before, .cut-guide::after {
-                content: '';
-                flex: 1;
-                border-bottom: 1.5px dashed #aaa;
-                margin: 0 12px;
+                margin: 0 auto;
             }
         }
 
-        /* Print Preview - Preserves EXACT Beautiful Look of Image 1 */
+        /* Print Preview - Guaranteed 1 Page Landscape */
         @media print {
+            @page {
+                size: A5 landscape;
+                margin: 5mm 6mm;
+            }
             body {
                 margin: 0 !important;
                 padding: 0 !important;
@@ -95,14 +83,14 @@
                 display: none !important;
             }
             .screen-wrapper {
-                padding: 4mm 0 0 0 !important;
+                padding: 0 !important;
                 margin: 0 !important;
                 display: block !important;
             }
             .voucher-container {
-                width: 196mm !important;
+                width: 100% !important;
+                max-width: 198mm !important;
                 height: 138mm !important;
-                max-width: 196mm !important;
                 max-height: 138mm !important;
                 margin: 0 auto !important;
                 padding: 6mm 8mm !important;
@@ -114,26 +102,6 @@
                 break-inside: avoid !important;
                 box-sizing: border-box !important;
             }
-            .cut-guide {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                width: 196mm !important;
-                margin: 3.5mm auto !important;
-                color: #777 !important;
-                font-size: 8.5px !important;
-                font-weight: 500 !important;
-                user-select: none !important;
-            }
-            .cut-guide::before, .cut-guide::after {
-                content: '' !important;
-                flex: 1 !important;
-                border-bottom: 1.5px dashed #888 !important;
-                margin: 0 8px !important;
-            }
-            .hide-in-single {
-                display: none !important;
-            }
         }
     </style>
 </head>
@@ -141,7 +109,7 @@
 
     <!-- Top Action Bar (Hidden when printing) -->
     <div class="no-print bg-[#1a1a1a] text-white p-3 sm:p-3.5 sticky top-0 z-50 shadow-md border-b border-[#333]">
-        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <img src="/static/logo.png" alt="Guasha House Logo" class="h-9 w-9 object-contain bg-white rounded-lg p-0.5">
                 <div>
@@ -152,240 +120,171 @@
                 </div>
             </div>
 
-            <!-- Mode Selector & Print Button -->
-            <div class="flex items-center gap-3">
-                <div class="flex items-center bg-[#2b2b2b] p-1 rounded-xl border border-gray-700 text-xs">
-                    <button type="button" 
-                            onclick="setVoucherMode('single')" 
-                            id="btn-single"
-                            class="px-3 py-1.5 rounded-lg font-bold transition text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs cursor-pointer">
-                        📄 1 ใบ (ครึ่งแผ่นบน)
-                    </button>
-                    <button type="button" 
-                            onclick="setVoucherMode('double')" 
-                            id="btn-double"
-                            class="px-3 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white transition text-xs cursor-pointer">
-                        📑 2 ใบใน 1 แผ่น (ต้นฉบับ + สำเนา)
-                    </button>
-                </div>
-
-                <button onclick="window.print()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                    <span>สั่งพิมพ์ / บันทึก PDF</span>
-                </button>
-            </div>
+            <button onclick="window.print()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                <span>สั่งพิมพ์ / บันทึก PDF</span>
+            </button>
         </div>
     </div>
-
-    <!-- JINJA MACRO FOR REUSABLE VOUCHER CARD -->
-    {% macro render_voucher_card(badge_text="") %}
-    <div class="voucher-container flex flex-col justify-between">
-        <!-- 1. HEADER SECTION -->
-        <div class="flex items-start justify-between border-b-2 border-gray-800 pb-2 mb-2">
-            <!-- Company Info -->
-            <div class="flex items-start gap-2.5 flex-1 min-w-0">
-                <img src="/static/logo.png" alt="Guasha House Logo" class="h-11 w-11 object-contain flex-shrink-0 mt-0.5">
-                <div class="flex-1 min-w-0 leading-tight">
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-[13px] font-bold text-gray-900 uppercase font-serif tracking-tight">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
-                        {% if badge_text %}
-                        <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border border-gray-500 text-gray-700 bg-gray-100 uppercase">{{ badge_text }}</span>
-                        {% endif %}
-                    </div>
-                    <h3 class="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">GUASHA HOUSE CO., LTD.</h3>
-                    <p class="text-[8px] text-gray-600 mt-0.5 leading-normal">
-                        199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240<br>
-                        โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษี: 0105565028948
-                    </p>
-                </div>
-            </div>
-
-            <!-- Voucher Title & Details -->
-            <div class="text-right flex-shrink-0 min-w-[170px]">
-                <div class="border-2 border-gray-800 bg-gray-50/80 px-3 py-1 rounded text-center mb-1">
-                    <h1 class="text-[14px] font-extrabold text-gray-900 leading-none">ใบสำคัญจ่าย</h1>
-                    <span class="text-[8px] font-bold text-gray-500 uppercase tracking-widest block mt-0.5">PAYMENT VOUCHER</span>
-                </div>
-                <div class="text-[8.5px] space-y-0.5 text-gray-700">
-                    <div><span class="font-bold text-gray-800">เลขที่ / No. :</span> <span class="font-bold text-gray-900 font-mono text-[9.5px]">{{ exp.voucher_number or '-' }}</span></div>
-                    <div><span class="font-bold text-gray-800">วันที่ / Date :</span> <span class="font-medium text-gray-900">{{ exp.formatted_date }}</span></div>
-                    <div><span class="font-bold text-gray-800">หมวดหมู่ :</span> <span class="font-bold text-[#b39268]">{{ exp.category }}</span></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 2. PAYEE & PAYMENT METHOD DETAILS -->
-        <div class="border border-gray-400 rounded bg-gray-50/50 p-2 mb-2 flex items-center justify-between gap-4 text-[9px]">
-            <div class="flex-1 min-w-0 leading-tight">
-                <div class="flex items-baseline gap-1.5">
-                    <span class="font-bold text-gray-800 uppercase flex-shrink-0">จ่ายให้แก่ / Pay To:</span>
-                    <span class="text-[11px] font-bold text-gray-900 truncate">{{ exp.pay_to or '-' }}</span>
-                    {% if exp.tax_id %}
-                    <span class="text-[8px] text-gray-500 ml-2">(เลขประจำตัวผู้เสียภาษี: <span class="font-mono font-medium text-gray-800">{{ exp.tax_id }}</span>)</span>
-                    {% endif %}
-                </div>
-                {% if exp.address %}
-                <div class="text-[8px] text-gray-600 truncate mt-0.5"><span class="font-semibold text-gray-700">ที่อยู่ / Address:</span> {{ exp.address }}</div>
-                {% endif %}
-            </div>
-            <div class="flex items-center gap-3 text-[8.5px] font-medium text-gray-700 border-l border-gray-300 pl-3 flex-shrink-0">
-                <span class="font-bold text-gray-800">การชำระเงิน:</span>
-                <label class="inline-flex items-center gap-1 cursor-default">
-                    <span class="inline-block w-3 h-3 border border-gray-500 rounded-sm bg-gray-900 text-white text-[8px] leading-none text-center font-bold">✓</span>
-                    <span>โอนเงิน</span>
-                </label>
-                <label class="inline-flex items-center gap-1 cursor-default text-gray-400">
-                    <span class="inline-block w-3 h-3 border border-gray-300 rounded-sm bg-white"></span>
-                    <span>เงินสด</span>
-                </label>
-            </div>
-        </div>
-
-        <!-- 3. LINE ITEMS TABLE -->
-        <div class="flex-1 mb-2">
-            <table class="w-full border-collapse border border-gray-400 text-[9.5px]">
-                <thead>
-                    <tr class="bg-gray-100 text-gray-800 border-b border-gray-400 text-center font-bold">
-                        <th class="border-r border-gray-400 py-1 px-2 w-10">ลำดับ<br><span class="text-[7.5px] font-normal block leading-none">Item</span></th>
-                        <th class="border-r border-gray-400 py-1 px-3 text-left">รายการค่าใช้จ่าย / รายละเอียด<br><span class="text-[7.5px] font-normal block leading-none">Expense Description</span></th>
-                        <th class="border-r border-gray-400 py-1 px-2 w-14">จำนวน<br><span class="text-[7.5px] font-normal block leading-none">Qty</span></th>
-                        <th class="py-1 px-3 text-right w-28">จำนวนเงิน (บาท)<br><span class="text-[7.5px] font-normal block leading-none">Amount (THB)</span></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in items %}
-                    <tr class="border-b border-gray-300">
-                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">{{ loop.index }}</td>
-                        <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ item.description }}</td>
-                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">{{ item.quantity }}</td>
-                        <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(item.amount) }}</td>
-                    </tr>
-                    {% else %}
-                    <tr class="border-b border-gray-300">
-                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">1</td>
-                        <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ exp.description or exp.category }}</td>
-                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">1</td>
-                        <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
-                    </tr>
-                    {% endfor %}
-
-                    <!-- Extra Blank Rows so the table looks full and substantial -->
-                    {% set total_items = items|length if items else 1 %}
-                    {% set pad_rows = 4 if total_items == 1 else (3 if total_items == 2 else 1) %}
-                    {% for i in range(pad_rows) %}
-                    <tr class="border-b border-gray-200">
-                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
-                        <td class="border-r border-gray-400 py-1.5 px-3 text-transparent select-none">-</td>
-                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
-                        <td class="py-1.5 px-3 text-right text-transparent select-none">-</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- 4. TOTALS & REMARKS SECTION -->
-        <div class="border border-gray-400 rounded flex mb-2 text-[9px]">
-            <!-- Remarks -->
-            <div class="flex-1 p-2 bg-gray-50/60 border-r border-gray-400 flex flex-col justify-between">
-                <div>
-                    <span class="font-bold text-gray-700 block uppercase tracking-wider text-[8px] mb-0.5">หมายเหตุ / REMARKS:</span>
-                    <span class="text-gray-800 whitespace-pre-line leading-tight">{{ exp.note or '-' }}</span>
-                </div>
-            </div>
-
-            <!-- Summary Figures -->
-            <div class="w-60 divide-y divide-gray-300 flex-shrink-0 text-[9.5px]">
-                <div class="flex justify-between px-2.5 py-1 text-gray-700">
-                    <span>รวมเป็นเงิน / Subtotal:</span>
-                    <span class="font-bold font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</span>
-                </div>
-                {% if exp.withholding_tax_amount and exp.withholding_tax_amount > 0 %}
-                <div class="flex justify-between px-2.5 py-1 text-red-700 bg-red-50/40">
-                    <span>หัก ณ ที่จ่าย 3% / WHT 3%:</span>
-                    <span class="font-bold font-mono">- ฿{{ "{:,.2f}".format(exp.withholding_tax_amount) }}</span>
-                </div>
-                {% endif %}
-                <div class="flex justify-between px-2.5 py-1.5 bg-gray-100 font-extrabold text-gray-900 border-t border-gray-400">
-                    <span class="uppercase tracking-tight">ยอดจ่ายสุทธิ / Net Amount:</span>
-                    <span class="font-mono text-[10.5px]">฿{{ "{:,.2f}".format(exp.net_amount or exp.amount) }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- 5. SIGNATURES SECTION -->
-        <div class="grid grid-cols-2 gap-10 pt-1 text-[9px] text-center border-t border-gray-300">
-            <!-- Payee Signature -->
-            <div class="space-y-0.5">
-                <div class="h-8 flex items-end justify-center"></div>
-                <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">ผู้รับเงิน / Payee Signature</div>
-                <div class="text-[7.5px] text-gray-500">วันที่ / Date: _____ / _____ / _____</div>
-            </div>
-
-            <!-- Paid By Signature -->
-            <div class="space-y-0.5">
-                <div class="h-8 flex items-end justify-center relative">
-                    {% if user and user.signature_url %}
-                    <img src="{{ user.signature_url }}" alt="ลายเซ็นผู้จ่ายเงิน" class="max-h-8 max-w-[120px] object-contain -mb-1">
-                    {% endif %}
-                </div>
-                <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">
-                    ผู้จ่ายเงิน / Paid By
-                    {% if user and user.fullname %}
-                    <span class="font-normal text-gray-600 ml-1">({{ user.fullname }})</span>
-                    {% endif %}
-                </div>
-                <div class="text-[7.5px] text-gray-500">วันที่ / Date: {{ exp.formatted_date }}</div>
-            </div>
-        </div>
-    </div>
-    {% endmacro %}
-
 
     <!-- SCREEN WRAPPER -->
     <div class="screen-wrapper">
-        <!-- 1st Voucher (Always visible) -->
-        {{ render_voucher_card(badge_text="ต้นฉบับ / ORIGINAL" if False else "") }}
+        <div class="voucher-container flex flex-col justify-between">
+            <!-- 1. HEADER SECTION -->
+            <div class="flex items-start justify-between border-b-2 border-gray-800 pb-2 mb-2">
+                <!-- Company Info -->
+                <div class="flex items-start gap-2.5 flex-1 min-w-0">
+                    <img src="/static/logo.png" alt="Guasha House Logo" class="h-11 w-11 object-contain flex-shrink-0 mt-0.5">
+                    <div class="flex-1 min-w-0 leading-tight">
+                        <h2 class="text-[13px] font-bold text-gray-900 uppercase font-serif tracking-tight">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
+                        <h3 class="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">GUASHA HOUSE CO., LTD.</h3>
+                        <p class="text-[8px] text-gray-600 mt-0.5 leading-normal">
+                            199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240<br>
+                            โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษี: 0105565028948
+                        </p>
+                    </div>
+                </div>
 
-        <!-- Cut Guide (Visible between 2 vouchers or on single voucher) -->
-        <div class="cut-guide">
-            <span>✂️ ตัดตามรอยประ (CUT HERE)</span>
-        </div>
+                <!-- Voucher Title & Details -->
+                <div class="text-right flex-shrink-0 min-w-[170px]">
+                    <div class="border-2 border-gray-800 bg-gray-50/80 px-3 py-1 rounded text-center mb-1">
+                        <h1 class="text-[14px] font-extrabold text-gray-900 leading-none">ใบสำคัญจ่าย</h1>
+                        <span class="text-[8px] font-bold text-gray-500 uppercase tracking-widest block mt-0.5">PAYMENT VOUCHER</span>
+                    </div>
+                    <div class="text-[8.5px] space-y-0.5 text-gray-700">
+                        <div><span class="font-bold text-gray-800">เลขที่ / No. :</span> <span class="font-bold text-gray-900 font-mono text-[9.5px]">{{ exp.voucher_number or '-' }}</span></div>
+                        <div><span class="font-bold text-gray-800">วันที่ / Date :</span> <span class="font-medium text-gray-900">{{ exp.formatted_date }}</span></div>
+                        <div><span class="font-bold text-gray-800">หมวดหมู่ :</span> <span class="font-bold text-[#b39268]">{{ exp.category }}</span></div>
+                    </div>
+                </div>
+            </div>
 
-        <!-- 2nd Voucher (Visible when 2-voucher mode is active) -->
-        <div id="voucher-copy-section" class="hide-in-single">
-            {{ render_voucher_card(badge_text="สำเนา / COPY") }}
+            <!-- 2. PAYEE & PAYMENT METHOD DETAILS -->
+            <div class="border border-gray-400 rounded bg-gray-50/50 p-2 mb-2 flex items-center justify-between gap-4 text-[9px]">
+                <div class="flex-1 min-w-0 leading-tight">
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="font-bold text-gray-800 uppercase flex-shrink-0">จ่ายให้แก่ / Pay To:</span>
+                        <span class="text-[11px] font-bold text-gray-900 truncate">{{ exp.pay_to or '-' }}</span>
+                        {% if exp.tax_id %}
+                        <span class="text-[8px] text-gray-500 ml-2">(เลขประจำตัวผู้เสียภาษี: <span class="font-mono font-medium text-gray-800">{{ exp.tax_id }}</span>)</span>
+                        {% endif %}
+                    </div>
+                    {% if exp.address %}
+                    <div class="text-[8px] text-gray-600 truncate mt-0.5"><span class="font-semibold text-gray-700">ที่อยู่ / Address:</span> {{ exp.address }}</div>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-3 text-[8.5px] font-medium text-gray-700 border-l border-gray-300 pl-3 flex-shrink-0">
+                    <span class="font-bold text-gray-800">การชำระเงิน:</span>
+                    <label class="inline-flex items-center gap-1 cursor-default">
+                        <span class="inline-block w-3 h-3 border border-gray-500 rounded-sm bg-gray-900 text-white text-[8px] leading-none text-center font-bold">✓</span>
+                        <span>โอนเงิน</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1 cursor-default text-gray-400">
+                        <span class="inline-block w-3 h-3 border border-gray-300 rounded-sm bg-white"></span>
+                        <span>เงินสด</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 3. LINE ITEMS TABLE -->
+            <div class="flex-1 mb-2">
+                <table class="w-full border-collapse border border-gray-400 text-[9.5px]">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-800 border-b border-gray-400 text-center font-bold">
+                            <th class="border-r border-gray-400 py-1 px-2 w-10">ลำดับ<br><span class="text-[7.5px] font-normal block leading-none">Item</span></th>
+                            <th class="border-r border-gray-400 py-1 px-3 text-left">รายการค่าใช้จ่าย / รายละเอียด<br><span class="text-[7.5px] font-normal block leading-none">Expense Description</span></th>
+                            <th class="border-r border-gray-400 py-1 px-2 w-14">จำนวน<br><span class="text-[7.5px] font-normal block leading-none">Qty</span></th>
+                            <th class="py-1 px-3 text-right w-28">จำนวนเงิน (บาท)<br><span class="text-[7.5px] font-normal block leading-none">Amount (THB)</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr class="border-b border-gray-300">
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">{{ loop.index }}</td>
+                            <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ item.description }}</td>
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">{{ item.quantity }}</td>
+                            <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(item.amount) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr class="border-b border-gray-300">
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">1</td>
+                            <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ exp.description or exp.category }}</td>
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">1</td>
+                            <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+
+                        <!-- Extra Blank Rows so the table looks full and substantial -->
+                        {% set total_items = items|length if items else 1 %}
+                        {% set pad_rows = 4 if total_items == 1 else (3 if total_items == 2 else 1) %}
+                        {% for i in range(pad_rows) %}
+                        <tr class="border-b border-gray-200">
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
+                            <td class="border-r border-gray-400 py-1.5 px-3 text-transparent select-none">-</td>
+                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
+                            <td class="py-1.5 px-3 text-right text-transparent select-none">-</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 4. TOTALS & REMARKS SECTION -->
+            <div class="border border-gray-400 rounded flex mb-2 text-[9px]">
+                <!-- Remarks -->
+                <div class="flex-1 p-2 bg-gray-50/60 border-r border-gray-400 flex flex-col justify-between">
+                    <div>
+                        <span class="font-bold text-gray-700 block uppercase tracking-wider text-[8px] mb-0.5">หมายเหตุ / REMARKS:</span>
+                        <span class="text-gray-800 whitespace-pre-line leading-tight">{{ exp.note or '-' }}</span>
+                    </div>
+                </div>
+
+                <!-- Summary Figures -->
+                <div class="w-60 divide-y divide-gray-300 flex-shrink-0 text-[9.5px]">
+                    <div class="flex justify-between px-2.5 py-1 text-gray-700">
+                        <span>รวมเป็นเงิน / Subtotal:</span>
+                        <span class="font-bold font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</span>
+                    </div>
+                    {% if exp.withholding_tax_amount and exp.withholding_tax_amount > 0 %}
+                    <div class="flex justify-between px-2.5 py-1 text-red-700 bg-red-50/40">
+                        <span>หัก ณ ที่จ่าย 3% / WHT 3%:</span>
+                        <span class="font-bold font-mono">- ฿{{ "{:,.2f}".format(exp.withholding_tax_amount) }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex justify-between px-2.5 py-1.5 bg-gray-100 font-extrabold text-gray-900 border-t border-gray-400">
+                        <span class="uppercase tracking-tight">ยอดจ่ายสุทธิ / Net Amount:</span>
+                        <span class="font-mono text-[10.5px]">฿{{ "{:,.2f}".format(exp.net_amount or exp.amount) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. SIGNATURES SECTION -->
+            <div class="grid grid-cols-2 gap-10 pt-1 text-[9px] text-center border-t border-gray-300">
+                <!-- Payee Signature -->
+                <div class="space-y-0.5">
+                    <div class="h-8 flex items-end justify-center"></div>
+                    <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">ผู้รับเงิน / Payee Signature</div>
+                    <div class="text-[7.5px] text-gray-500">วันที่ / Date: _____ / _____ / _____</div>
+                </div>
+
+                <!-- Paid By Signature -->
+                <div class="space-y-0.5">
+                    <div class="h-8 flex items-end justify-center relative">
+                        {% if user and user.signature_url %}
+                        <img src="{{ user.signature_url }}" alt="ลายเซ็นผู้จ่ายเงิน" class="max-h-8 max-w-[120px] object-contain -mb-1">
+                        {% endif %}
+                    </div>
+                    <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">
+                        ผู้จ่ายเงิน / Paid By
+                        {% if user and user.fullname %}
+                        <span class="font-normal text-gray-600 ml-1">({{ user.fullname }})</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-[7.5px] text-gray-500">วันที่ / Date: {{ exp.formatted_date }}</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Toggle Controller -->
-    <script>
-        let currentMode = localStorage.getItem('voucher_print_mode') || 'single';
-
-        function setVoucherMode(mode) {
-            currentMode = mode;
-            localStorage.setItem('voucher_print_mode', mode);
-
-            const btnSingle = document.getElementById('btn-single');
-            const btnDouble = document.getElementById('btn-double');
-            const copySection = document.getElementById('voucher-copy-section');
-
-            if (mode === 'single') {
-                btnSingle.className = "px-3 py-1.5 rounded-lg font-bold transition text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs cursor-pointer";
-                btnDouble.className = "px-3 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white transition text-xs cursor-pointer";
-                copySection.classList.add('hide-in-single');
-                copySection.classList.add('hidden');
-            } else {
-                btnDouble.className = "px-3 py-1.5 rounded-lg font-bold transition text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs cursor-pointer";
-                btnSingle.className = "px-3 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white transition text-xs cursor-pointer";
-                copySection.classList.remove('hide-in-single');
-                copySection.classList.remove('hidden');
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            setVoucherMode(currentMode);
-        });
-    </script>
 </body>
 </html>
