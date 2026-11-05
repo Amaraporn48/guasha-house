@@ -2151,7 +2151,24 @@
                                                    @change="toggleSelectAllExpenses($event)"
                                                    title="เลือกทั้งหมด / ยกเลิกทั้งหมด">
                                         </th>
-                                        <th class="px-4 py-3">เลขที่ PV / วันที่</th>
+                                        <th class="px-4 py-3 cursor-pointer select-none group hover:text-charcoal transition-colors"
+                                            @click="toggleExpenseSort()"
+                                            :title="expenseSortOrder === 'desc' ? 'คลิกเพื่อเรียงจาก: เก่าไปใหม่ (ใบแรกมาก่อน)' : 'คลิกเพื่อเรียงจาก: ใหม่ไปเก่า (ใบล่าสุดมาก่อน)'">
+                                            <div class="inline-flex items-center gap-1.5">
+                                                <span>เลขที่ PV / วันที่</span>
+                                                <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[11px] font-bold transition-all shadow-2xs"
+                                                      :class="expenseSortOrder === 'asc' ? 'bg-gold text-white' : 'bg-beige/80 text-gray-600 group-hover:bg-gold/20 group-hover:text-gold-dark'">
+                                                    <span x-show="expenseSortOrder === 'desc'" class="inline-flex items-center gap-0.5">
+                                                        <span>↓</span>
+                                                        <span class="text-[9px] font-normal hidden sm:inline">ล่าสุด</span>
+                                                    </span>
+                                                    <span x-show="expenseSortOrder === 'asc'" class="inline-flex items-center gap-0.5">
+                                                        <span>↑</span>
+                                                        <span class="text-[9px] font-normal hidden sm:inline">ใบแรก</span>
+                                                    </span>
+                                                </span>
+                                            </div>
+                                        </th>
                                         <th class="px-4 py-3">หมวดหมู่ / Category</th>
                                         <th class="px-4 py-3 text-right">จำนวนเงินสุทธิ / Net</th>
                                         <th class="px-4 py-3 text-center">จัดการ / Actions</th>
@@ -4017,6 +4034,7 @@
                 expenseFilterYear: 'ALL',
                 expenseFilterMonth: 'ALL',
                 expenseFilterCategory: 'ALL',
+                expenseSortOrder: 'desc',
                 selectedDocIds: [],
                 selectedExpenseIds: [],
                 docFilter: {
@@ -5426,6 +5444,9 @@
                     for (let i = 0; i < (cat || '').length; i++) hash = (hash << 5) - hash + cat.charCodeAt(i);
                     return fallbacks[Math.abs(hash) % fallbacks.length];
                 },
+                toggleExpenseSort() {
+                    this.expenseSortOrder = this.expenseSortOrder === 'desc' ? 'asc' : 'desc';
+                },
                 filteredExpenses() {
                     if (!this.expenses) return [];
                     const list = this.expenses.filter(exp => {
@@ -5458,14 +5479,23 @@
                         return true;
                     });
 
+                    const order = this.expenseSortOrder || 'desc';
                     return list.sort((a, b) => {
                         const dateA = a.date || '';
                         const dateB = b.date || '';
-                        if (dateA !== dateB) return dateB.localeCompare(dateA);
-                        const vA = a.voucher_number || '';
-                        const vB = b.voucher_number || '';
-                        if (vA !== vB) return vB.localeCompare(vA);
-                        return (b.id || 0) - (a.id || 0);
+                        let diff = 0;
+                        if (dateA !== dateB) {
+                            diff = dateA.localeCompare(dateB);
+                        } else {
+                            const vA = a.voucher_number || '';
+                            const vB = b.voucher_number || '';
+                            if (vA !== vB) {
+                                diff = vA.localeCompare(vB);
+                            } else {
+                                diff = (a.id || 0) - (b.id || 0);
+                            }
+                        }
+                        return order === 'asc' ? diff : -diff;
                     });
                 },
                 getExpensesByCategory() {
