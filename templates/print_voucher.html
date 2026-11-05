@@ -29,8 +29,58 @@
     <!-- Dynamic Print Page Size Stylesheet -->
     <style id="print-page-style">
         @page {
-            size: A4 portrait;
-            margin: 0;
+            size: A5 landscape;
+            margin: 5mm 8mm;
+        }
+        @media print {
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .print-container {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: auto !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .print-hide-on-half {
+                display: none !important;
+            }
+            .print-compact-header {
+                padding-bottom: 2mm !important;
+                margin-bottom: 2.5mm !important;
+            }
+            .print-compact-box {
+                padding: 2mm 3mm !important;
+                margin-bottom: 2.5mm !important;
+            }
+            .print-compact-table th, .print-compact-table td {
+                padding: 1.5mm 2.5mm !important;
+                font-size: 9.5px !important;
+            }
+            .print-compact-table th span {
+                font-size: 7.5px !important;
+            }
+            .print-compact-calc {
+                font-size: 9.5px !important;
+            }
+            .print-compact-calc div {
+                padding: 1.2mm 2.5mm !important;
+            }
+            .print-compact-sig {
+                padding-top: 1.5mm !important;
+                gap: 20mm !important;
+            }
+            .print-compact-sig .sig-space {
+                height: 9mm !important;
+            }
         }
     </style>
 
@@ -41,455 +91,357 @@
 
         @media screen {
             body {
-                background-color: #f3f0e9 !important;
+                background-color: #fbfaf7 !important;
                 color: #1a1a1a !important;
                 margin: 0;
                 padding: 0;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             }
-            .screen-preview-wrapper {
-                padding: 1.5rem 1rem 3rem 1rem;
-            }
-            .voucher-card {
-                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+            .print-container {
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
                 background-color: white !important;
-                border: 1px solid #e7e2d7;
+                border: 1px solid #f5f2eb;
             }
-            .cut-line {
+            .header-flex-box {
                 display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 0.75rem;
-                color: #8c8273;
-                font-size: 11px;
-                font-weight: 600;
-                margin: 1rem 0;
-                user-select: none;
+                flex-direction: column;
+                gap: 1rem;
             }
-            .cut-line::before, .cut-line::after {
-                content: '';
-                flex: 1;
-                border-bottom: 2px dashed #b8afa0;
+            .customer-flex-box {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .table-wrap-responsive {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .table-min-width {
+                min-width: 520px;
+            }
+
+            @media (min-width: 640px) {
+                .header-flex-box {
+                    flex-direction: row;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                }
+                .customer-flex-box {
+                    flex-direction: row;
+                    justify-content: space-between;
+                }
+                .table-min-width {
+                    min-width: 100%;
+                }
             }
         }
 
         @media print {
-            body {
-                background-color: white !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .screen-preview-wrapper {
-                padding: 0 !important;
-                margin: 0 !important;
-            }
             .no-print {
                 display: none !important;
             }
-            .voucher-card {
-                box-shadow: none !important;
-                border: none !important;
-                margin: 0 !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-            .cut-line {
+            .header-flex-box {
                 display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                gap: 0.5rem !important;
-                color: #8c8273 !important;
-                font-size: 9px !important;
-                font-weight: 600 !important;
-                margin: 2mm 0 !important;
-                height: 5mm !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
             }
-            .cut-line::before, .cut-line::after {
-                content: '' !important;
-                flex: 1 !important;
-                border-bottom: 1.5px dashed #a89f91 !important;
-            }
-            .print-hidden {
-                display: none !important;
+            .customer-flex-box {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
             }
         }
     </style>
 </head>
 <body>
 
-    <!-- TOP CONTROL & ACTION BAR (Hidden when printing) -->
-    <div class="no-print bg-[#1a1a1a] text-white p-3 sm:p-4 sticky top-0 z-50 shadow-lg border-b border-[#333]">
-        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-            <!-- Left Info -->
-            <div class="flex items-center gap-3 w-full md:w-auto">
+    <!-- Top Action Bar (Hidden when printing) -->
+    <div class="no-print bg-[#1a1a1a] text-white p-3.5 sticky top-0 z-50 shadow-md mb-6">
+        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <!-- Left: Company Info -->
+            <div class="flex items-center gap-3 w-full sm:w-auto">
                 <img src="/static/logo.png" alt="Guasha House Logo" class="h-9 w-9 object-contain bg-white rounded-lg p-0.5">
                 <div>
-                    <h1 class="text-xs sm:text-sm font-bold text-[#c5a880] uppercase tracking-wider">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
-                    <p class="text-[10px] sm:text-[11px] text-gray-300">
-                        ใบสำคัญจ่าย (Payment Voucher - <span class="font-mono font-bold text-white">{{ exp.voucher_number or exp.id }}</span>)
-                    </p>
+                    <h1 class="text-sm font-bold text-[#c5a880] uppercase tracking-wider">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
+                    <p class="text-[11px] text-gray-300">ใบสำคัญจ่าย (Payment Voucher - <span class="font-mono font-bold text-white">{{ exp.voucher_number or exp.id }}</span>)</p>
                 </div>
             </div>
 
-            <!-- Middle Switchers (Print Mode & Paper) -->
-            <div class="flex flex-wrap items-center gap-2 justify-center w-full md:w-auto">
-                <!-- Layout Mode Selector -->
+            <!-- Right: Paper Mode Toggle & Print Button -->
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
                 <div class="flex items-center bg-[#2b2b2b] p-1 rounded-xl border border-gray-700 text-xs">
-                    <span class="text-[10px] text-gray-400 font-semibold px-2 uppercase hidden lg:inline">รูปแบบ:</span>
+                    <span class="text-[10px] text-gray-400 font-semibold px-2 uppercase">ขนาดพิมพ์:</span>
                     <button type="button" 
-                            onclick="setLayoutMode('half')" 
-                            id="btn-mode-half"
-                            class="px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs">
-                        <span>📄</span>
-                        <span>ครึ่ง A4 (1 ใบ)</span>
+                            onclick="setPrintSize('half')" 
+                            id="btn-half"
+                            title="พิมพ์ขนาดครึ่ง A4 (A5 แนวนอน)"
+                            class="px-3 py-1.5 rounded-lg font-bold transition text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs cursor-pointer">
+                        📄 ครึ่ง A4
                     </button>
                     <button type="button" 
-                            onclick="setLayoutMode('double')" 
-                            id="btn-mode-double"
-                            class="px-3 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white transition flex items-center gap-1.5 text-xs">
-                        <span>📑</span>
-                        <span>2 ชุดใน 1 แผ่น A4 (บน-ล่าง)</span>
-                    </button>
-                    <button type="button" 
-                            onclick="setLayoutMode('full')" 
-                            id="btn-mode-full"
-                            class="px-3 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white transition flex items-center gap-1.5 text-xs">
-                        <span>📋</span>
-                        <span>เต็มแผ่น A4</span>
+                            onclick="setPrintSize('full')" 
+                            id="btn-full"
+                            title="พิมพ์ขนาดเต็มหน้า A4"
+                            class="px-3 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white transition text-xs cursor-pointer">
+                        📑 เต็มหน้า A4
                     </button>
                 </div>
 
-                <!-- Paper Size Selector (for single half-page) -->
-                <div id="paper-size-wrapper" class="flex items-center bg-[#2b2b2b] p-1 rounded-xl border border-gray-700 text-xs">
-                    <span class="text-[10px] text-gray-400 font-semibold px-2 uppercase hidden lg:inline">กระดาษ:</span>
-                    <button type="button" 
-                            onclick="setPaperSize('a4')" 
-                            id="btn-paper-a4"
-                            title="พิมพ์บนกระดาษ A4 ปกติ (จะพิมพ์อยู่ที่ครึ่งแผ่นบน)"
-                            class="px-2.5 py-1.5 rounded-lg font-bold text-xs bg-[#c5a880] text-[#1a1a1a]">
-                        กระดาษ A4
-                    </button>
-                    <button type="button" 
-                            onclick="setPaperSize('a5')" 
-                            id="btn-paper-a5"
-                            title="สำหรับใส่กระดาษขนาด A5 แนวนอนในเครื่องพิมพ์"
-                            class="px-2.5 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white text-xs">
-                        กระดาษ A5 (แนวนอน)
-                    </button>
-                </div>
-            </div>
-
-            <!-- Right Print Button -->
-            <div class="flex items-center gap-2 w-full md:w-auto justify-end">
-                <button onclick="window.print()" class="w-full md:w-auto bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center justify-center gap-2 shadow-md cursor-pointer">
+                <button onclick="window.print()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                    <span>สั่งพิมพ์ / บันทึก PDF</span>
+                    <span id="print-btn-text">พิมพ์ใบสำคัญจ่าย (ครึ่ง A4)</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- JINJA MACRO FOR RENDERING A VOUCHER -->
-    {% macro render_voucher_content(badge="", is_compact=true, hide_on_mode="") %}
-    <div class="voucher-card bg-white mx-auto w-full {% if is_compact %}max-w-[210mm] p-[6mm_10mm_5mm_10mm] sm:p-[7mm_12mm_6mm_12mm]{% else %}min-h-[280mm] max-w-[210mm] p-6 sm:p-[15mm]{% endif %} flex flex-col justify-between rounded-xl sm:rounded-2xl {{ hide_on_mode }}">
+    <!-- MAIN PRINT CONTAINER (Full, Beautiful, Standard Screen View) -->
+    <div class="print-container flex flex-col justify-between min-h-[280mm] w-full max-w-full sm:max-w-[210mm] mx-auto p-4 sm:p-[15mm] my-0 sm:my-6 rounded-none sm:rounded-2xl">
         
-        <!-- TOP SECTION: HEADER, PAYEE, LINE ITEMS -->
+        <!-- TOP SECTION: COMPANY & PAYEE DETAILS & ITEMS TABLE -->
         <div>
             <!-- Header Block -->
-            <div class="flex flex-col sm:flex-row items-start justify-between border-b-2 border-gray-300 pb-2.5 mb-2.5 gap-2">
-                <!-- Company Logo & Address -->
-                <div class="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
-                    <img src="/static/logo.png" alt="Guasha House Logo" class="{% if is_compact %}h-11 w-11 sm:h-12 sm:w-12{% else %}h-14 w-14 sm:h-16 sm:w-16{% endif %} object-contain flex-shrink-0">
+            <div class="header-flex-box border-b-2 border-gray-300 pb-4 mb-6 print-compact-header">
+                <div class="flex gap-3 sm:gap-4 items-start w-full sm:w-auto">
+                    <img src="/static/logo.png" alt="Guasha House Logo" class="h-12 w-12 sm:h-16 sm:w-16 object-contain flex-shrink-0">
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
-                            <h2 class="{% if is_compact %}text-xs sm:text-[13px]{% else %}text-sm sm:text-base{% endif %} font-bold text-gray-800 leading-tight uppercase font-serif">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
-                            {% if badge %}
-                            <span class="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded border border-gray-400 text-gray-600 uppercase">{{ badge }}</span>
-                            {% endif %}
-                        </div>
-                        <h3 class="{% if is_compact %}text-[9px] sm:text-[9.5px]{% else %}text-[10px] sm:text-xs{% endif %} font-semibold text-gray-500 uppercase tracking-widest mb-0.5">GUASHA HOUSE CO., LTD.</h3>
-                        <p class="{% if is_compact %}text-[8px] sm:text-[8.5px]{% else %}text-[9px] sm:text-[9.5px]{% endif %} text-gray-600 leading-tight">
-                            199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240<br>
-                            โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษี: 0105565028948
+                        <h2 class="text-sm sm:text-base font-bold text-gray-800 leading-tight uppercase font-serif">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
+                        <h3 class="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">GUASHA HOUSE CO., LTD.</h3>
+                        <p class="text-[9px] sm:text-[9.5px] text-gray-600 leading-normal">
+                            199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพมหานคร 10240<br>
+                            โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษีอากร: 0105565028948
                         </p>
                     </div>
                 </div>
-
-                <!-- Voucher Meta -->
-                <div class="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l-2 border-gold pt-1.5 sm:pt-0 sm:pl-3 min-w-0 sm:min-w-[155px] flex sm:block justify-between items-center">
+                <div class="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l-2 border-gold pt-2 sm:pt-0 sm:pl-4 min-w-0 sm:min-w-[160px] flex sm:block justify-between items-center">
                     <div>
-                        <h4 class="{% if is_compact %}text-xs sm:text-[13px]{% else %}text-xs sm:text-sm{% endif %} font-bold text-gray-800 leading-tight">ใบสำคัญจ่าย</h4>
-                        <h5 class="{% if is_compact %}text-[8px] sm:text-[8.5px]{% else %}text-[8.5px] sm:text-[9.5px]{% endif %} font-bold text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">PAYMENT VOUCHER</h5>
+                        <h4 class="text-xs sm:text-sm font-bold text-gray-800 leading-tight">ใบสำคัญจ่าย</h4>
+                        <h5 class="text-[8.5px] sm:text-[9.5px] font-bold text-gray-400 uppercase tracking-wider mb-1 sm:mb-2">PAYMENT VOUCHER</h5>
                     </div>
-                    <div class="{% if is_compact %}text-[8.5px] sm:text-[9px]{% else %}text-[9px] sm:text-[9.5px]{% endif %} space-y-0.5 text-gray-600 text-right">
-                        <div><span class="font-bold text-gray-700">เลขที่ / No. :</span> <span class="font-bold text-gray-900 font-mono">{{ exp.voucher_number or '-' }}</span></div>
-                        <div><span class="font-bold text-gray-700">วันที่ / Date :</span> <span class="font-medium text-gray-900">{{ exp.formatted_date }}</span></div>
-                        <div><span class="font-bold text-gray-700">หมวดหมู่ :</span> <span class="font-bold text-[#b39268]">{{ exp.category }}</span></div>
+                    <div class="text-[9px] sm:text-[9.5px] space-y-0.5 text-gray-600 text-right">
+                        <div><span class="font-bold">เลขที่ / No. :</span> <span class="font-medium text-gray-900 font-mono">{{ exp.voucher_number or '-' }}</span></div>
+                        <div><span class="font-bold">วันที่ / Date :</span> <span class="font-medium text-gray-900">{{ exp.formatted_date }}</span></div>
+                        <div><span class="font-bold">หมวดหมู่ :</span> <span class="font-bold text-[#b39268]">{{ exp.category }}</span></div>
                     </div>
                 </div>
             </div>
 
             <!-- Payee Details Block -->
-            <div class="border border-gray-300 rounded-lg {% if is_compact %}p-2 mb-2 bg-gray-50/70{% else %}p-3 sm:p-4 mb-5 bg-gray-50/50{% endif %} flex flex-col sm:flex-row justify-between gap-1 sm:gap-4">
+            <div class="border border-gray-300 rounded-lg p-3 sm:p-4 bg-gray-50/50 mb-6 customer-flex-box print-compact-box">
                 <div class="flex-1 min-w-0">
-                    <span class="{% if is_compact %}text-[8px] sm:text-[8.5px]{% else %}text-[9px] sm:text-[9.5px]{% endif %} font-bold text-gray-400 uppercase tracking-wider block mb-0.5">ข้อมูลผู้รับเงิน / PAYEE INFORMATION</span>
-                    <div class="{% if is_compact %}text-[11px] sm:text-xs{% else %}text-xs{% endif %} font-bold text-gray-900 leading-snug">{{ exp.pay_to or '-' }}</div>
-                    <p class="{% if is_compact %}text-[8.5px] sm:text-[9px]{% else %}text-[9px] sm:text-[9.5px]{% endif %} text-gray-600 leading-tight mt-0.5">{{ exp.address or '-' }}</p>
+                    <h5 class="text-[9px] sm:text-[9.5px] font-bold text-gray-400 uppercase tracking-wider mb-1">ข้อมูลผู้รับเงิน / PAYEE INFORMATION</h5>
+                    <div class="text-xs font-bold text-gray-900 mb-0.5">{{ exp.pay_to or '-' }}</div>
+                    <p class="text-[9px] sm:text-[9.5px] text-gray-600 leading-normal">{{ exp.address or '-' }}</p>
                 </div>
-                <div class="text-left sm:text-right {% if is_compact %}text-[8.5px] sm:text-[9px]{% else %}text-[9px] sm:text-[9.5px]{% endif %} text-gray-600 flex-shrink-0 border-t sm:border-t-0 pt-1 sm:pt-0 border-gray-200">
-                    <div><span class="font-bold text-gray-700">เลขประจำตัวผู้เสียภาษี :</span> <span class="font-medium font-mono">{{ exp.tax_id or '-' }}</span></div>
+                <div class="text-left sm:text-right text-[9px] sm:text-[9.5px] text-gray-600 border-t sm:border-t-0 pt-2 sm:pt-0 border-gray-200 flex-shrink-0">
+                    <div><span class="font-bold">เลขประจำตัวผู้เสียภาษี :</span> <span class="font-medium font-mono">{{ exp.tax_id or '-' }}</span></div>
                 </div>
             </div>
 
             <!-- Line Items Table -->
-            <div class="w-full overflow-x-auto {% if is_compact %}mb-2{% else %}mb-4{% endif %}">
-                <table class="w-full border border-gray-300 {% if is_compact %}text-[9px] sm:text-[9.5px]{% else %}text-[10.5px]{% endif %}">
+            <div class="table-wrap-responsive mb-4">
+                <table class="invoice-table table-min-width text-[10.5px] border border-gray-300 w-full print-compact-table">
                     <thead>
                         <tr class="bg-gray-100 text-charcoal border-b border-gray-300">
-                            <th class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-center border-r border-gray-300 w-10">ลำดับ<br><span class="text-[7.5px] font-normal block">Item</span></th>
-                            <th class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-left border-r border-gray-300">รายการค่าใช้จ่าย / Description<br><span class="text-[7.5px] font-normal block">Expense Detail</span></th>
-                            <th class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-center border-r border-gray-300 w-14">จำนวน<br><span class="text-[7.5px] font-normal block">Quantity</span></th>
-                            <th class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-right w-28">จำนวนเงิน (บาท)<br><span class="text-[7.5px] font-normal block">Amount (THB)</span></th>
+                            <th class="px-3 py-2 text-center border-r border-gray-300 w-12">ลำดับ<br><span class="text-[8.5px] font-normal block mt-0.5">Item</span></th>
+                            <th class="px-3 py-2 text-left border-r border-gray-300">รายการค่าใช้จ่าย / Description<br><span class="text-[8.5px] font-normal block mt-0.5">Expense Detail</span></th>
+                            <th class="px-3 py-2 text-center border-r border-gray-300 w-16">จำนวน<br><span class="text-[8.5px] font-normal block mt-0.5">Quantity</span></th>
+                            <th class="px-3 py-2 text-right w-28">จำนวนเงิน (บาท)<br><span class="text-[8.5px] font-normal block mt-0.5">Amount (THB)</span></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in items %}
                         <tr class="border-b border-gray-300">
-                            <td class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-center border-r border-gray-300">{{ loop.index }}</td>
-                            <td class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} border-r border-gray-300 font-medium">{{ item.description }}</td>
-                            <td class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-center border-r border-gray-300">{{ item.quantity }}</td>
-                            <td class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-right font-semibold font-mono">฿{{ "{:,.2f}".format(item.amount) }}</td>
+                            <td class="px-3 py-2 text-center border-r border-gray-300">{{ loop.index }}</td>
+                            <td class="px-3 py-2 border-r border-gray-300 font-medium">{{ item.description }}</td>
+                            <td class="px-3 py-2 text-center border-r border-gray-300">{{ item.quantity }}</td>
+                            <td class="px-3 py-2 text-right font-semibold font-mono">฿{{ "{:,.2f}".format(item.amount) }}</td>
                         </tr>
                         {% else %}
                         <tr class="border-b border-gray-300">
-                            <td class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-center border-r border-gray-300">1</td>
-                            <td class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} border-r border-gray-300 font-medium">{{ exp.description or exp.category }}</td>
-                            <td class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-center border-r border-gray-300">1</td>
-                            <td class="{% if is_compact %}px-2 py-1{% else %}px-3 py-2{% endif %} text-right font-semibold font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
+                            <td class="px-3 py-2 text-center border-r border-gray-300">1</td>
+                            <td class="px-3 py-2 border-r border-gray-300 font-medium">{{ exp.description or exp.category }}</td>
+                            <td class="px-3 py-2 text-center border-r border-gray-300">1</td>
+                            <td class="px-3 py-2 text-right font-semibold font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
                         </tr>
                         {% endfor %}
                         
-                        <!-- Dynamic Padding Rows (Compact: 1-2 rows; Full: 8 rows) -->
-                        {% if is_compact %}
-                            {% set compact_pad = 2 if not items or items|length <= 1 else 1 %}
-                            {% for i in range(compact_pad) %}
-                            <tr class="border-b border-gray-300">
-                                <td class="px-2 py-1 text-center border-r border-gray-300 text-transparent">-</td>
-                                <td class="px-2 py-1 border-r border-gray-300 text-transparent">-</td>
-                                <td class="px-2 py-1 border-r border-gray-300 text-transparent">-</td>
-                                <td class="px-2 py-1 text-transparent">-</td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            {% for i in padding_rows %}
-                            <tr class="border-b border-gray-300">
-                                <td class="px-3 py-2 text-center border-r border-gray-300 text-transparent">-</td>
-                                <td class="px-3 py-2 border-r border-gray-300 text-transparent">-</td>
-                                <td class="px-3 py-2 border-r border-gray-300 text-transparent">-</td>
-                                <td class="px-3 py-2 text-transparent">-</td>
-                            </tr>
-                            {% endfor %}
-                        {% endif %}
+                        <!-- Padding Rows (Shown on screen & Full A4, hidden when printing Half A4) -->
+                        {% for i in padding_rows %}
+                        <tr class="border-b border-gray-300 print-hide-on-half">
+                            <td class="px-3 py-2 text-center border-r border-gray-300 text-transparent">-</td>
+                            <td class="px-3 py-2 border-r border-gray-300 text-transparent">-</td>
+                            <td class="px-3 py-2 border-r border-gray-300 text-transparent">-</td>
+                            <td class="px-3 py-2 text-transparent">-</td>
+                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- BOTTOM SECTION: SUMMARY CALCULATIONS & SIGNATURES -->
-        <div class="{% if is_compact %}space-y-2.5{% else %}space-y-6{% endif %}">
-            <!-- Calculations & Remarks -->
-            <div class="flex flex-col sm:grid sm:grid-cols-12 border border-gray-300">
-                <div class="sm:col-span-7 {% if is_compact %}p-2{% else %}p-3{% endif %} bg-gray-50 flex flex-col justify-between border-b sm:border-b-0 sm:border-r border-gray-300">
+        <!-- BOTTOM SECTION: GRAND TOTALS, REMARKS & SIGNATURES -->
+        <div class="space-y-6">
+            
+            <!-- Summary Calculations -->
+            <div class="flex flex-col sm:grid sm:grid-cols-12 border border-gray-300 print-compact-calc">
+                <div class="sm:col-span-7 p-3 bg-gray-50 flex flex-col justify-between border-b sm:border-b-0 sm:border-r border-gray-300">
                     <div>
-                        <span class="{% if is_compact %}text-[7.5px] sm:text-[8px]{% else %}text-[8.5px]{% endif %} font-bold text-gray-400 uppercase tracking-wider block mb-0.5">หมายเหตุ / REMARKS</span>
-                        <span class="{% if is_compact %}text-[9.5px] sm:text-[10px]{% else %}text-xs{% endif %} text-gray-700 whitespace-pre-line">{{ exp.note or '-' }}</span>
+                        <span class="text-[8.5px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">หมายเหตุ / REMARKS</span>
+                        <span class="text-xs text-gray-700 whitespace-pre-line">{{ exp.note or '-' }}</span>
                     </div>
                 </div>
-                <div class="sm:col-span-5 {% if is_compact %}text-[9.5px] sm:text-[10px]{% else %}text-[10.5px]{% endif %} divide-y divide-gray-300">
-                    <div class="flex justify-between {% if is_compact %}p-1.5 px-2{% else %}p-2{% endif %}">
+                <div class="sm:col-span-5 text-[10.5px] divide-y divide-gray-300">
+                    <div class="flex justify-between p-2">
                         <span class="text-gray-500 font-medium">รวมก่อนภาษี / Subtotal</span>
                         <span class="font-bold font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</span>
                     </div>
                     {% if exp.withholding_tax_amount and exp.withholding_tax_amount > 0 %}
-                    <div class="flex justify-between {% if is_compact %}p-1.5 px-2{% else %}p-2{% endif %} text-red-700 bg-red-50/40">
+                    <div class="flex justify-between p-2 text-red-700 bg-red-50/40">
                         <span class="font-medium">หัก ณ ที่จ่าย 3% / WHT 3%</span>
                         <span class="font-bold font-mono">- ฿{{ "{:,.2f}".format(exp.withholding_tax_amount) }}</span>
                     </div>
                     {% endif %}
-                    <div class="flex justify-between {% if is_compact %}p-1.5 px-2{% else %}p-2{% endif %} bg-gray-100 font-bold">
+                    <div class="flex justify-between p-2 bg-gray-100 font-bold">
                         <span class="text-gray-800 font-semibold">คงเหลือสุทธิ / Net Amount</span>
                         <span class="font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(exp.net_amount or exp.amount) }}</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Signatures Block -->
-            <div class="grid grid-cols-2 gap-8 sm:gap-14 text-center {% if is_compact %}text-[10px] sm:text-[10.5px] pt-1{% else %}text-xs pt-8{% endif %} max-w-xl mx-auto">
+            <!-- Signature Block (2 Signatures: Payee & Paid By) -->
+            <div class="grid grid-cols-2 gap-16 text-center text-xs pt-8 max-w-xl mx-auto print-compact-sig">
                 <!-- Payee Signature -->
                 <div class="space-y-1">
-                    <div class="{% if is_compact %}h-8 sm:h-9{% else %}h-14{% endif %} flex items-end justify-center"></div>
-                    <div class="border-t border-gray-400 pt-1 font-bold text-gray-800">ผู้รับเงิน / Payee Signature</div>
+                    <div class="h-16 sig-space flex items-end justify-center"></div>
+                    <div class="border-t border-gray-400 pt-2 font-bold text-gray-800">ผู้รับเงิน / Payee Signature</div>
                 </div>
                 <!-- Paid By Signature -->
                 <div class="space-y-1">
-                    <div class="{% if is_compact %}h-8 sm:h-9{% else %}h-14{% endif %} flex items-end justify-center relative">
+                    <div class="h-16 sig-space flex items-end justify-center relative">
                         {% if user and user.signature_url %}
-                        <img src="{{ user.signature_url }}" alt="ลายเซ็นผู้จ่ายเงิน" class="{% if is_compact %}max-h-8 max-w-[120px]{% else %}max-h-12 max-w-[150px]{% endif %} object-contain -mb-1">
+                        <img src="{{ user.signature_url }}" alt="ลายเซ็นผู้จ่ายเงิน" class="max-h-14 max-w-[150px] object-contain -mb-1">
                         {% endif %}
                     </div>
-                    <div class="border-t border-gray-400 pt-1 font-bold text-gray-800">
+                    <div class="border-t border-gray-400 pt-2 font-bold text-gray-800">
                         ผู้จ่ายเงิน / Paid By
                         {% if user and user.fullname %}
-                        <span class="block text-[8.5px] font-normal text-gray-500">({{ user.fullname }})</span>
+                        <span class="block text-[9.5px] font-normal text-gray-500">({{ user.fullname }})</span>
                         {% endif %}
                     </div>
                 </div>
             </div>
+
         </div>
-
-    </div>
-    {% endmacro %}
-
-
-    <!-- SCREEN PREVIEW WRAPPER -->
-    <div class="screen-preview-wrapper max-w-5xl mx-auto">
-
-        <!-- VIEW 1: HALF A4 (SINGLE) -->
-        <div id="view-half-single" class="layout-view">
-            {{ render_voucher_content(badge="", is_compact=true) }}
-        </div>
-
-        <!-- VIEW 2: 2 VOUCHERS PER A4 (DOUBLE: ORIGINAL & COPY) -->
-        <div id="view-half-double" class="layout-view hidden">
-            <!-- Top Voucher: ต้นฉบับ -->
-            {{ render_voucher_content(badge="ต้นฉบับ / ORIGINAL", is_compact=true) }}
-            
-            <!-- Cut Line -->
-            <div class="cut-line">
-                <span>✂️ ตัดตามรอยประ (CUT HERE)</span>
-            </div>
-
-            <!-- Bottom Voucher: สำเนา -->
-            {{ render_voucher_content(badge="สำเนา / COPY", is_compact=true) }}
-        </div>
-
-        <!-- VIEW 3: FULL A4 (ORIGINAL FULL PAGE) -->
-        <div id="view-full" class="layout-view hidden">
-            {{ render_voucher_content(badge="", is_compact=false) }}
-        </div>
-
     </div>
 
-
-    <!-- CONTROLLER JAVASCRIPT -->
+    <!-- Print Size Controller -->
     <script>
-        let currentLayout = localStorage.getItem('expense_voucher_layout') || 'half';
-        let currentPaper = localStorage.getItem('expense_voucher_paper') || 'a4';
+        let currentSize = localStorage.getItem('expense_voucher_print_size') || 'half';
 
-        function updateStyleTag() {
+        function setPrintSize(size) {
+            currentSize = size;
+            localStorage.setItem('expense_voucher_print_size', size);
+
+            const btnHalf = document.getElementById('btn-half');
+            const btnFull = document.getElementById('btn-full');
+            const printBtnText = document.getElementById('print-btn-text');
             const styleTag = document.getElementById('print-page-style');
-            if (!styleTag) return;
 
-            if (currentLayout === 'half') {
-                if (currentPaper === 'a5') {
-                    styleTag.innerHTML = `
-                        @page {
-                            size: A5 landscape;
-                            margin: 5mm;
-                        }
-                    `;
-                } else {
-                    // Standard A4 paper - prints on the top half of the sheet
-                    styleTag.innerHTML = `
-                        @page {
-                            size: A4 portrait;
-                            margin: 6mm 10mm;
-                        }
-                    `;
-                }
-            } else if (currentLayout === 'double') {
+            if (size === 'half') {
+                btnHalf.className = "px-3 py-1.5 rounded-lg font-bold transition text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs cursor-pointer";
+                btnFull.className = "px-3 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white transition text-xs cursor-pointer";
+                printBtnText.innerText = "พิมพ์ใบสำคัญจ่าย (ครึ่ง A4)";
+                
                 styleTag.innerHTML = `
                     @page {
-                        size: A4 portrait;
-                        margin: 4mm 8mm;
+                        size: A5 landscape;
+                        margin: 5mm 8mm;
+                    }
+                    @media print {
+                        body {
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: white !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .print-container {
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            min-height: auto !important;
+                            height: auto !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            box-shadow: none !important;
+                            border: none !important;
+                        }
+                        .print-hide-on-half {
+                            display: none !important;
+                        }
+                        .print-compact-header {
+                            padding-bottom: 2mm !important;
+                            margin-bottom: 2.5mm !important;
+                        }
+                        .print-compact-box {
+                            padding: 2mm 3mm !important;
+                            margin-bottom: 2.5mm !important;
+                        }
+                        .print-compact-table th, .print-compact-table td {
+                            padding: 1.5mm 2.5mm !important;
+                            font-size: 9.5px !important;
+                        }
+                        .print-compact-table th span {
+                            font-size: 7.5px !important;
+                        }
+                        .print-compact-calc {
+                            font-size: 9.5px !important;
+                        }
+                        .print-compact-calc div {
+                            padding: 1.2mm 2.5mm !important;
+                        }
+                        .print-compact-sig {
+                            padding-top: 1.5mm !important;
+                            gap: 20mm !important;
+                        }
+                        .print-compact-sig .sig-space {
+                            height: 9mm !important;
+                        }
                     }
                 `;
             } else {
-                // Full A4
+                btnFull.className = "px-3 py-1.5 rounded-lg font-bold transition text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs cursor-pointer";
+                btnHalf.className = "px-3 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white transition text-xs cursor-pointer";
+                printBtnText.innerText = "พิมพ์ใบสำคัญจ่าย (เต็มหน้า A4)";
+
                 styleTag.innerHTML = `
                     @page {
                         size: A4 portrait;
-                        margin: 10mm;
+                        margin: 0;
+                    }
+                    @media print {
+                        body {
+                            background-color: white !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .print-container {
+                            box-shadow: none !important;
+                            border: none !important;
+                            margin: 0 !important;
+                            width: 210mm !important;
+                            height: 297mm !important;
+                            padding: 15mm 15mm !important;
+                        }
                     }
                 `;
             }
         }
 
-        function setLayoutMode(mode) {
-            currentLayout = mode;
-            localStorage.setItem('expense_voucher_layout', mode);
-
-            // Update UI Views
-            document.querySelectorAll('.layout-view').forEach(el => el.classList.add('hidden'));
-            
-            const btnHalf = document.getElementById('btn-mode-half');
-            const btnDouble = document.getElementById('btn-mode-double');
-            const btnFull = document.getElementById('btn-mode-full');
-            const paperWrapper = document.getElementById('paper-size-wrapper');
-
-            // Reset buttons style
-            [btnHalf, btnDouble, btnFull].forEach(b => {
-                b.className = "px-3 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white transition flex items-center gap-1.5 text-xs";
-            });
-
-            if (mode === 'half') {
-                document.getElementById('view-half-single').classList.remove('hidden');
-                btnHalf.className = "px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs";
-                paperWrapper.classList.remove('hidden');
-            } else if (mode === 'double') {
-                document.getElementById('view-half-double').classList.remove('hidden');
-                btnDouble.className = "px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs";
-                paperWrapper.classList.add('hidden');
-            } else {
-                document.getElementById('view-full').classList.remove('hidden');
-                btnFull.className = "px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 text-xs bg-[#c5a880] text-[#1a1a1a] shadow-xs";
-                paperWrapper.classList.add('hidden');
-            }
-
-            updateStyleTag();
-        }
-
-        function setPaperSize(paper) {
-            currentPaper = paper;
-            localStorage.setItem('expense_voucher_paper', paper);
-
-            const btnA4 = document.getElementById('btn-paper-a4');
-            const btnA5 = document.getElementById('btn-paper-a5');
-
-            btnA4.className = "px-2.5 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white text-xs";
-            btnA5.className = "px-2.5 py-1.5 rounded-lg font-medium text-gray-300 hover:text-white text-xs";
-
-            if (paper === 'a5') {
-                btnA5.className = "px-2.5 py-1.5 rounded-lg font-bold text-xs bg-[#c5a880] text-[#1a1a1a]";
-            } else {
-                btnA4.className = "px-2.5 py-1.5 rounded-lg font-bold text-xs bg-[#c5a880] text-[#1a1a1a]";
-            }
-
-            updateStyleTag();
-        }
-
-        // Initialize state
         window.addEventListener('DOMContentLoaded', () => {
-            // Check query param if passed ?layout=half or ?layout=double or ?layout=full
-            const urlParams = new URLSearchParams(window.location.search);
-            const qLayout = urlParams.get('layout');
-            if (qLayout && ['half', 'double', 'full'].includes(qLayout)) {
-                currentLayout = qLayout;
-            }
-            setLayoutMode(currentLayout);
-            setPaperSize(currentPaper);
+            setPrintSize(currentSize);
         });
     </script>
 </body>
