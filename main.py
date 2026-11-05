@@ -1391,6 +1391,54 @@ def resequence_documents(db: Session, year: Optional[str] = None):
             d.document_number = f"INV-{yr}-{seq:04d}"
         db.flush()
 
+def resequence_expenses(db: Session, year: Optional[str] = None):
+    """
+    Resequence payment voucher numbers (PV-YYYY-XXXX) strictly chronologically by date.
+    Sort order: date ASC, created_at ASC, id ASC.
+    - If an expense is entered with a past/retroactive date, it automatically slots in,
+      and subsequent expenses shift up.
+    - If an expense is deleted, the remaining expenses re-sequence continuously
+      without gaps (0001, 0002, 0003...).
+    """
+    import uuid
+    from database import Expense
+    from sqlalchemy import func, or_
+    if year:
+        target_years = [str(year)]
+    else:
+        years_query = db.query(func.substr(Expense.date, 1, 4)).distinct().all()
+        target_years = sorted(list({y[0] for y in years_query if y[0] and len(y[0]) == 4 and y[0].isdigit()}))
+        if not target_years:
+            target_years = [str(datetime.date.today().year)]
+
+    for yr in target_years:
+        exps = db.query(Expense).filter(
+            or_(
+                Expense.date.like(f"{yr}-%"),
+                Expense.voucher_number.like(f"PV-{yr}-%"),
+                Expense.voucher_number.like(f"TEMP-PV-{yr}-%")
+            )
+        ).all()
+        if not exps:
+            continue
+
+        def sort_key(e):
+            e_date = (e.date or "9999-99-99").strip().split('T')[0]
+            e_created = e.created_at.isoformat() if e.created_at else e_date
+            return (e_date, e_created, e.id or 0)
+
+        sorted_exps = sorted(exps, key=sort_key)
+
+        # Pass 1: Give temporary unique numbers to avoid conflict
+        for e in sorted_exps:
+            e.voucher_number = f"TEMP-PV-{yr}-{e.id}-{uuid.uuid4().hex[:6]}"
+        db.flush()
+
+        # Pass 2: Assign continuous chronological sequence: PV-YYYY-0001, PV-YYYY-0002, ...
+        for seq, e in enumerate(sorted_exps, start=1):
+            e.voucher_number = f"PV-{yr}-{seq:04d}"
+        db.flush()
+
 def generate_invoice_number(db: Session, year: str) -> str:
     prefix = f"INV-{year}-"
     result = db.execute(
@@ -2834,17 +2882,15 @@ def get_expense_categories(db: Session = Depends(get_db), current_user: User = D
 @app.get("/api/expenses")
 def get_expenses(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from database import Expense
-    return db.query(Expense).order_by(Expense.date.desc()).all()
+    return db.query(Expense).order_by(Expense.date.desc(), Expense.voucher_number.desc(), Expense.id.desc()).all()
 
 @app.post("/api/expenses")
 def create_expense(exp_data: ExpenseCreateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from database import Expense
+    import uuid
     
-    v_num = exp_data.voucher_number
-    if not v_num or not v_num.strip():
-        count = db.query(Expense).count() + 1
-        year_str = datetime.date.today().year
-        v_num = f"PV-{year_str}-{count:04d}"
+    exp_year = exp_data.date[:4] if exp_data.date and len(exp_data.date) >= 4 else str(datetime.date.today().year)
+    v_num = f"TEMP-PV-{exp_year}-{uuid.uuid4().hex[:6]}"
         
     sub_amt = exp_data.subtotal if (exp_data.subtotal and exp_data.subtotal > 0) else exp_data.amount
     net_amt = exp_data.net_amount if (exp_data.net_amount and exp_data.net_amount > 0) else exp_data.amount
@@ -2875,7 +2921,12 @@ def create_expense(exp_data: ExpenseCreateSchema, request: Request, db: Session 
             pass
 
     db.add(new_exp)
+    db.flush()
+    
+    # Resequence payment vouchers chronologically by date
+    resequence_expenses(db, exp_year)
     db.commit()
+    db.refresh(new_exp)
     
     res_v_num = getattr(new_exp, "voucher_number", None) or f"PV-{new_exp.id:04d}"
     
@@ -2901,7 +2952,12 @@ def delete_expense(exp_id: int, request: Request, db: Session = Depends(get_db),
     v_num = getattr(exp, "voucher_number", None) or f"PV-{exp.id}"
     cat = exp.category
     amt = exp.amount
+    exp_year = exp.date[:4] if exp.date and len(exp.date) >= 4 else str(datetime.date.today().year)
+    
     db.delete(exp)
+    db.flush()
+    # Resequence remaining expenses so numbers run continuously without gaps
+    resequence_expenses(db, exp_year)
     db.commit()
     
     create_audit_log(
@@ -2915,7 +2971,7 @@ def delete_expense(exp_id: int, request: Request, db: Session = Depends(get_db),
         request=request
     )
     
-    return {"success": True, "message": "ลบรายการรายจ่ายสำเร็จ"}
+    return {"success": True, "message": "ลบรายการรายจ่ายและจัดเรียงเลขที่ใบสำคัญจ่ายใหม่ต่อเนื่องสำเร็จ"}
 
 @app.put("/api/expenses/{exp_id}")
 def update_expense(exp_id: int, exp_data: ExpenseCreateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -2934,7 +2990,6 @@ def update_expense(exp_id: int, exp_data: ExpenseCreateSchema, request: Request,
     exp.description = exp_data.description or exp_data.pay_to or exp_data.category
     
     for attr, val in [
-        ("voucher_number", exp_data.voucher_number or exp.voucher_number),
         ("pay_to", exp_data.pay_to),
         ("address", exp_data.address),
         ("tax_id", exp_data.tax_id),
@@ -2950,6 +3005,10 @@ def update_expense(exp_id: int, exp_data: ExpenseCreateSchema, request: Request,
         except Exception:
             pass
 
+    db.flush()
+    # Resequence expenses in case date was modified
+    exp_year = exp.date[:4] if exp.date and len(exp.date) >= 4 else str(datetime.date.today().year)
+    resequence_expenses(db, exp_year)
     db.commit()
     db.refresh(exp)
 
@@ -2966,6 +3025,20 @@ def update_expense(exp_id: int, exp_data: ExpenseCreateSchema, request: Request,
     )
 
     return {"success": True, "message": "อัปเดตข้อมูลใบสำคัญจ่ายสำเร็จ", "expense_id": exp.id, "voucher_number": v_num}
+
+@app.post("/api/expenses/resequence")
+def resequence_all_expenses_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        from database import Expense
+        resequence_expenses(db)
+        db.commit()
+        return {"success": True, "message": "จัดเรียงเลขที่ใบสำคัญจ่ายตามวันที่และรันเลขต่อเนื่องเรียบร้อยแล้ว"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาดในการจัดเรียงเลขที่ใบสำคัญจ่าย: {e}")
 
 # ----------------- INVENTORY UPGRADE & RESTOCK -----------------
 class RestockSchema(BaseModel):
@@ -2997,9 +3070,9 @@ def restock_product(restock_data: RestockSchema, request: Request, db: Session =
     # Register as expense only if total_cost > 0
     exp_id = None
     if total_cost > 0.0:
-        count = db.query(Expense).count() + 1
-        year_str = datetime.date.today().year
-        v_num = f"PV-{year_str}-{count:04d}"
+        import uuid
+        exp_year = restock_data.date[:4] if restock_data.date and len(restock_data.date) >= 4 else str(datetime.date.today().year)
+        v_num = f"TEMP-PV-{exp_year}-{uuid.uuid4().hex[:6]}"
         
         unit_info = f" (ชิ้นละ {unit_cost:,.2f} บ.)" if unit_cost > 0 else ""
         desc = f"ซื้อสินค้าเติมสต็อก: {prod.name} จำนวน {restock_data.quantity} ชิ้น{unit_info}"
@@ -3035,6 +3108,8 @@ def restock_product(restock_data: RestockSchema, request: Request, db: Session =
                 pass
                 
         db.add(new_exp)
+        db.flush()
+        resequence_expenses(db, exp_year)
         db.commit()
         db.refresh(new_exp)
         exp_id = new_exp.id
@@ -3348,7 +3423,19 @@ def print_expenses_summary_list(
         if category and category.strip() and category != "ALL":
             stmt = stmt.filter(Expense.category == category.strip())
             
-        raw_expenses = stmt.order_by(Expense.date.desc(), Expense.id.desc()).all()
+        raw_expenses = stmt.all()
+        
+        # Sort expenses sequentially by voucher number (0001, 0002, 0003, ...)
+        import re
+        def exp_sort_key(e):
+            v_num = e.voucher_number or ""
+            m = re.search(r'(\d+)$', v_num)
+            if m:
+                prefix = v_num[:m.start()]
+                return (prefix, int(m.group(1)))
+            return (e.date or "", e.id or 0)
+            
+        raw_expenses = sorted(raw_expenses, key=exp_sort_key)
         
         months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
         exp_list = []
@@ -4024,9 +4111,10 @@ def startup_resequence_all():
         from database import SessionLocal
         db = SessionLocal()
         resequence_documents(db)
+        resequence_expenses(db)
         db.commit()
         db.close()
-        print("✅ Automatically resequenced all documents by date on startup.")
+        print("✅ Automatically resequenced all documents and expenses by date on startup.")
     except Exception as e:
         print("Startup resequence notice:", e)
 

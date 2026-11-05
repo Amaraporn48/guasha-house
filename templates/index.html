@@ -2020,6 +2020,12 @@
                         <p class="text-xs text-gray-400 mt-1">บันทึกค่าใช้จ่ายต่างๆ ซื้อสินค้าเข้าสต็อก ค่าการตลาด ค่าแรง และสั่งพิมพ์ใบสำคัญจ่าย (Payment Voucher)</p>
                     </div>
                     <div class="flex items-center gap-2.5">
+                        <button @click="resequenceExpenses()"
+                                title="จัดเรียงเลขที่ใบสำคัญจ่ายใหม่ตามลำดับวันที่ และรันเลขต่อเนื่องอัตโนมัติ"
+                                class="bg-cream hover:bg-beige border border-beige text-charcoal text-xs font-semibold px-3 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+                            <svg class="w-4 h-4 text-gold-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span class="hidden sm:inline">เรียงเลขตามวันที่</span>
+                        </button>
                         <button @click="openExpenseModal()"
                                 class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition uppercase tracking-wider flex items-center gap-1.5 shadow cursor-pointer">
                             <span class="text-sm font-bold text-gold">+</span>
@@ -3408,8 +3414,10 @@
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">เลขที่ใบสำคัญจ่าย</label>
-                                <input type="text" x-model="expenseModal.voucher_number" required
-                                       class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2 text-sm font-mono font-bold focus-gold">
+                                <input type="text" x-model="expenseModal.voucher_number"
+                                       :placeholder="expenseModal.id ? 'PV-YYYY-XXXX' : '(ระบบรันเลขอัตโนมัติตามวันที่)'"
+                                       :disabled="!expenseModal.id"
+                                       class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2 text-sm font-mono font-bold focus-gold disabled:opacity-75 disabled:bg-gray-100/60">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">วันที่จ่าย / Date</label>
@@ -5047,13 +5055,11 @@
 
                 openExpenseModal() {
                     const todayStr = new Date().toISOString().substring(0, 10);
-                    const pvCount = (this.expenses ? this.expenses.length : 0) + 1;
-                    const yearStr = new Date().getFullYear();
                     
                     this.expenseModal = {
                         open: true,
                         id: null,
-                        voucher_number: `PV-${yearStr}-${String(pvCount).padStart(4, '0')}`,
+                        voucher_number: '(ระบบรันเลขอัตโนมัติตามวันที่)',
                         date: todayStr,
                         category: 'ค่าสินค้า/วัตถุดิบ',
                         pay_to: '',
@@ -5124,8 +5130,9 @@
                     const url = isEdit ? `/api/expenses/${this.expenseModal.id}` : '/api/expenses';
                     const method = isEdit ? 'PUT' : 'POST';
                     
+                    const vNum = (this.expenseModal.voucher_number || '').trim();
                     const payload = {
-                        voucher_number: this.expenseModal.voucher_number || '',
+                        voucher_number: (isEdit && vNum && !vNum.includes('ระบบ')) ? vNum : '',
                         date: this.expenseModal.date || new Date().toISOString().substring(0, 10),
                         category: this.expenseModal.category,
                         pay_to: this.expenseModal.pay_to || '',
@@ -5221,7 +5228,7 @@
                 },
                 filteredExpenses() {
                     if (!this.expenses) return [];
-                    return this.expenses.filter(exp => {
+                    const list = this.expenses.filter(exp => {
                         if (!exp.date) return true;
                         const dateStr = String(exp.date); // e.g. "2026-09-04"
                         const parts = dateStr.split('-');
@@ -5249,6 +5256,16 @@
                             }
                         }
                         return true;
+                    });
+
+                    return list.sort((a, b) => {
+                        const dateA = a.date || '';
+                        const dateB = b.date || '';
+                        if (dateA !== dateB) return dateB.localeCompare(dateA);
+                        const vA = a.voucher_number || '';
+                        const vB = b.voucher_number || '';
+                        if (vA !== vB) return vB.localeCompare(vA);
+                        return (b.id || 0) - (a.id || 0);
                     });
                 },
                 getExpensesByCategory() {
@@ -6146,6 +6163,21 @@
                             if (data.success) {
                                 this.showToast(data.message || 'จัดเรียงเลขที่เอกสารสำเร็จ');
                                 this.fetchDocuments();
+                            } else {
+                                this.showToast(data.detail || 'เกิดข้อผิดพลาด', 'error');
+                            }
+                        })
+                        .catch(err => this.showToast(err.message, 'error'));
+                },
+
+                resequenceExpenses() {
+                    if (!confirm('ต้องการจัดเรียงเลขที่ใบสำคัญจ่ายใหม่ทั้งหมดตามลำดับวันที่ และรันเลขต่อเนื่อง PV-2026-0001, 0002... หรือไม่?')) return;
+                    fetch('/api/expenses/resequence', { method: 'POST' })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                this.showToast(data.message || 'จัดเรียงเลขที่ใบสำคัญจ่ายสำเร็จ');
+                                this.fetchExpenses();
                             } else {
                                 this.showToast(data.detail || 'เกิดข้อผิดพลาด', 'error');
                             }
