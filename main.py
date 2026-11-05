@@ -2794,6 +2794,9 @@ class ExpenseCreateSchema(BaseModel):
     net_amount: Optional[float] = 0.0
     note: Optional[str] = ""
 
+class ExpenseCategoryCreateSchema(BaseModel):
+    name: str
+
 # ----------------- REGIONS API -----------------
 class RegionCreateSchema(BaseModel):
     name: str
@@ -2878,7 +2881,9 @@ def delete_branch(branch_id: int, db: Session = Depends(get_db), current_user: U
 # ----------------- EXPENSES API -----------------
 @app.get("/api/expenses/categories")
 def get_expense_categories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    from database import Expense
+    from database import Expense, SiteSetting
+    import json
+    
     distinct_cats = db.query(Expense.category).distinct().all()
     cats = [c[0] for c in distinct_cats if c[0]]
     defaults = ["ค่าสินค้า/วัตถุดิบ", "ค่าเช่า/สถานที่", "ค่าเงินเดือน/ค่าแรง", "ค่าการตลาด/โฆษณา", "ค่าน้ำ/ค่าไฟ/สาธารณูปโภค", "ค่าใช้จ่ายทั่วไป"]
@@ -2892,13 +2897,72 @@ def get_expense_categories(db: Session = Depends(get_db), current_user: User = D
         "อื่นๆ": "ค่าใช้จ่ายทั่วไป"
     }
     
+    # Custom categories saved in SiteSetting
+    custom_setting = db.query(SiteSetting).filter(SiteSetting.key == "custom_expense_categories").first()
+    custom_cats = []
+    if custom_setting and custom_setting.value:
+        try:
+            custom_cats = json.loads(custom_setting.value)
+        except Exception:
+            custom_cats = [c.strip() for c in custom_setting.value.split(",") if c.strip()]
+
     result = list(defaults)
+    for c in custom_cats:
+        if c and c not in result:
+            result.append(c)
+
     for c in cats:
         clean_c = legacy_map.get(c, c)
-        if clean_c not in result:
+        if clean_c and clean_c not in result:
             result.append(clean_c)
             
     return result
+
+@app.post("/api/expenses/categories")
+def add_expense_category(payload: ExpenseCategoryCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from database import SiteSetting
+    import json
+    
+    name = (payload.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="กรุณาระบุชื่อหมวดหมู่รายจ่าย")
+        
+    custom_setting = db.query(SiteSetting).filter(SiteSetting.key == "custom_expense_categories").first()
+    custom_cats = []
+    if custom_setting and custom_setting.value:
+        try:
+            custom_cats = json.loads(custom_setting.value)
+        except Exception:
+            custom_cats = [c.strip() for c in custom_setting.value.split(",") if c.strip()]
+            
+    if name not in custom_cats:
+        custom_cats.append(name)
+        if not custom_setting:
+            custom_setting = SiteSetting(key="custom_expense_categories", value=json.dumps(custom_cats, ensure_ascii=False))
+            db.add(custom_setting)
+        else:
+            custom_setting.value = json.dumps(custom_cats, ensure_ascii=False)
+        db.commit()
+        
+    return get_expense_categories(db=db, current_user=current_user)
+
+@app.delete("/api/expenses/categories/{category_name}")
+def delete_expense_category(category_name: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from database import SiteSetting
+    import json
+    
+    custom_setting = db.query(SiteSetting).filter(SiteSetting.key == "custom_expense_categories").first()
+    if custom_setting and custom_setting.value:
+        try:
+            custom_cats = json.loads(custom_setting.value)
+        except Exception:
+            custom_cats = [c.strip() for c in custom_setting.value.split(",") if c.strip()]
+        if category_name in custom_cats:
+            custom_cats.remove(category_name)
+            custom_setting.value = json.dumps(custom_cats, ensure_ascii=False)
+            db.commit()
+            
+    return get_expense_categories(db=db, current_user=current_user)
 
 @app.get("/api/expenses")
 def get_expenses(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

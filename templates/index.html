@@ -2031,6 +2031,12 @@
                             <span class="text-sm font-bold text-gold">+</span>
                             <span>บันทึกรายจ่ายใหม่</span>
                         </button>
+                        <button @click="openAddCategoryModal()"
+                                title="เพิ่มหมวดหมู่รายจ่ายใหม่"
+                                class="bg-cream hover:bg-beige border border-beige text-charcoal text-xs font-semibold px-3 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+                            <span class="text-sm font-bold text-gold-dark">+</span>
+                            <span class="hidden sm:inline">เพิ่มหมวดหมู่</span>
+                        </button>
                         <button @click="printExpensesSummary()"
                                 title="พิมพ์รายงานตารางรายจ่าย / Print List"
                                 class="bg-cream hover:bg-beige border border-beige text-charcoal text-xs font-semibold px-3 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer">
@@ -3425,7 +3431,14 @@
                                        class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2 text-sm focus-gold">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">หมวดหมู่รายจ่าย *</label>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">หมวดหมู่รายจ่าย *</label>
+                                    <button type="button" 
+                                            @click="openAddCategoryModal()" 
+                                            class="text-[11px] font-bold text-gold-dark hover:text-charcoal uppercase cursor-pointer hover:underline flex items-center gap-0.5">
+                                        <span>+</span> เพิ่มหมวดหมู่
+                                    </button>
+                                </div>
                                 <select x-model="expenseModal.category" required
                                         class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2 text-sm font-bold text-gold-dark focus-gold cursor-pointer">
                                     <option value="" disabled>-- เลือกหมวดหมู่รายจ่าย --</option>
@@ -3748,6 +3761,67 @@
         </div>
     </div>
 
+    <!-- Expense Category Modal -->
+    <div x-show="categoryModal.open" 
+         class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[70] no-print" 
+         x-transition
+         @keydown.escape.window="if (categoryModal.open) categoryModal.open = false"
+         style="display: none;">
+        <div class="bg-white border border-beige rounded-2xl max-w-md w-full shadow-2xl overflow-hidden relative" @click.away="categoryModal.open = false">
+            <div class="p-5 border-b border-beige flex items-center justify-between bg-cream/40">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-gold/15 text-gold-dark flex items-center justify-center text-sm font-bold shadow-xs">📁</div>
+                    <div>
+                        <h3 class="text-sm font-bold tracking-wider text-charcoal uppercase">เพิ่มหมวดหมู่รายจ่ายใหม่</h3>
+                        <p class="text-[11px] text-gray-400">หมวดหมู่นี้จะแสดงในแบบฟอร์มใบสำคัญจ่ายและตัวกรองรายงาน</p>
+                    </div>
+                </div>
+                <button type="button" @click="categoryModal.open = false" class="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none px-2 py-1 cursor-pointer">&times;</button>
+            </div>
+            
+            <form @submit.prevent="saveExpenseCategory()" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">ชื่อหมวดหมู่รายจ่าย *</label>
+                    <input type="text" 
+                           x-model="categoryModal.name" 
+                           placeholder="เช่น ค่าวัสดุสิ้นเปลือง, ค่าอุปกรณ์สำนักงาน, ค่าขนส่ง..." 
+                           required
+                           class="w-full bg-cream border border-beige rounded-xl px-3.5 py-2.5 text-sm focus-gold text-charcoal font-medium">
+                </div>
+
+                <!-- Existing categories chips for quick reference and deletion of custom ones -->
+                <div class="pt-1">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">หมวดหมู่ทั้งหมดในระบบ:</label>
+                    <div class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-cream/30 rounded-xl border border-beige/60">
+                        <template x-for="cat in expenseCategories" :key="cat">
+                            <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg bg-white border border-beige text-charcoal shadow-2xs">
+                                <span class="w-1.5 h-1.5 rounded-full" :style="`background-color: ${getCategoryStyle(cat).dot}`"></span>
+                                <span x-text="cat"></span>
+                                <button type="button" 
+                                        x-show="!['ค่าสินค้า/วัตถุดิบ', 'ค่าเช่า/สถานที่', 'ค่าเงินเดือน/ค่าแรง', 'ค่าการตลาด/โฆษณา', 'ค่าน้ำ/ค่าไฟ/สาธารณูปโภค', 'ค่าใช้จ่ายทั่วไป'].includes(cat)"
+                                        @click="deleteExpenseCategory(cat)"
+                                        title="ลบหมวดหมู่นี้"
+                                        class="text-gray-300 hover:text-red-500 font-bold text-xs ml-0.5 transition cursor-pointer">
+                                    &times;
+                                </button>
+                            </span>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-beige">
+                    <button type="button" @click="categoryModal.open = false" class="bg-cream hover:bg-beige text-charcoal text-xs font-semibold px-4 py-2.5 rounded-xl border border-beige transition cursor-pointer">
+                        ยกเลิก / Cancel
+                    </button>
+                    <button type="submit" :disabled="savingCategory" class="bg-charcoal hover:bg-gold-dark text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition disabled:opacity-50 flex items-center gap-1.5 shadow-sm cursor-pointer">
+                        <svg x-show="savingCategory" class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                        <span x-text="savingCategory ? 'กำลังบันทึก...' : 'บันทึกหมวดหมู่'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Restock Modal Form -->
     <div x-show="restockModal.open" class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 no-print" x-transition>
         <div class="bg-white border border-beige rounded-2xl max-w-md w-full shadow-2xl overflow-hidden relative">
@@ -3936,6 +4010,8 @@
                     points: []
                 },
                 expenseModal: { open: false, id: null, date: new Date().toISOString().substring(0, 10), category: '', description: '', amount: 0.0 },
+                categoryModal: { open: false, name: '' },
+                savingCategory: false,
                 restockModal: { open: false, product_id: null, product_name: '', quantity: 10, unit_cost: '', cost_amount: '', date: new Date().toISOString().substring(0, 10) },
                 viewModal: { open: false, doc: {} },
                 uploadingSlip: false,
@@ -5197,6 +5273,64 @@
 
                 printExpenseVoucher(expId) {
                     window.open(`/print/expense/${expId}`, '_blank');
+                },
+                openAddCategoryModal() {
+                    this.categoryModal = {
+                        open: true,
+                        name: ''
+                    };
+                },
+                async saveExpenseCategory() {
+                    const name = (this.categoryModal.name || '').trim();
+                    if (!name) {
+                        alert('กรุณาระบุชื่อหมวดหมู่รายจ่าย');
+                        return;
+                    }
+                    this.savingCategory = true;
+                    try {
+                        const res = await fetch('/api/expenses/categories', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: name })
+                        });
+                        if (!res.ok) {
+                            const errData = await res.json().catch(() => ({}));
+                            throw new Error(errData.detail || 'เกิดข้อผิดพลาดในการบันทึกหมวดหมู่');
+                        }
+                        const updated = await res.json();
+                        this.expenseCategories = updated;
+
+                        // Auto-select in expense voucher modal if open
+                        if (this.expenseModal && this.expenseModal.open) {
+                            this.expenseModal.category = name;
+                        }
+
+                        this.categoryModal.open = false;
+                        this.categoryModal.name = '';
+                        this.showToast(`เพิ่มหมวดหมู่ "${name}" เรียบร้อยแล้ว`);
+                    } catch (e) {
+                        alert(e.message || 'บันทึกหมวดหมู่ไม่สำเร็จ');
+                    } finally {
+                        this.savingCategory = false;
+                    }
+                },
+                async deleteExpenseCategory(cat) {
+                    if (!confirm(`คุณต้องการลบหมวดหมู่ "${cat}" ออกจากรายการที่กำหนดเองใช่หรือไม่?`)) return;
+                    try {
+                        const res = await fetch(`/api/expenses/categories/${encodeURIComponent(cat)}`, {
+                            method: 'DELETE'
+                        });
+                        if (res.ok) {
+                            const updated = await res.json();
+                            this.expenseCategories = updated;
+                            if (this.expenseModal && this.expenseModal.category === cat) {
+                                this.expenseModal.category = updated[0] || '';
+                            }
+                            this.showToast(`ลบหมวดหมู่ "${cat}" เรียบร้อยแล้ว`);
+                        }
+                    } catch (e) {
+                        alert('ไม่สามารถลบหมวดหมู่ได้: ' + e);
+                    }
                 },
                 fetchExpenseCategories() {
                     fetch('/api/expenses/categories')
