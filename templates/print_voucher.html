@@ -54,7 +54,7 @@
             }
             .voucher-card {
                 width: 194mm;
-                height: 140mm;
+                min-height: 138mm;
                 max-width: 100%;
                 background-color: white !important;
                 box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16), 0 3px 8px rgba(0, 0, 0, 0.08);
@@ -85,11 +85,12 @@
             }
         }
 
-        /* Print Preview - Guaranteed Exactly 1 Page on A4 (Top Half) */
+        /* Print Preview - Guaranteed Strictly 1 Single Page on A4 (Top Half) */
         @media print {
             html, body {
                 width: 210mm !important;
-                height: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white !important;
@@ -101,18 +102,22 @@
             }
             .screen-wrapper {
                 width: 210mm !important;
-                height: auto !important;
+                max-height: 147mm !important;
                 padding: 0 !important;
                 margin: 0 !important;
                 display: block !important;
+                overflow: hidden !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                break-inside: avoid !important;
+                break-after: avoid !important;
             }
             .voucher-card {
                 width: 192mm !important;
-                height: 138mm !important;
+                min-height: 134mm !important;
                 max-width: 192mm !important;
-                max-height: 138mm !important;
-                margin: 6mm auto 0 auto !important;
-                padding: 5mm 7mm 4mm 7mm !important;
+                margin: 5mm auto 0 auto !important;
+                padding: 4mm 6mm 4mm 6mm !important;
                 background-color: white !important;
                 box-shadow: none !important;
                 border: 1.5px solid #1a1a1a !important;
@@ -129,7 +134,7 @@
                 align-items: center !important;
                 justify-content: center !important;
                 width: 192mm !important;
-                margin: 3.5mm auto 0 auto !important;
+                margin: 2.5mm auto 0 auto !important;
                 color: #888 !important;
                 font-size: 8.5px !important;
                 font-weight: 500 !important;
@@ -200,21 +205,23 @@
                 </div>
             </div>
 
-            <!-- 2. PAYEE & PAYMENT METHOD DETAILS -->
-            <div class="border border-gray-400 bg-gray-50/50 p-2 mb-1.5 flex items-center justify-between gap-4 text-[9px] sm:text-[9.5px] w-full">
+            <!-- 2. PAYEE & PAYMENT METHOD DETAILS (Full Name & Full Address Without Any Truncation) -->
+            <div class="border border-gray-400 bg-gray-50/50 p-2 sm:p-2.5 mb-1.5 flex items-start justify-between gap-4 text-[9px] sm:text-[9.5px] w-full">
                 <div class="flex-1 min-w-0 leading-tight">
-                    <div class="flex items-baseline gap-1.5">
+                    <div class="flex flex-wrap items-baseline gap-1.5">
                         <span class="font-bold text-gray-800 uppercase flex-shrink-0">จ่ายให้แก่ / Pay To:</span>
-                        <span class="text-[11px] sm:text-[12px] font-bold text-gray-900 truncate">{{ exp.pay_to or '-' }}</span>
+                        <span class="text-[11px] sm:text-[11.5px] font-bold text-gray-900 break-words">{{ exp.pay_to or '-' }}</span>
                         {% if exp.tax_id %}
-                        <span class="text-[8.5px] text-gray-500 ml-2">(เลขประจำตัวผู้เสียภาษี: <span class="font-mono font-medium text-gray-800">{{ exp.tax_id }}</span>)</span>
+                        <span class="text-[8.5px] text-gray-600 ml-1 flex-shrink-0">(เลขประจำตัวผู้เสียภาษี: <span class="font-mono font-medium text-gray-800">{{ exp.tax_id }}</span>)</span>
                         {% endif %}
                     </div>
                     {% if exp.address %}
-                    <div class="text-[8px] sm:text-[8.5px] text-gray-600 truncate mt-0.5"><span class="font-semibold text-gray-700">ที่อยู่ / Address:</span> {{ exp.address }}</div>
+                    <div class="text-[8.5px] sm:text-[9px] text-gray-700 mt-1 leading-normal break-words">
+                        <span class="font-semibold text-gray-800">ที่อยู่ / Address:</span> {{ exp.address }}
+                    </div>
                     {% endif %}
                 </div>
-                <div class="flex items-center gap-3 text-[8.5px] sm:text-[9px] font-medium text-gray-700 border-l border-gray-300 pl-3 flex-shrink-0">
+                <div class="flex items-center gap-3 text-[8.5px] sm:text-[9px] font-medium text-gray-700 border-l border-gray-300 pl-3 flex-shrink-0 pt-0.5">
                     <span class="font-bold text-gray-800">การชำระเงิน:</span>
                     <label class="inline-flex items-center gap-1 cursor-default">
                         <span class="inline-block w-3.5 h-3.5 border border-gray-600 rounded-sm bg-gray-900 text-white text-[8.5px] leading-none text-center font-bold">✓</span>
@@ -257,7 +264,7 @@
 
                         <!-- Extra Blank Rows so the table looks full and substantial -->
                         {% set total_items = items|length if items else 1 %}
-                        {% set pad_rows = 3 if total_items == 1 else (2 if total_items == 2 else 1) %}
+                        {% set pad_rows = 2 if total_items == 1 else (1 if total_items == 2 else 0) %}
                         {% for i in range(pad_rows) %}
                         <tr class="border-b border-gray-200">
                             <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
