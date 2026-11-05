@@ -3751,6 +3751,80 @@ def print_shipping_label(doc_id: int, request: Request, db: Session = Depends(ge
         }
     )
 
+@app.get("/print/expenses/batch", response_class=HTMLResponse)
+def print_expenses_batch(
+    request: Request,
+    ids: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_from_cookie)
+):
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+    import json
+    from database import Expense
+    
+    id_list = []
+    if ids:
+        for x in ids.split(','):
+            x = x.strip()
+            if x.isdigit():
+                id_list.append(int(x))
+                
+    if not id_list:
+        raise HTTPException(status_code=400, detail="กรุณาระบุเลขประจำตัวใบสำคัญจ่าย (ids) อย่างน้อย 1 รายการ")
+        
+    # Fetch expenses while preserving requested order
+    raw_expenses = db.query(Expense).filter(Expense.id.in_(id_list)).all()
+    exp_map = {e.id: e for e in raw_expenses}
+    expenses = [exp_map[eid] for eid in id_list if eid in exp_map]
+    
+    if not expenses:
+        raise HTTPException(status_code=404, detail="ไม่พบข้อมูลใบสำคัญจ่ายที่ระบุ")
+        
+    months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+    for exp in expenses:
+        items = []
+        if exp.items_json:
+            try:
+                items = json.loads(exp.items_json)
+            except Exception:
+                items = []
+        setattr(exp, "items", items)
+        
+        formatted_date = str(exp.date)
+        if exp.date:
+            try:
+                parts = str(exp.date).split('T')[0].split('-')
+                if len(parts) == 3:
+                    y = int(parts[0]) + 543
+                    m = int(parts[1])
+                    d = int(parts[2])
+                    if 1 <= m <= 12:
+                        formatted_date = f"{d} {months_th[m-1]} {y}"
+            except Exception:
+                pass
+        setattr(exp, "formatted_date", formatted_date)
+        
+    # Group into pages of 2 vouchers per A4 sheet (top & bottom)
+    pages = []
+    for i in range(0, len(expenses), 2):
+        top_exp = expenses[i]
+        bottom_exp = expenses[i+1] if i + 1 < len(expenses) else None
+        pages.append({
+            "top": top_exp,
+            "bottom": bottom_exp
+        })
+        
+    return templates.TemplateResponse(
+        request=request,
+        name="print_voucher_batch.html",
+        context={
+            "pages": pages,
+            "total_expenses": len(expenses),
+            "user": current_user
+        }
+    )
+
 @app.get("/print/expense/{exp_id}", response_class=HTMLResponse)
 def print_expense_voucher(exp_id: int, request: Request, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_from_cookie)):
     if not current_user:

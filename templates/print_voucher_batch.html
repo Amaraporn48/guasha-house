@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>พิมพ์ใบสำคัญจ่ายหลายรายการ ({{ total_expenses }} รายการ)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#fbfaf7',
+                        beige: '#f5f2eb',
+                        charcoal: '#1a1a1a',
+                        gold: '#c5a880',
+                        'gold-dark': '#b39268',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        /* Screen Preview */
+        @media screen {
+            body {
+                background-color: #eeebe3 !important;
+                color: #1a1a1a !important;
+                margin: 0;
+                padding: 0;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            }
+            .screen-wrapper {
+                padding: 2rem 1rem 3rem 1rem;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2rem;
+            }
+            .a4-page {
+                width: 210mm;
+                min-height: 297mm;
+                background-color: white !important;
+                box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16), 0 3px 8px rgba(0, 0, 0, 0.08);
+                border-radius: 4px;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                position: relative;
+            }
+            .half-slot {
+                height: 148.5mm;
+                max-height: 148.5mm;
+                box-sizing: border-box;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                padding: 4mm 9mm 2mm 9mm;
+            }
+            .voucher-card {
+                width: 192mm;
+                min-height: 134mm;
+                max-height: 136mm;
+                margin: 0 auto;
+                background-color: white !important;
+                border: 1.5px solid #1a1a1a !important;
+                border-radius: 4px;
+                padding: 4mm 6mm;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+            .cut-guide {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 192mm;
+                margin: 1.5mm auto 0 auto;
+                color: #888;
+                font-size: 8.5px;
+                font-weight: 500;
+                user-select: none;
+            }
+            .cut-guide::before, .cut-guide::after {
+                content: '';
+                flex: 1;
+                border-bottom: 1.5px dashed #aaa;
+                margin: 0 12px;
+            }
+            .empty-slot {
+                width: 192mm;
+                min-height: 134mm;
+                margin: 0 auto;
+                border: 2px dashed #ddd;
+                border-radius: 6px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: #aaa;
+                font-size: 12px;
+            }
+        }
+
+        /* Print Preview - Guaranteed Exactly 2 Vouchers Per A4 Page */
+        @media print {
+            html, body {
+                width: 210mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .screen-wrapper {
+                width: 210mm !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: block !important;
+            }
+            .a4-page {
+                width: 210mm !important;
+                height: 297mm !important;
+                max-height: 297mm !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: flex-start !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                box-sizing: border-box !important;
+                background: white !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+            .a4-page:last-child {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            .half-slot {
+                height: 148.5mm !important;
+                max-height: 148.5mm !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                padding: 4mm 9mm 2mm 9mm !important;
+            }
+            .voucher-card {
+                width: 192mm !important;
+                min-height: 133mm !important;
+                max-height: 136mm !important;
+                margin: 0 auto !important;
+                padding: 4mm 6mm 4mm 6mm !important;
+                background-color: white !important;
+                box-shadow: none !important;
+                border: 1.5px solid #1a1a1a !important;
+                border-radius: 4px !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .cut-guide {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 192mm !important;
+                margin: 1.5mm auto 0 auto !important;
+                color: #888 !important;
+                font-size: 8px !important;
+                font-weight: 500 !important;
+                user-select: none !important;
+            }
+            .cut-guide::before, .cut-guide::after {
+                content: '' !important;
+                flex: 1 !important;
+                border-bottom: 1px dashed #999 !important;
+                margin: 0 10px !important;
+            }
+            .empty-slot {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Action Bar (Hidden when printing) -->
+    <div class="no-print bg-[#1a1a1a] text-white p-3 sm:p-3.5 sticky top-0 z-50 shadow-md border-b border-[#333]">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="/static/logo.png" alt="Guasha House Logo" class="h-9 w-9 object-contain bg-white rounded-lg p-0.5">
+                <div>
+                    <h1 class="text-xs sm:text-sm font-bold text-[#c5a880] uppercase tracking-wider">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
+                    <p class="text-[10px] sm:text-[11px] text-gray-300">
+                        พิมพ์ใบสำคัญจ่ายหลายรายการ (รวม <span class="font-bold text-white">{{ total_expenses }}</span> รายการ / กระดาษ <span class="font-bold text-[#c5a880]">{{ pages|length }}</span> แผ่น A4)
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="window.close()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer">
+                    ปิดหน้านี้
+                </button>
+                <button onclick="window.print()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    <span>สั่งพิมพ์ทั้งหมด ({{ total_expenses }} ใบ)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JINJA MACRO FOR RENDERING A VOUCHER CARD -->
+    {% macro render_voucher_card(exp) %}
+    <div class="voucher-card">
+        <!-- 1. HEADER SECTION -->
+        <div class="flex items-start justify-between border-b-2 border-gray-800 pb-2 mb-1.5">
+            <!-- Company Info -->
+            <div class="flex items-start gap-2.5 flex-1 min-w-0">
+                <img src="/static/logo.png" alt="Guasha House Logo" class="h-11 w-11 object-contain flex-shrink-0 mt-0.5">
+                <div class="flex-1 min-w-0 leading-tight">
+                    <h2 class="text-[13px] sm:text-[14px] font-bold text-gray-900 uppercase font-serif tracking-tight">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
+                    <h3 class="text-[9px] sm:text-[9.5px] font-semibold text-gray-600 uppercase tracking-wider">GUASHA HOUSE CO., LTD.</h3>
+                    <p class="text-[8px] sm:text-[8.5px] text-gray-600 mt-0.5 leading-normal">
+                        199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240<br>
+                        โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษี: 0105565028948
+                    </p>
+                </div>
+            </div>
+
+            <!-- Voucher Title & Details -->
+            <div class="text-right flex-shrink-0 min-w-[170px]">
+                <div class="border-2 border-gray-800 bg-gray-50/80 px-3 py-1 rounded text-center mb-1">
+                    <h1 class="text-[14px] sm:text-[15px] font-extrabold text-gray-900 leading-none">ใบสำคัญจ่าย</h1>
+                    <span class="text-[8px] sm:text-[8.5px] font-bold text-gray-500 uppercase tracking-widest block mt-0.5">PAYMENT VOUCHER</span>
+                </div>
+                <div class="text-[8.5px] sm:text-[9px] space-y-0.5 text-gray-700">
+                    <div><span class="font-bold text-gray-800">เลขที่ / No. :</span> <span class="font-bold text-gray-900 font-mono text-[9.5px] sm:text-[10px]">{{ exp.voucher_number or '-' }}</span></div>
+                    <div><span class="font-bold text-gray-800">วันที่ / Date :</span> <span class="font-medium text-gray-900">{{ exp.formatted_date }}</span></div>
+                    <div><span class="font-bold text-gray-800">หมวดหมู่ :</span> <span class="font-bold text-[#b39268]">{{ exp.category }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. PAYEE & PAYMENT METHOD DETAILS (Full Name & Full Address Without Any Truncation) -->
+        <div class="border border-gray-400 bg-gray-50/50 p-2 sm:p-2.5 mb-1.5 flex items-start justify-between gap-4 text-[9px] sm:text-[9.5px] w-full">
+            <div class="flex-1 min-w-0 leading-tight">
+                <div class="flex flex-wrap items-baseline gap-1.5">
+                    <span class="font-bold text-gray-800 uppercase flex-shrink-0">จ่ายให้แก่ / Pay To:</span>
+                    <span class="text-[11px] sm:text-[11.5px] font-bold text-gray-900 break-words">{{ exp.pay_to or '-' }}</span>
+                    {% if exp.tax_id %}
+                    <span class="text-[8.5px] text-gray-600 ml-1 flex-shrink-0">(เลขประจำตัวผู้เสียภาษี: <span class="font-mono font-medium text-gray-800">{{ exp.tax_id }}</span>)</span>
+                    {% endif %}
+                </div>
+                {% if exp.address %}
+                <div class="text-[8.5px] sm:text-[9px] text-gray-700 mt-1 leading-normal break-words">
+                    <span class="font-semibold text-gray-800">ที่อยู่ / Address:</span> {{ exp.address }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-3 text-[8.5px] sm:text-[9px] font-medium text-gray-700 border-l border-gray-300 pl-3 flex-shrink-0 pt-0.5">
+                <span class="font-bold text-gray-800">การชำระเงิน:</span>
+                <label class="inline-flex items-center gap-1 cursor-default">
+                    <span class="inline-block w-3.5 h-3.5 border border-gray-600 rounded-sm bg-gray-900 text-white text-[8.5px] leading-none text-center font-bold">✓</span>
+                    <span>โอนเงิน</span>
+                </label>
+                <label class="inline-flex items-center gap-1 cursor-default text-gray-400">
+                    <span class="inline-block w-3.5 h-3.5 border border-gray-300 rounded-sm bg-white"></span>
+                    <span>เงินสด</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 3. UNIFIED LINE ITEMS & TOTALS TABLE (Mathematically Aligned Grid) -->
+        <div class="flex-1 mb-1.5 flex flex-col justify-start">
+            <table class="w-full border-collapse border border-gray-400 text-[9.5px] sm:text-[10px]">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-800 border-b border-gray-400 text-center font-bold">
+                        <th class="border-r border-gray-400 py-1 px-2 w-12">ลำดับ<br><span class="text-[7.5px] font-normal block leading-none">Item</span></th>
+                        <th class="border-r border-gray-400 py-1 px-3 text-left">รายการค่าใช้จ่าย / รายละเอียด<br><span class="text-[7.5px] font-normal block leading-none">Expense Description</span></th>
+                        <th class="border-r border-gray-400 py-1 px-2 w-16">จำนวน<br><span class="text-[7.5px] font-normal block leading-none">Qty</span></th>
+                        <th class="py-1 px-3 text-right w-44">จำนวนเงิน (บาท)<br><span class="text-[7.5px] font-normal block leading-none">Amount (THB)</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in exp.items %}
+                    <tr class="border-b border-gray-300">
+                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">{{ loop.index }}</td>
+                        <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ item.description }}</td>
+                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">{{ item.quantity }}</td>
+                        <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(item.amount) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr class="border-b border-gray-300">
+                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">1</td>
+                        <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ exp.description or exp.category }}</td>
+                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">1</td>
+                        <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <!-- Extra Blank Rows so the table looks full and substantial -->
+                    {% set total_items = exp.items|length if exp.items else 1 %}
+                    {% set pad_rows = 2 if total_items == 1 else (1 if total_items == 2 else 0) %}
+                    {% for i in range(pad_rows) %}
+                    <tr class="border-b border-gray-200">
+                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
+                        <td class="border-r border-gray-400 py-1.5 px-3 text-transparent select-none">-</td>
+                        <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
+                        <td class="py-1.5 px-3 text-right text-transparent select-none">-</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- Table Footer: Remarks on Left (Cols 1-3), Totals on Right (Col 4 - Perfectly Aligned) -->
+                <tfoot>
+                    <tr class="border-t border-gray-400">
+                        <!-- Remarks Area (Spanning cols 1 to 3) -->
+                        <td colspan="3" rowspan="{% if exp.withholding_tax_amount and exp.withholding_tax_amount > 0 %}3{% else %}2{% endif %}" class="border-r border-gray-400 p-2 bg-gray-50/60 align-top">
+                            <span class="font-bold text-gray-700 block uppercase tracking-wider text-[8px] mb-0.5">หมายเหตุ / REMARKS:</span>
+                            <span class="text-gray-800 whitespace-pre-line leading-tight text-[8.5px] sm:text-[9px]">{{ exp.note or '-' }}</span>
+                        </td>
+                        <!-- Subtotal -->
+                        <td class="px-3 py-1 bg-white border-b border-gray-300">
+                            <div class="flex justify-between items-center text-gray-700 text-[9px] sm:text-[9.5px]">
+                                <span>รวมเป็นเงิน:</span>
+                                <span class="font-bold font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% if exp.withholding_tax_amount and exp.withholding_tax_amount > 0 %}
+                    <!-- WHT Row (if applicable) -->
+                    <tr class="border-b border-gray-300 bg-red-50/40 text-red-700">
+                        <td class="px-3 py-1">
+                            <div class="flex justify-between items-center text-[9px] sm:text-[9.5px]">
+                                <span>หัก ณ ที่จ่าย 3%:</span>
+                                <span class="font-bold font-mono">- ฿{{ "{:,.2f}".format(exp.withholding_tax_amount) }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <!-- Net Amount -->
+                    <tr class="bg-gray-100 font-extrabold text-gray-900">
+                        <td class="px-3 py-1.5">
+                            <div class="flex justify-between items-center text-[10px] sm:text-[10.5px]">
+                                <span class="uppercase tracking-tight text-[9px]">ยอดจ่ายสุทธิ:</span>
+                                <span class="font-mono text-[11px] sm:text-[12px]">฿{{ "{:,.2f}".format(exp.net_amount or exp.amount) }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- 4. SIGNATURES SECTION -->
+        <div class="grid grid-cols-2 gap-12 pt-1 text-[9px] sm:text-[9.5px] text-center border-t border-gray-300">
+            <!-- Payee Signature -->
+            <div class="space-y-0.5">
+                <div class="h-8 flex items-end justify-center"></div>
+                <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">ผู้รับเงิน / Payee Signature</div>
+                <div class="text-[7.5px] sm:text-[8px] text-gray-500">วันที่ / Date: _____ / _____ / _____</div>
+            </div>
+
+            <!-- Paid By Signature -->
+            <div class="space-y-0.5">
+                <div class="h-8 flex items-end justify-center relative">
+                    {% if user and user.signature_url %}
+                    <img src="{{ user.signature_url }}" alt="ลายเซ็นผู้จ่ายเงิน" class="max-h-8 max-w-[120px] object-contain -mb-1">
+                    {% endif %}
+                </div>
+                <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">
+                    ผู้จ่ายเงิน / Paid By
+                    {% if user and user.fullname %}
+                    <span class="font-normal text-gray-600 ml-1">({{ user.fullname }})</span>
+                    {% endif %}
+                </div>
+                <div class="text-[7.5px] sm:text-[8px] text-gray-500">วันที่ / Date: {{ exp.formatted_date }}</div>
+            </div>
+        </div>
+    </div>
+    {% endmacro %}
+
+    <!-- SCREEN & PRINT PAGES WRAPPER -->
+    <div class="screen-wrapper">
+        {% for page in pages %}
+        <div class="a4-page">
+            <!-- TOP HALF (0 - 148.5mm) -->
+            <div class="half-slot">
+                {{ render_voucher_card(page.top) }}
+                <!-- Cut Guide between top and bottom halves -->
+                <div class="cut-guide">
+                    <span>✂️ ตัดตามรอยประ (ครึ่งแผ่น A4)</span>
+                </div>
+            </div>
+
+            <!-- BOTTOM HALF (148.5mm - 297mm) -->
+            <div class="half-slot">
+                {% if page.bottom %}
+                    {{ render_voucher_card(page.bottom) }}
+                    <!-- Subtle spacing at bottom -->
+                    <div class="h-1"></div>
+                {% else %}
+                    <!-- Blank Half (when total vouchers count is odd) -->
+                    <div class="empty-slot">
+                        <span class="text-2xl mb-1">✂️</span>
+                        <span>พื้นที่ว่างสำหรับครึ่งแผ่น A4 (สามารถตัดเก็บไว้ใช้ได้)</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
