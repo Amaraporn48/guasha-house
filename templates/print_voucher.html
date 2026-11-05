@@ -28,8 +28,8 @@
     
     <style>
         @page {
-            size: A5 landscape;
-            margin: 5mm 6mm;
+            size: landscape;
+            margin: 6mm 8mm;
         }
 
         * {
@@ -53,26 +53,31 @@
                 min-height: calc(100vh - 70px);
             }
             .voucher-container {
-                width: 200mm;
-                height: 138mm;
+                width: 210mm;
+                height: 148.5mm;
                 max-width: 100%;
                 background-color: white !important;
                 box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16), 0 3px 8px rgba(0, 0, 0, 0.08);
                 border: 1.5px solid #222 !important;
                 border-radius: 6px;
-                padding: 6mm 8mm;
+                padding: 7mm 9mm 6mm 9mm;
                 box-sizing: border-box;
                 margin: 0 auto;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
             }
         }
 
-        /* Print Preview - Guaranteed 1 Page Landscape */
+        /* Print Preview - Fills the Landscape Sheet 100% with Perfect Borders & Padding */
         @media print {
             @page {
-                size: A5 landscape;
-                margin: 5mm 6mm;
+                size: landscape;
+                margin: 6mm 8mm;
             }
-            body {
+            html, body {
+                width: 100% !important;
+                height: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white !important;
@@ -83,17 +88,21 @@
                 display: none !important;
             }
             .screen-wrapper {
+                width: 100% !important;
+                height: 100% !important;
                 padding: 0 !important;
                 margin: 0 !important;
-                display: block !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
             }
             .voucher-container {
                 width: 100% !important;
-                max-width: 198mm !important;
-                height: 138mm !important;
-                max-height: 138mm !important;
+                height: 100% !important;
+                min-height: 98% !important;
+                max-width: 100% !important;
                 margin: 0 auto !important;
-                padding: 6mm 8mm !important;
+                padding: 6mm 10mm 5mm 10mm !important;
                 background-color: white !important;
                 box-shadow: none !important;
                 border: 1.5px solid #222 !important;
@@ -101,6 +110,9 @@
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 box-sizing: border-box !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
             }
         }
     </style>
@@ -129,16 +141,17 @@
 
     <!-- SCREEN WRAPPER -->
     <div class="screen-wrapper">
-        <div class="voucher-container flex flex-col justify-between">
+        <div class="voucher-container">
+            
             <!-- 1. HEADER SECTION -->
             <div class="flex items-start justify-between border-b-2 border-gray-800 pb-2 mb-2">
                 <!-- Company Info -->
                 <div class="flex items-start gap-2.5 flex-1 min-w-0">
                     <img src="/static/logo.png" alt="Guasha House Logo" class="h-11 w-11 object-contain flex-shrink-0 mt-0.5">
                     <div class="flex-1 min-w-0 leading-tight">
-                        <h2 class="text-[13px] font-bold text-gray-900 uppercase font-serif tracking-tight">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
-                        <h3 class="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">GUASHA HOUSE CO., LTD.</h3>
-                        <p class="text-[8px] text-gray-600 mt-0.5 leading-normal">
+                        <h2 class="text-[13px] sm:text-[14px] font-bold text-gray-900 uppercase font-serif tracking-tight">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
+                        <h3 class="text-[9px] sm:text-[10px] font-semibold text-gray-600 uppercase tracking-wider">GUASHA HOUSE CO., LTD.</h3>
+                        <p class="text-[8px] sm:text-[8.5px] text-gray-600 mt-0.5 leading-normal">
                             199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240<br>
                             โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษี: 0105565028948
                         </p>
@@ -148,11 +161,11 @@
                 <!-- Voucher Title & Details -->
                 <div class="text-right flex-shrink-0 min-w-[170px]">
                     <div class="border-2 border-gray-800 bg-gray-50/80 px-3 py-1 rounded text-center mb-1">
-                        <h1 class="text-[14px] font-extrabold text-gray-900 leading-none">ใบสำคัญจ่าย</h1>
-                        <span class="text-[8px] font-bold text-gray-500 uppercase tracking-widest block mt-0.5">PAYMENT VOUCHER</span>
+                        <h1 class="text-[14px] sm:text-[15px] font-extrabold text-gray-900 leading-none">ใบสำคัญจ่าย</h1>
+                        <span class="text-[8px] sm:text-[8.5px] font-bold text-gray-500 uppercase tracking-widest block mt-0.5">PAYMENT VOUCHER</span>
                     </div>
-                    <div class="text-[8.5px] space-y-0.5 text-gray-700">
-                        <div><span class="font-bold text-gray-800">เลขที่ / No. :</span> <span class="font-bold text-gray-900 font-mono text-[9.5px]">{{ exp.voucher_number or '-' }}</span></div>
+                    <div class="text-[8.5px] sm:text-[9px] space-y-0.5 text-gray-700">
+                        <div><span class="font-bold text-gray-800">เลขที่ / No. :</span> <span class="font-bold text-gray-900 font-mono text-[9.5px] sm:text-[10px]">{{ exp.voucher_number or '-' }}</span></div>
                         <div><span class="font-bold text-gray-800">วันที่ / Date :</span> <span class="font-medium text-gray-900">{{ exp.formatted_date }}</span></div>
                         <div><span class="font-bold text-gray-800">หมวดหมู่ :</span> <span class="font-bold text-[#b39268]">{{ exp.category }}</span></div>
                     </div>
@@ -160,57 +173,57 @@
             </div>
 
             <!-- 2. PAYEE & PAYMENT METHOD DETAILS -->
-            <div class="border border-gray-400 rounded bg-gray-50/50 p-2 mb-2 flex items-center justify-between gap-4 text-[9px]">
+            <div class="border border-gray-400 rounded bg-gray-50/50 p-2 mb-2 flex items-center justify-between gap-4 text-[9px] sm:text-[9.5px]">
                 <div class="flex-1 min-w-0 leading-tight">
                     <div class="flex items-baseline gap-1.5">
                         <span class="font-bold text-gray-800 uppercase flex-shrink-0">จ่ายให้แก่ / Pay To:</span>
-                        <span class="text-[11px] font-bold text-gray-900 truncate">{{ exp.pay_to or '-' }}</span>
+                        <span class="text-[11px] sm:text-[12px] font-bold text-gray-900 truncate">{{ exp.pay_to or '-' }}</span>
                         {% if exp.tax_id %}
-                        <span class="text-[8px] text-gray-500 ml-2">(เลขประจำตัวผู้เสียภาษี: <span class="font-mono font-medium text-gray-800">{{ exp.tax_id }}</span>)</span>
+                        <span class="text-[8.5px] text-gray-500 ml-2">(เลขประจำตัวผู้เสียภาษี: <span class="font-mono font-medium text-gray-800">{{ exp.tax_id }}</span>)</span>
                         {% endif %}
                     </div>
                     {% if exp.address %}
-                    <div class="text-[8px] text-gray-600 truncate mt-0.5"><span class="font-semibold text-gray-700">ที่อยู่ / Address:</span> {{ exp.address }}</div>
+                    <div class="text-[8px] sm:text-[8.5px] text-gray-600 truncate mt-0.5"><span class="font-semibold text-gray-700">ที่อยู่ / Address:</span> {{ exp.address }}</div>
                     {% endif %}
                 </div>
-                <div class="flex items-center gap-3 text-[8.5px] font-medium text-gray-700 border-l border-gray-300 pl-3 flex-shrink-0">
+                <div class="flex items-center gap-3 text-[8.5px] sm:text-[9px] font-medium text-gray-700 border-l border-gray-300 pl-3 flex-shrink-0">
                     <span class="font-bold text-gray-800">การชำระเงิน:</span>
                     <label class="inline-flex items-center gap-1 cursor-default">
-                        <span class="inline-block w-3 h-3 border border-gray-500 rounded-sm bg-gray-900 text-white text-[8px] leading-none text-center font-bold">✓</span>
+                        <span class="inline-block w-3.5 h-3.5 border border-gray-600 rounded-sm bg-gray-900 text-white text-[8.5px] leading-none text-center font-bold">✓</span>
                         <span>โอนเงิน</span>
                     </label>
                     <label class="inline-flex items-center gap-1 cursor-default text-gray-400">
-                        <span class="inline-block w-3 h-3 border border-gray-300 rounded-sm bg-white"></span>
+                        <span class="inline-block w-3.5 h-3.5 border border-gray-300 rounded-sm bg-white"></span>
                         <span>เงินสด</span>
                     </label>
                 </div>
             </div>
 
             <!-- 3. LINE ITEMS TABLE -->
-            <div class="flex-1 mb-2">
-                <table class="w-full border-collapse border border-gray-400 text-[9.5px]">
+            <div class="flex-1 mb-2 flex flex-col justify-start">
+                <table class="w-full border-collapse border border-gray-400 text-[9.5px] sm:text-[10px]">
                     <thead>
                         <tr class="bg-gray-100 text-gray-800 border-b border-gray-400 text-center font-bold">
-                            <th class="border-r border-gray-400 py-1 px-2 w-10">ลำดับ<br><span class="text-[7.5px] font-normal block leading-none">Item</span></th>
-                            <th class="border-r border-gray-400 py-1 px-3 text-left">รายการค่าใช้จ่าย / รายละเอียด<br><span class="text-[7.5px] font-normal block leading-none">Expense Description</span></th>
-                            <th class="border-r border-gray-400 py-1 px-2 w-14">จำนวน<br><span class="text-[7.5px] font-normal block leading-none">Qty</span></th>
-                            <th class="py-1 px-3 text-right w-28">จำนวนเงิน (บาท)<br><span class="text-[7.5px] font-normal block leading-none">Amount (THB)</span></th>
+                            <th class="border-r border-gray-400 py-1.5 px-2 w-12">ลำดับ<br><span class="text-[7.5px] font-normal block leading-none">Item</span></th>
+                            <th class="border-r border-gray-400 py-1.5 px-3 text-left">รายการค่าใช้จ่าย / รายละเอียด<br><span class="text-[7.5px] font-normal block leading-none">Expense Description</span></th>
+                            <th class="border-r border-gray-400 py-1.5 px-2 w-16">จำนวน<br><span class="text-[7.5px] font-normal block leading-none">Qty</span></th>
+                            <th class="py-1.5 px-3 text-right w-32">จำนวนเงิน (บาท)<br><span class="text-[7.5px] font-normal block leading-none">Amount (THB)</span></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in items %}
                         <tr class="border-b border-gray-300">
-                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">{{ loop.index }}</td>
-                            <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ item.description }}</td>
-                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">{{ item.quantity }}</td>
-                            <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(item.amount) }}</td>
+                            <td class="border-r border-gray-400 py-2 px-2 text-center text-gray-600">{{ loop.index }}</td>
+                            <td class="border-r border-gray-400 py-2 px-3 font-medium text-gray-900">{{ item.description }}</td>
+                            <td class="border-r border-gray-400 py-2 px-2 text-center text-gray-700 font-mono">{{ item.quantity }}</td>
+                            <td class="py-2 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(item.amount) }}</td>
                         </tr>
                         {% else %}
                         <tr class="border-b border-gray-300">
-                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-600">1</td>
-                            <td class="border-r border-gray-400 py-1.5 px-3 font-medium text-gray-900">{{ exp.description or exp.category }}</td>
-                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-gray-700 font-mono">1</td>
-                            <td class="py-1.5 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
+                            <td class="border-r border-gray-400 py-2 px-2 text-center text-gray-600">1</td>
+                            <td class="border-r border-gray-400 py-2 px-3 font-medium text-gray-900">{{ exp.description or exp.category }}</td>
+                            <td class="border-r border-gray-400 py-2 px-2 text-center text-gray-700 font-mono">1</td>
+                            <td class="py-2 px-3 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</td>
                         </tr>
                         {% endfor %}
 
@@ -219,10 +232,10 @@
                         {% set pad_rows = 4 if total_items == 1 else (3 if total_items == 2 else 1) %}
                         {% for i in range(pad_rows) %}
                         <tr class="border-b border-gray-200">
-                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
-                            <td class="border-r border-gray-400 py-1.5 px-3 text-transparent select-none">-</td>
-                            <td class="border-r border-gray-400 py-1.5 px-2 text-center text-transparent select-none">-</td>
-                            <td class="py-1.5 px-3 text-right text-transparent select-none">-</td>
+                            <td class="border-r border-gray-400 py-2 px-2 text-center text-transparent select-none">-</td>
+                            <td class="border-r border-gray-400 py-2 px-3 text-transparent select-none">-</td>
+                            <td class="border-r border-gray-400 py-2 px-2 text-center text-transparent select-none">-</td>
+                            <td class="py-2 px-3 text-right text-transparent select-none">-</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -230,48 +243,48 @@
             </div>
 
             <!-- 4. TOTALS & REMARKS SECTION -->
-            <div class="border border-gray-400 rounded flex mb-2 text-[9px]">
+            <div class="border border-gray-400 rounded flex mb-2 text-[9px] sm:text-[9.5px]">
                 <!-- Remarks -->
                 <div class="flex-1 p-2 bg-gray-50/60 border-r border-gray-400 flex flex-col justify-between">
                     <div>
-                        <span class="font-bold text-gray-700 block uppercase tracking-wider text-[8px] mb-0.5">หมายเหตุ / REMARKS:</span>
+                        <span class="font-bold text-gray-700 block uppercase tracking-wider text-[8px] sm:text-[8.5px] mb-0.5">หมายเหตุ / REMARKS:</span>
                         <span class="text-gray-800 whitespace-pre-line leading-tight">{{ exp.note or '-' }}</span>
                     </div>
                 </div>
 
                 <!-- Summary Figures -->
-                <div class="w-60 divide-y divide-gray-300 flex-shrink-0 text-[9.5px]">
-                    <div class="flex justify-between px-2.5 py-1 text-gray-700">
+                <div class="w-64 divide-y divide-gray-300 flex-shrink-0 text-[9.5px] sm:text-[10px]">
+                    <div class="flex justify-between px-3 py-1.5 text-gray-700">
                         <span>รวมเป็นเงิน / Subtotal:</span>
                         <span class="font-bold font-mono">฿{{ "{:,.2f}".format(exp.subtotal or exp.amount) }}</span>
                     </div>
                     {% if exp.withholding_tax_amount and exp.withholding_tax_amount > 0 %}
-                    <div class="flex justify-between px-2.5 py-1 text-red-700 bg-red-50/40">
+                    <div class="flex justify-between px-3 py-1.5 text-red-700 bg-red-50/40">
                         <span>หัก ณ ที่จ่าย 3% / WHT 3%:</span>
                         <span class="font-bold font-mono">- ฿{{ "{:,.2f}".format(exp.withholding_tax_amount) }}</span>
                     </div>
                     {% endif %}
-                    <div class="flex justify-between px-2.5 py-1.5 bg-gray-100 font-extrabold text-gray-900 border-t border-gray-400">
+                    <div class="flex justify-between px-3 py-2 bg-gray-100 font-extrabold text-gray-900 border-t border-gray-400">
                         <span class="uppercase tracking-tight">ยอดจ่ายสุทธิ / Net Amount:</span>
-                        <span class="font-mono text-[10.5px]">฿{{ "{:,.2f}".format(exp.net_amount or exp.amount) }}</span>
+                        <span class="font-mono text-[11px] sm:text-[12px]">฿{{ "{:,.2f}".format(exp.net_amount or exp.amount) }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- 5. SIGNATURES SECTION -->
-            <div class="grid grid-cols-2 gap-10 pt-1 text-[9px] text-center border-t border-gray-300">
+            <div class="grid grid-cols-2 gap-12 pt-1 text-[9px] sm:text-[9.5px] text-center border-t border-gray-300">
                 <!-- Payee Signature -->
                 <div class="space-y-0.5">
-                    <div class="h-8 flex items-end justify-center"></div>
+                    <div class="h-9 flex items-end justify-center"></div>
                     <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">ผู้รับเงิน / Payee Signature</div>
-                    <div class="text-[7.5px] text-gray-500">วันที่ / Date: _____ / _____ / _____</div>
+                    <div class="text-[7.5px] sm:text-[8px] text-gray-500">วันที่ / Date: _____ / _____ / _____</div>
                 </div>
 
                 <!-- Paid By Signature -->
                 <div class="space-y-0.5">
-                    <div class="h-8 flex items-end justify-center relative">
+                    <div class="h-9 flex items-end justify-center relative">
                         {% if user and user.signature_url %}
-                        <img src="{{ user.signature_url }}" alt="ลายเซ็นผู้จ่ายเงิน" class="max-h-8 max-w-[120px] object-contain -mb-1">
+                        <img src="{{ user.signature_url }}" alt="ลายเซ็นผู้จ่ายเงิน" class="max-h-9 max-w-[120px] object-contain -mb-1">
                         {% endif %}
                     </div>
                     <div class="border-t border-gray-500 pt-1 font-bold text-gray-900">
@@ -280,9 +293,10 @@
                         <span class="font-normal text-gray-600 ml-1">({{ user.fullname }})</span>
                         {% endif %}
                     </div>
-                    <div class="text-[7.5px] text-gray-500">วันที่ / Date: {{ exp.formatted_date }}</div>
+                    <div class="text-[7.5px] sm:text-[8px] text-gray-500">วันที่ / Date: {{ exp.formatted_date }}</div>
                 </div>
             </div>
+
         </div>
     </div>
 
