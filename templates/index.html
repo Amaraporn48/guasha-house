@@ -1319,6 +1319,7 @@
                                     <th class="px-6 py-4">เลขที่ / No.</th>
                                     <th class="px-6 py-4">วันที่ / Date</th>
                                     <th class="px-6 py-4">ลูกค้า / Customer</th>
+                                    <th class="px-6 py-4">สินค้า / Items</th>
                                     <th class="px-6 py-4 text-right">จำนวนเงิน / Total</th>
                                     <th class="px-6 py-4">วิธีชำระเงิน / Payment</th>
                                     <th class="px-6 py-4">ผู้จัดทำ / Created By</th>
@@ -1334,6 +1335,21 @@
                                         <td class="px-6 py-4 font-semibold text-charcoal" x-text="doc.document_number"></td>
                                         <td class="px-6 py-4 text-gray-600" x-text="formatThaiDate(doc.date)"></td>
                                         <td class="px-6 py-4 font-medium text-gray-800" x-text="doc.customer_name"></td>
+                                        <td class="px-6 py-4 text-xs text-gray-600 max-w-[240px]">
+                                            <template x-if="doc.items && doc.items.length > 0">
+                                                <div class="space-y-0.5">
+                                                    <template x-for="(it, i) in doc.items" :key="it.id || i">
+                                                        <div class="truncate" :title="(it.description || '') + ' × ' + (it.quantity || 1)">
+                                                            <span class="font-medium text-charcoal" x-text="it.description"></span>
+                                                            <span class="text-gray-400 font-mono" x-text="'×' + (it.quantity || 1)"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                            <template x-if="!doc.items || doc.items.length === 0">
+                                                <span class="text-gray-400">-</span>
+                                            </template>
+                                        </td>
                                         <td class="px-6 py-4 text-right font-bold text-charcoal" x-text="formatCurrency(doc.total_amount_after_vat)"></td>
                                         <td class="px-6 py-4">
                                             <span class="text-xs px-2.5 py-1 rounded-full font-medium"
@@ -1356,7 +1372,7 @@
                                 </template>
                                 <template x-if="documents.length === 0">
                                     <tr>
-                                        <td colspan="8" class="px-6 py-16 text-center text-gray-400">ไม่พบเอกสารตรงตามเงื่อนไขที่กำหนด</td>
+                                        <td colspan="9" class="px-6 py-16 text-center text-gray-400">ไม่พบเอกสารตรงตามเงื่อนไขที่กำหนด</td>
                                     </tr>
                                 </template>
                             </tbody>

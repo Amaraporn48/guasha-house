@@ -20,7 +20,7 @@ from urllib.parse import quote
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import text, and_, or_, func
 from sqlalchemy.exc import IntegrityError
 
@@ -1705,7 +1705,7 @@ def list_documents(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    q = db.query(Document)
+    q = db.query(Document).options(joinedload(Document.items))
     
     if ids and ids.strip():
         id_list = [int(x.strip()) for x in ids.split(',') if x.strip().isdigit()]
@@ -2212,7 +2212,7 @@ def export_documents_summary_excel_endpoint(
     if not current_user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
 
-    q = db.query(Document)
+    q = db.query(Document).options(joinedload(Document.items))
     subtitle_parts = []
 
     if ids and ids.strip():
