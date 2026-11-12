@@ -3695,6 +3695,65 @@ def print_monthly_account_summary(
         print(f"Error rendering print_summary: {e}")
         raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการโหลดรายงานประจำปี")
 
+@app.get("/print/documents/batch", response_class=HTMLResponse)
+def print_documents_batch(
+    request: Request,
+    ids: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_from_cookie)
+):
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+
+    id_list = []
+    if ids:
+        for x in ids.split(','):
+            x = x.strip()
+            if x.isdigit():
+                id_list.append(int(x))
+
+    if not id_list:
+        raise HTTPException(status_code=400, detail="กรุณาระบุเลขประจำตัวเอกสาร (ids) อย่างน้อย 1 รายการ")
+
+    raw_docs = db.query(Document).filter(Document.id.in_(id_list)).all()
+    doc_map = {d.id: d for d in raw_docs}
+    docs = [doc_map[did] for did in id_list if did in doc_map]
+
+    if not docs:
+        raise HTTPException(status_code=404, detail="ไม่พบเอกสารที่ระบุ")
+
+    for doc in docs:
+        doc.vat_amount = 0.0
+        doc.total_amount_after_vat = doc.total_amount_before_vat
+        doc.total_amount_text = bahttext(doc.total_amount_before_vat)
+
+        if not getattr(doc, "signature_url", None):
+            creator = db.query(User).filter(User.id == doc.created_by_user_id).first() if doc.created_by_user_id else None
+            if not creator and doc.received_by:
+                creator = db.query(User).filter(User.fullname == doc.received_by.strip()).first()
+            if creator and creator.signature_url:
+                doc.signature_url = creator.signature_url
+
+        setattr(doc, "sorted_items", sorted(doc.items, key=lambda x: x.item_index))
+
+    # Group into pages of 2 receipts per A4 sheet (top & bottom)
+    pages = []
+    for i in range(0, len(docs), 2):
+        pages.append({
+            "top": docs[i],
+            "bottom": docs[i + 1] if i + 1 < len(docs) else None
+        })
+
+    return templates.TemplateResponse(
+        request=request,
+        name="print_batch.html",
+        context={
+            "pages": pages,
+            "total_docs": len(docs),
+            "user": current_user
+        }
+    )
+
 @app.get("/print/{doc_id}", response_class=HTMLResponse)
 def print_invoice(doc_id: int, request: Request, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_from_cookie)):
     if not current_user:

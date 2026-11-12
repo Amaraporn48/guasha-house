@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>พิมพ์ใบเสร็จรับเงินหลายรายการ ({{ total_docs }} รายการ)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#fbfaf7',
+                        beige: '#f5f2eb',
+                        charcoal: '#1a1a1a',
+                        gold: '#c5a880',
+                        'gold-dark': '#b39268',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        /* Screen Preview */
+        @media screen {
+            body {
+                background-color: #eeebe3 !important;
+                color: #1a1a1a !important;
+                margin: 0;
+                padding: 0;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            }
+            .screen-wrapper {
+                padding: 2rem 1rem 3rem 1rem;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2rem;
+            }
+            .a4-page {
+                width: 210mm;
+                min-height: 297mm;
+                background-color: white !important;
+                box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16), 0 3px 8px rgba(0, 0, 0, 0.08);
+                border-radius: 4px;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                position: relative;
+            }
+            .half-slot {
+                height: 148.5mm;
+                max-height: 148.5mm;
+                box-sizing: border-box;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                padding: 4mm 9mm 2mm 9mm;
+            }
+            .receipt-card {
+                width: 192mm;
+                min-height: 134mm;
+                max-height: 136mm;
+                margin: 0 auto;
+                background-color: white !important;
+                border: 1.5px solid #1a1a1a !important;
+                border-radius: 4px;
+                padding: 4mm 6mm;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+            .cut-guide {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 192mm;
+                margin: 1.5mm auto 0 auto;
+                color: #888;
+                font-size: 8.5px;
+                font-weight: 500;
+                user-select: none;
+            }
+            .cut-guide::before, .cut-guide::after {
+                content: '';
+                flex: 1;
+                border-bottom: 1.5px dashed #aaa;
+                margin: 0 12px;
+            }
+            .empty-slot {
+                width: 192mm;
+                min-height: 134mm;
+                margin: 0 auto;
+                border: 2px dashed #ddd;
+                border-radius: 6px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: #aaa;
+                font-size: 12px;
+            }
+        }
+
+        /* Print Preview - Guaranteed Exactly 2 Receipts Per A4 Page */
+        @media print {
+            html, body {
+                width: 210mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .screen-wrapper {
+                width: 210mm !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: block !important;
+            }
+            .a4-page {
+                width: 210mm !important;
+                height: 297mm !important;
+                max-height: 297mm !important;
+                overflow: hidden !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: flex-start !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                box-sizing: border-box !important;
+                background: white !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+            .a4-page:last-child {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            .half-slot {
+                height: 148.5mm !important;
+                max-height: 148.5mm !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                padding: 4mm 9mm 2mm 9mm !important;
+            }
+            .receipt-card {
+                width: 192mm !important;
+                min-height: 133mm !important;
+                max-height: 136mm !important;
+                margin: 0 auto !important;
+                padding: 4mm 6mm 4mm 6mm !important;
+                background-color: white !important;
+                box-shadow: none !important;
+                border: 1.5px solid #1a1a1a !important;
+                border-radius: 4px !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .cut-guide {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 192mm !important;
+                margin: 1.5mm auto 0 auto !important;
+                color: #888 !important;
+                font-size: 8px !important;
+                font-weight: 500 !important;
+                user-select: none !important;
+            }
+            .cut-guide::before, .cut-guide::after {
+                content: '' !important;
+                flex: 1 !important;
+                border-bottom: 1px dashed #999 !important;
+                margin: 0 10px !important;
+            }
+            .empty-slot {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Action Bar (Hidden when printing) -->
+    <div class="no-print bg-[#1a1a1a] text-white p-3 sm:p-3.5 sticky top-0 z-50 shadow-md border-b border-[#333]">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="/static/logo.png" alt="Guasha House Logo" class="h-9 w-9 object-contain bg-white rounded-lg p-0.5">
+                <div>
+                    <h1 class="text-xs sm:text-sm font-bold text-[#c5a880] uppercase tracking-wider">บริษัท กัวซา เฮ้าส์ จำกัด</h1>
+                    <p class="text-[10px] sm:text-[11px] text-gray-300">
+                        พิมพ์ใบเสร็จรับเงินหลายรายการ (รวม <span class="font-bold text-white">{{ total_docs }}</span> รายการ / กระดาษ <span class="font-bold text-[#c5a880]">{{ pages|length }}</span> แผ่น A4)
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="window.close()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer">
+                    ปิดหน้านี้
+                </button>
+                <button onclick="window.print()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    <span>สั่งพิมพ์ทั้งหมด ({{ total_docs }} ใบ)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JINJA MACRO FOR RENDERING A RECEIPT CARD -->
+    {% macro render_receipt_card(doc) %}
+    <div class="receipt-card">
+        <!-- 1. HEADER SECTION -->
+        <div class="flex items-start justify-between border-b-2 border-gray-800 pb-2 mb-1.5">
+            <!-- Company Info -->
+            <div class="flex items-start gap-2.5 flex-1 min-w-0">
+                <img src="/static/logo.png" alt="Guasha House Logo" class="h-11 w-11 object-contain flex-shrink-0 mt-0.5">
+                <div class="flex-1 min-w-0 leading-tight">
+                    <h2 class="text-[13px] sm:text-[14px] font-bold text-gray-900 uppercase font-serif tracking-tight">บริษัท กัวซา เฮ้าส์ จำกัด</h2>
+                    <h3 class="text-[9px] sm:text-[9.5px] font-semibold text-gray-600 uppercase tracking-wider">GUASHA HOUSE CO., LTD.</h3>
+                    <p class="text-[8px] sm:text-[8.5px] text-gray-600 mt-0.5 leading-normal">
+                        199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพมหานคร 10240<br>
+                        โทร. 061-496-6361 | เลขประจำตัวผู้เสียภาษีอากร: 0105565028948
+                    </p>
+                </div>
+            </div>
+
+            <!-- Receipt Title & Details -->
+            <div class="text-right flex-shrink-0 min-w-[165px]">
+                <div class="border-2 border-gray-800 bg-gray-50/80 px-3 py-1 rounded text-center mb-1">
+                    <h1 class="text-[14px] sm:text-[15px] font-extrabold text-gray-900 leading-none">ใบเสร็จรับเงิน</h1>
+                    <span class="text-[8px] sm:text-[8.5px] font-bold text-gray-500 uppercase tracking-widest block mt-0.5">RECEIPT</span>
+                </div>
+                <div class="text-[8.5px] sm:text-[9px] space-y-0.5 text-gray-700">
+                    <div><span class="font-bold text-gray-800">เลขที่ / No. :</span> <span class="font-bold text-gray-900 font-mono text-[9.5px] sm:text-[10px]">{{ doc.document_number }}</span></div>
+                    <div><span class="font-bold text-gray-800">วันที่ / Date :</span> <span class="font-medium text-gray-900 thai-date" data-date="{{ doc.date }}">{{ doc.date }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. CUSTOMER DETAILS (Full Name & Full Address Without Truncation) -->
+        <div class="border border-gray-400 bg-gray-50/50 p-2 sm:p-2.5 mb-1.5 flex items-start justify-between gap-4 text-[9px] sm:text-[9.5px] w-full">
+            <div class="flex-1 min-w-0 leading-tight">
+                <div class="text-[8px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">ข้อมูลลูกค้า / CUSTOMER INFORMATION</div>
+                <div class="text-[11px] sm:text-[11.5px] font-bold text-gray-900 break-words">{{ doc.customer_name }}</div>
+                <div class="text-[8.5px] sm:text-[9px] text-gray-700 mt-0.5 leading-normal break-words">{{ doc.customer_address }}</div>
+            </div>
+            <div class="text-right text-[8.5px] sm:text-[9px] text-gray-700 border-l border-gray-300 pl-3 flex-shrink-0 space-y-0.5">
+                <div><span class="font-bold text-gray-800">เลขประจำตัวผู้เสียภาษี :</span> <span class="font-mono font-medium text-gray-900">{{ doc.customer_tax_id or '-' }}</span></div>
+                <div><span class="font-bold text-gray-800">เบอร์โทรศัพท์ :</span> <span class="font-mono font-medium text-gray-900">{{ doc.customer_phone or '-' }}</span></div>
+            </div>
+        </div>
+
+        <!-- 3. UNIFIED LINE ITEMS & TOTALS TABLE -->
+        <div class="flex-1 mb-1.5 flex flex-col justify-start">
+            <table class="w-full border-collapse border border-gray-400 text-[9px] sm:text-[9.5px]">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-800 border-b border-gray-400 text-center font-bold">
+                        <th class="border-r border-gray-400 py-1 px-1.5 w-10">ลำดับ<br><span class="text-[7.5px] font-normal block leading-none">Item</span></th>
+                        <th class="border-r border-gray-400 py-1 px-2.5 text-left">รายการสินค้า / บริการ<br><span class="text-[7.5px] font-normal block leading-none">Description</span></th>
+                        <th class="border-r border-gray-400 py-1 px-1.5 w-14">จำนวน<br><span class="text-[7.5px] font-normal block leading-none">Qty</span></th>
+                        <th class="border-r border-gray-400 py-1 px-2 text-right w-24">ราคาต่อหน่วย<br><span class="text-[7.5px] font-normal block leading-none">Unit/Price</span></th>
+                        <th class="py-1 px-2.5 text-right w-28">จำนวนเงิน<br><span class="text-[7.5px] font-normal block leading-none">Amount</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in doc.sorted_items %}
+                    <tr class="border-b border-gray-300">
+                        <td class="border-r border-gray-400 py-1 px-1.5 text-center text-gray-600">{{ loop.index }}</td>
+                        <td class="border-r border-gray-400 py-1 px-2.5 font-medium text-gray-900 break-words">{{ item.description }}</td>
+                        <td class="border-r border-gray-400 py-1 px-1.5 text-center text-gray-700 font-mono">{{ item.quantity|int if item.quantity == item.quantity|int else item.quantity }}</td>
+                        <td class="border-r border-gray-400 py-1 px-2 text-right text-gray-800 font-mono">฿{{ "{:,.2f}".format(item.unit_price or 0) }}</td>
+                        <td class="py-1 px-2.5 text-right font-bold text-gray-900 font-mono">฿{{ "{:,.2f}".format(item.amount or 0) }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    {% set total_items = doc.sorted_items|length if doc.sorted_items else 1 %}
+                    {% set pad_rows = 2 if total_items == 1 else (1 if total_items == 2 else 0) %}
+                    {% for i in range(pad_rows) %}
+                    <tr class="border-b border-gray-200">
+                        <td class="border-r border-gray-400 py-1 px-1.5 text-center text-transparent select-none">-</td>
+                        <td class="border-r border-gray-400 py-1 px-2.5 text-transparent select-none">-</td>
+                        <td class="border-r border-gray-400 py-1 px-1.5 text-transparent select-none">-</td>
+                        <td class="border-r border-gray-400 py-1 px-2 text-transparent select-none">-</td>
+                        <td class="py-1 px-2.5 text-transparent select-none">-</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- Table Footer -->
+                <tfoot>
+                    <tr class="border-t border-gray-400">
+                        <td colspan="3" rowspan="2" class="border-r border-gray-400 p-2 bg-gray-50/60 text-center align-middle">
+                            <span class="font-bold text-gray-500 block uppercase tracking-wider text-[7.5px] mb-0.5">จำนวนเงินตัวอักษร / TOTAL IN WORDS</span>
+                            <span class="font-bold text-gray-900 text-[10px] sm:text-[10.5px]">{{ doc.total_amount_text }}</span>
+                        </td>
+                        <td colspan="2" class="px-2.5 py-1 bg-white border-b border-gray-300">
+                            <div class="flex justify-between items-center text-gray-700 text-[8.5px] sm:text-[9px]">
+                                <span>ราคาสินค้า / Subtotal</span>
+                                <span class="font-bold font-mono">฿{{ "{:,.2f}".format(doc.total_amount_before_vat or 0) }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="bg-gray-100 font-extrabold text-gray-900">
+                        <td colspan="2" class="px-2.5 py-1.5">
+                            <div class="flex justify-between items-center text-[9.5px] sm:text-[10px]">
+                                <span>รวมทั้งสิ้น / Grand Total</span>
+                                <span class="font-mono text-[10.5px] sm:text-[11px]">฿{{ "{:,.2f}".format(doc.total_amount_before_vat or 0) }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- 4. PAYMENT RECEIVED & SIGNATURE SECTION -->
+        <div class="grid grid-cols-12 gap-4 items-end pt-1 border-t border-gray-300">
+            <div class="col-span-7 border border-gray-300 bg-gray-50/50 rounded p-2 text-[8.5px] sm:text-[9px]">
+                <span class="font-bold text-gray-600 block uppercase tracking-wider text-[7.5px] mb-1">ได้รับเงินแล้ว / PAYMENT RECEIVED</span>
+                <div class="flex flex-wrap items-center gap-3 text-gray-800">
+                    <label class="inline-flex items-center gap-1 cursor-default">
+                        {% if doc.payment_method == 'CASH' %}
+                        <span class="inline-block w-3.5 h-3.5 border border-gray-700 rounded-sm bg-gray-900 text-white text-[8.5px] leading-none text-center font-bold">✓</span>
+                        {% else %}
+                        <span class="inline-block w-3.5 h-3.5 border border-gray-400 rounded-sm bg-white"></span>
+                        {% endif %}
+                        <span class="font-semibold">CASH / เงินสด</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1 cursor-default">
+                        {% if doc.payment_method == 'TRANSFER' %}
+                        <span class="inline-block w-3.5 h-3.5 border border-gray-700 rounded-sm bg-gray-900 text-white text-[8.5px] leading-none text-center font-bold">✓</span>
+                        {% else %}
+                        <span class="inline-block w-3.5 h-3.5 border border-gray-400 rounded-sm bg-white"></span>
+                        {% endif %}
+                        <span class="font-semibold">TRANSFER / โอนเงิน</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1 cursor-default">
+                        {% if doc.payment_method == 'CHEQUE' %}
+                        <span class="inline-block w-3.5 h-3.5 border border-gray-700 rounded-sm bg-gray-900 text-white text-[8.5px] leading-none text-center font-bold">✓</span>
+                        {% else %}
+                        <span class="inline-block w-3.5 h-3.5 border border-gray-400 rounded-sm bg-white"></span>
+                        {% endif %}
+                        <span class="font-semibold">CHEQUE / เช็คธนาคาร</span>
+                    </label>
+                </div>
+                {% if doc.payment_method == 'CHEQUE' %}
+                <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 pt-1 mt-1 border-t border-gray-300 border-dashed text-[8px] text-gray-700">
+                    <div><span class="font-bold">Bank:</span> {{ doc.cheque_bank or '-' }}</div>
+                    <div><span class="font-bold">No.:</span> {{ doc.cheque_number or '-' }}</div>
+                    <div><span class="font-bold">Date:</span> <span class="thai-date" data-date="{{ doc.cheque_date or '' }}">{{ doc.cheque_date or '-' }}</span></div>
+                    <div><span class="font-bold">Branch:</span> {{ doc.cheque_branch or '-' }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-span-5 text-center text-[8.5px] sm:text-[9px]">
+                <div class="h-9 flex items-end justify-center relative">
+                    {% if doc.signature_url %}
+                    <img src="{{ doc.signature_url }}" alt="ลายเซ็นผู้รับเงิน" class="max-h-9 max-w-[130px] object-contain -mb-1">
+                    {% endif %}
+                </div>
+                <div class="border-t border-gray-500 pt-1">
+                    <div class="font-bold text-gray-900 leading-tight">
+                        ผู้รับเงิน / Received By
+                        {% if doc.received_by %}
+                        <span class="font-normal text-gray-600 ml-1">({{ doc.received_by }})</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-[7.5px] text-gray-400">Authorized Signature</div>
+                    <div class="text-[7.5px] sm:text-[8px] text-gray-600 mt-0.5">
+                        วันที่ / Date:
+                        {% if doc.received_date %}
+                        <span class="font-semibold text-gray-900 thai-date" data-date="{{ doc.received_date }}">{{ doc.received_date }}</span>
+                        {% else %}
+                        <span>_____ / _____ / _____</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endmacro %}
+
+    <!-- SCREEN & PRINT PAGES WRAPPER -->
+    <div class="screen-wrapper">
+        {% for page in pages %}
+        <div class="a4-page">
+            <!-- TOP HALF (0 - 148.5mm) -->
+            <div class="half-slot">
+                {{ render_receipt_card(page.top) }}
+                <div class="cut-guide">
+                    <span>✂️ ตัดตามรอยประ (ครึ่งแผ่น A4)</span>
+                </div>
+            </div>
+
+            <!-- BOTTOM HALF (148.5mm - 297mm) -->
+            <div class="half-slot">
+                {% if page.bottom %}
+                    {{ render_receipt_card(page.bottom) }}
+                    <div class="h-1"></div>
+                {% else %}
+                    <div class="empty-slot">
+                        <span class="text-2xl mb-1">✂️</span>
+                        <span>พื้นที่ว่างสำหรับครึ่งแผ่น A4 (สามารถตัดเก็บไว้ใช้ได้)</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        function formatThaiDate(dateStr) {
+            if (!dateStr) return '-';
+            const clean = String(dateStr).split('T')[0];
+            const parts = clean.split('-');
+            if (parts.length !== 3) return dateStr;
+            const yearNum = parseInt(parts[0], 10);
+            const monthIndex = parseInt(parts[1], 10) - 1;
+            const dayNum = parseInt(parts[2], 10);
+            const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            if (isNaN(yearNum) || monthIndex < 0 || monthIndex > 11 || isNaN(dayNum)) return dateStr;
+            return `${dayNum} ${months[monthIndex]} ${yearNum + 543}`;
+        }
+
+        document.querySelectorAll('.thai-date').forEach(el => {
+            const raw = el.getAttribute('data-date');
+            if (raw) {
+                el.innerText = formatThaiDate(raw);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -764,24 +764,27 @@
                         </div>
 
                         <div class="space-y-3 max-h-72 overflow-y-auto pr-1">
-                            <template x-for="(item, index) in docForm.items" :key="index">
+                            <template x-for="(item, index) in docForm.items" :key="item._uid || index">
                                 <div class="p-3 border border-beige bg-cream/20 rounded-xl space-y-2 relative">
                                     <button @click="removeProductLineItem(index)" class="absolute top-2 right-2 text-red-400 hover:text-red-600 text-sm font-bold">&times;</button>
                                     
                                     <div>
                                         <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">ค้นหาและดึงสินค้า / Quick select product</label>
-                                        <select @change="onItemProductChange($event.target.value, index)"
+                                        <select x-model="item.selected_product_id"
+                                                @change="onItemProductChange(item, $event.target.value)"
                                                 class="w-full bg-white border border-beige rounded-lg px-2 py-1 text-xs focus-gold mb-1">
                                             <option value="">-- โหลดชื่อสินค้า/บริการ --</option>
                                             <template x-for="p in products" :key="p.id">
-                                                <option :value="p.id" x-text="p.name"></option>
+                                                <option :value="String(p.id)" x-text="p.name"></option>
                                             </template>
                                         </select>
                                     </div>
 
                                     <div>
                                         <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">ชื่อรายการ / Description</label>
-                                        <input type="text" x-model="item.description" placeholder="รายละเอียดรายการ"
+                                        <input type="text" x-model="item.description"
+                                               @input="if (!item.description) item.selected_product_id = ''"
+                                               placeholder="รายละเอียดรายการ"
                                                class="w-full bg-white border border-beige rounded-lg px-3 py-1 text-xs focus-gold">
                                     </div>
 
@@ -1193,10 +1196,16 @@
                             <h3 class="text-sm font-semibold tracking-wider text-charcoal uppercase">ค้นหาและกรองข้อมูลเอกสาร / Search & Filters</h3>
                             <p class="text-xs text-gray-400">ค้นหา กรอง และสั่งพิมพ์สรุปตารางรายการเอกสารทั้งหมดในระบบ</p>
                         </div>
-                        <div class="flex items-center gap-2 self-stretch sm:self-auto">
+                        <div class="flex flex-wrap items-center gap-2 self-stretch sm:self-auto">
                             <template x-if="selectedDocIds.length > 0">
-                                <button @click="selectedDocIds = []" class="text-xs text-gray-500 hover:text-red-500 underline px-2 py-1 transition font-medium">
+                                <button @click="selectedDocIds = []" class="text-xs text-gray-500 hover:text-red-500 underline px-2 py-1 transition font-medium cursor-pointer">
                                     ล้างที่เลือก (<span x-text="selectedDocIds.length"></span>)
+                                </button>
+                            </template>
+                            <template x-if="selectedDocIds.length > 0">
+                                <button @click="printBatchDocuments()" class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 justify-center cursor-pointer">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                                    <span>🖨️ พิมพ์ใบเสร็จที่เลือก (<span x-text="selectedDocIds.length"></span> ใบ / 2 ใบต่อแผ่น)</span>
                                 </button>
                             </template>
                             <button @click="resequenceDocs()" title="จัดเรียงเลขที่เอกสารใหม่ตามลำดับวันที่ และรันเลขต่อเนื่องอัตโนมัติ" class="bg-cream hover:bg-beige text-charcoal border border-beige font-semibold text-xs px-3.5 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5 justify-center">
@@ -1205,7 +1214,7 @@
                             </button>
                             <button @click="printDocumentsSummary()" class="bg-charcoal hover:bg-gold-dark text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2 justify-center">
                                 <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                                <span x-text="selectedDocIds.length > 0 ? `พิมพ์ที่เลือก (${selectedDocIds.length} รายการ)` : 'พิมพ์รายงานตารางเอกสาร'"></span>
+                                <span x-text="selectedDocIds.length > 0 ? `พิมพ์สรุปที่เลือก (${selectedDocIds.length})` : 'พิมพ์รายงานตารางเอกสาร'"></span>
                             </button>
                             <button @click="exportDocumentsExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 justify-center">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -1353,6 +1362,31 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <!-- Floating Batch Action Bar for Documents (Auto-pair 2 receipts per A4) -->
+                <div x-show="selectedDocIds.length > 0"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 translate-y-8"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 translate-y-8"
+                     class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white px-5 py-3 rounded-2xl shadow-2xl flex flex-wrap items-center justify-center gap-4 z-50 border border-gold/40 max-w-[95vw] no-print">
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="w-6 h-6 rounded-full bg-gold/20 text-gold flex items-center justify-center font-bold font-mono text-[11px]" x-text="selectedDocIds.length"></span>
+                        <span>เลือกแล้ว <b class="text-gold font-mono" x-text="selectedDocIds.length"></b> ใบ (ใช้กระดาษ A4 ประมาณ <b class="text-white font-mono" x-text="Math.ceil(selectedDocIds.length / 2)"></b> แผ่น)</span>
+                    </div>
+                    <div class="h-4 w-px bg-white/20 hidden sm:block"></div>
+                    <button @click="printBatchDocuments()"
+                            class="bg-[#c5a880] hover:bg-[#b39268] text-[#1a1a1a] font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-2 shadow cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        <span>🖨️ สั่งพิมพ์ใบเสร็จชุดนี้ (2 ใบต่อ 1 แผ่น A4)</span>
+                    </button>
+                    <button @click="selectedDocIds = []"
+                            class="text-xs text-gray-400 hover:text-white hover:underline transition cursor-pointer">
+                        ✕ ล้างที่เลือก
+                    </button>
                 </div>
             </div>
 
@@ -4196,6 +4230,10 @@
                     
                     // Reload appropriate datasets on navigating
                     if (view === 'dashboard') this.fetchDashboardStats();
+                    if (view === 'create') {
+                        this.fetchProducts();
+                        this.fetchCustomers();
+                    }
                     if (view === 'documents') this.fetchDocuments();
                     if (view === 'customers') this.fetchCustomers();
                     if (view === 'products') this.fetchProducts();
@@ -6080,7 +6118,7 @@
                         vat_amount: 0.00,
                         total_amount_after_vat: 0.00,
                         items: [
-                            { description: '', quantity: 1, unit_price: 0.00 }
+                            { _uid: Date.now() + Math.random(), selected_product_id: '', description: '', quantity: 1, unit_price: 0.00 }
                         ]
                     };
                     this.setView('create');
@@ -6107,25 +6145,26 @@
                 },
 
                 addProductLineItem() {
-                    this.docForm.items.push({ description: '', quantity: 1, unit_price: 0.00 });
+                    this.docForm.items.push({ _uid: Date.now() + Math.random(), selected_product_id: '', description: '', quantity: 1, unit_price: 0.00 });
                     this.recalculateDocTotals();
                 },
 
                 removeProductLineItem(index) {
                     this.docForm.items.splice(index, 1);
                     if (this.docForm.items.length === 0) {
-                        this.docForm.items.push({ description: '', quantity: 1, unit_price: 0.00 });
+                        this.docForm.items.push({ _uid: Date.now() + Math.random(), selected_product_id: '', description: '', quantity: 1, unit_price: 0.00 });
                     }
                     this.recalculateDocTotals();
                 },
 
-                onItemProductChange(productId, index) {
-                    const id = parseInt(productId);
-                    if (!id) return;
-                    const prod = this.products.find(p => p.id === id);
+                onItemProductChange(item, productId) {
+                    const pid = productId !== undefined ? productId : (item ? item.selected_product_id : '');
+                    if (!pid || !item) return;
+                    const prod = this.products.find(p => String(p.id) === String(pid));
                     if (prod) {
-                        this.docForm.items[index].description = prod.name;
-                        this.docForm.items[index].unit_price = prod.unit_price;
+                        item.selected_product_id = String(prod.id);
+                        item.description = prod.name || '';
+                        item.unit_price = prod.unit_price || 0;
                         this.recalculateDocTotals();
                     }
                 },
@@ -6302,11 +6341,16 @@
                                 total_amount_before_vat: data.total_amount_before_vat,
                                 vat_amount: data.vat_amount,
                                 total_amount_after_vat: data.total_amount_after_vat,
-                                items: data.items.map(item => ({
-                                    description: item.description,
-                                    quantity: item.quantity,
-                                    unit_price: item.unit_price
-                                }))
+                                items: data.items.map((item, idx) => {
+                                    const matchedProd = (this.products || []).find(p => p.name === item.description);
+                                    return {
+                                        _uid: Date.now() + Math.random() + idx,
+                                        selected_product_id: matchedProd ? String(matchedProd.id) : '',
+                                        description: item.description,
+                                        quantity: item.quantity,
+                                        unit_price: item.unit_price
+                                    };
+                                })
                             };
                             this.setView('create');
                         });
@@ -6353,6 +6397,14 @@
 
                 isAllDocsSelected() {
                     return this.documents.length > 0 && this.selectedDocIds.length === this.documents.length;
+                },
+
+                printBatchDocuments() {
+                    if (!this.selectedDocIds || this.selectedDocIds.length === 0) {
+                        alert('กรุณาเลือกรายการใบเสร็จรับเงินที่ต้องการพิมพ์อย่างน้อย 1 รายการ');
+                        return;
+                    }
+                    window.open(`/print/documents/batch?ids=${this.selectedDocIds.join(',')}`, '_blank');
                 },
 
                 printDocumentsSummary() {
