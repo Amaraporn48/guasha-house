@@ -54,6 +54,7 @@
             }
             .a4-page {
                 width: 210mm;
+                height: 297mm;
                 min-height: 297mm;
                 background-color: white !important;
                 box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16), 0 3px 8px rgba(0, 0, 0, 0.08);
@@ -65,19 +66,20 @@
                 position: relative;
             }
             .half-slot {
+                width: 210mm;
                 height: 148.5mm;
                 max-height: 148.5mm;
                 box-sizing: border-box;
                 overflow: hidden;
                 display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                padding: 4mm 9mm 2mm 9mm;
+                align-items: center;
+                justify-content: center;
+                padding: 0 9mm;
             }
             .receipt-card {
                 width: 192mm;
-                min-height: 134mm;
-                max-height: 136mm;
+                min-height: 132mm;
+                max-height: 134mm;
                 margin: 0 auto;
                 background-color: white !important;
                 border: 1.5px solid #1a1a1a !important;
@@ -89,15 +91,21 @@
                 justify-content: space-between;
             }
             .cut-guide {
+                position: absolute;
+                top: 148.5mm;
+                left: 9mm;
+                right: 9mm;
+                transform: translateY(-50%);
+                z-index: 10;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 192mm;
-                margin: 1.5mm auto 0 auto;
                 color: #888;
                 font-size: 8.5px;
+                line-height: 1;
                 font-weight: 500;
                 user-select: none;
+                pointer-events: none;
             }
             .cut-guide::before, .cut-guide::after {
                 content: '';
@@ -107,7 +115,7 @@
             }
             .empty-slot {
                 width: 192mm;
-                min-height: 134mm;
+                min-height: 132mm;
                 margin: 0 auto;
                 border: 2px dashed #ddd;
                 border-radius: 6px;
@@ -140,6 +148,7 @@
                 display: block !important;
             }
             .a4-page {
+                position: relative !important;
                 width: 210mm !important;
                 height: 297mm !important;
                 max-height: 297mm !important;
@@ -161,19 +170,20 @@
                 break-after: avoid !important;
             }
             .half-slot {
+                width: 210mm !important;
                 height: 148.5mm !important;
                 max-height: 148.5mm !important;
                 box-sizing: border-box !important;
                 overflow: hidden !important;
                 display: flex !important;
-                flex-direction: column !important;
-                justify-content: space-between !important;
-                padding: 4mm 9mm 2mm 9mm !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0 9mm !important;
             }
             .receipt-card {
                 width: 192mm !important;
-                min-height: 133mm !important;
-                max-height: 136mm !important;
+                min-height: 132mm !important;
+                max-height: 134mm !important;
                 margin: 0 auto !important;
                 padding: 4mm 6mm 4mm 6mm !important;
                 background-color: white !important;
@@ -188,13 +198,18 @@
                 break-inside: avoid !important;
             }
             .cut-guide {
+                position: absolute !important;
+                top: 148.5mm !important;
+                left: 9mm !important;
+                right: 9mm !important;
+                transform: translateY(-50%) !important;
+                z-index: 10 !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
-                width: 192mm !important;
-                margin: 1.5mm auto 0 auto !important;
                 color: #888 !important;
                 font-size: 8px !important;
+                line-height: 1 !important;
                 font-weight: 500 !important;
                 user-select: none !important;
             }
@@ -418,16 +433,17 @@
             <!-- TOP HALF (0 - 148.5mm) -->
             <div class="half-slot">
                 {{ render_receipt_card(page.top) }}
-                <div class="cut-guide">
-                    <span>✂️ ตัดตามรอยประ (ครึ่งแผ่น A4)</span>
-                </div>
+            </div>
+
+            <!-- Exact Center Cut Guide (148.5mm Fold Line) -->
+            <div class="cut-guide">
+                <span>✂️ ตัดตามรอยประ (ครึ่งแผ่น A4)</span>
             </div>
 
             <!-- BOTTOM HALF (148.5mm - 297mm) -->
             <div class="half-slot">
                 {% if page.bottom %}
                     {{ render_receipt_card(page.bottom) }}
-                    <div class="h-1"></div>
                 {% else %}
                     <div class="empty-slot">
                         <span class="text-2xl mb-1">✂️</span>

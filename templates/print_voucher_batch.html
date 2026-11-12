@@ -54,6 +54,7 @@
             }
             .a4-page {
                 width: 210mm;
+                height: 297mm;
                 min-height: 297mm;
                 background-color: white !important;
                 box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16), 0 3px 8px rgba(0, 0, 0, 0.08);
@@ -65,19 +66,21 @@
                 position: relative;
             }
             .half-slot {
+                width: 210mm;
                 height: 148.5mm;
                 max-height: 148.5mm;
                 box-sizing: border-box;
                 overflow: hidden;
                 display: flex;
                 flex-direction: column;
-                justify-content: space-between;
-                padding: 4mm 9mm 2mm 9mm;
+                align-items: center;
+                justify-content: center;
+                padding: 0 9mm;
             }
             .voucher-card {
                 width: 192mm;
-                min-height: 134mm;
-                max-height: 136mm;
+                min-height: 132mm;
+                max-height: 134mm;
                 margin: 0 auto;
                 background-color: white !important;
                 border: 1.5px solid #1a1a1a !important;
@@ -89,11 +92,16 @@
                 justify-content: space-between;
             }
             .cut-guide {
+                position: absolute;
+                top: 148.5mm;
+                left: 9mm;
+                right: 9mm;
+                transform: translateY(-50%);
+                z-index: 10;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 192mm;
-                margin: 1.5mm auto 0 auto;
+                margin: 0;
                 color: #888;
                 font-size: 8.5px;
                 font-weight: 500;
@@ -107,7 +115,7 @@
             }
             .empty-slot {
                 width: 192mm;
-                min-height: 134mm;
+                min-height: 132mm;
                 margin: 0 auto;
                 border: 2px dashed #ddd;
                 border-radius: 6px;
@@ -140,6 +148,7 @@
                 display: block !important;
             }
             .a4-page {
+                position: relative !important;
                 width: 210mm !important;
                 height: 297mm !important;
                 max-height: 297mm !important;
@@ -161,19 +170,21 @@
                 break-after: avoid !important;
             }
             .half-slot {
+                width: 210mm !important;
                 height: 148.5mm !important;
                 max-height: 148.5mm !important;
                 box-sizing: border-box !important;
                 overflow: hidden !important;
                 display: flex !important;
                 flex-direction: column !important;
-                justify-content: space-between !important;
-                padding: 4mm 9mm 2mm 9mm !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0 9mm !important;
             }
             .voucher-card {
                 width: 192mm !important;
-                min-height: 133mm !important;
-                max-height: 136mm !important;
+                min-height: 132mm !important;
+                max-height: 134mm !important;
                 margin: 0 auto !important;
                 padding: 4mm 6mm 4mm 6mm !important;
                 background-color: white !important;
@@ -188,11 +199,16 @@
                 break-inside: avoid !important;
             }
             .cut-guide {
+                position: absolute !important;
+                top: 148.5mm !important;
+                left: 9mm !important;
+                right: 9mm !important;
+                transform: translateY(-50%) !important;
+                z-index: 10 !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
-                width: 192mm !important;
-                margin: 1.5mm auto 0 auto !important;
+                margin: 0 !important;
                 color: #888 !important;
                 font-size: 8px !important;
                 font-weight: 500 !important;
@@ -414,18 +430,17 @@
             <!-- TOP HALF (0 - 148.5mm) -->
             <div class="half-slot">
                 {{ render_voucher_card(page.top) }}
-                <!-- Cut Guide between top and bottom halves -->
-                <div class="cut-guide">
-                    <span>✂️ ตัดตามรอยประ (ครึ่งแผ่น A4)</span>
-                </div>
+            </div>
+
+            <!-- Cut Guide centered at exact 148.5mm (50% of 297mm A4) -->
+            <div class="cut-guide">
+                <span>✂️ ตัดตามรอยประ (ครึ่งแผ่น A4)</span>
             </div>
 
             <!-- BOTTOM HALF (148.5mm - 297mm) -->
             <div class="half-slot">
                 {% if page.bottom %}
                     {{ render_voucher_card(page.bottom) }}
-                    <!-- Subtle spacing at bottom -->
-                    <div class="h-1"></div>
                 {% else %}
                     <!-- Blank Half (when total vouchers count is odd) -->
                     <div class="empty-slot">
