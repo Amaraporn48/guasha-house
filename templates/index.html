@@ -1308,34 +1308,41 @@
                 </div>
 
                 <!-- Invoice Listing Table -->
-                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden documents-table-box">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
+                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden documents-table-box" x-data="{ canScrollLeft: false, canScrollRight: false, updateScroll() { const el = this.$refs.docTableScroll; if (!el) return; this.canScrollLeft = el.scrollLeft > 4; this.canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 4; } }" x-init="$nextTick(() => updateScroll()); window.addEventListener('resize', () => updateScroll())">
+                    <div x-show="canScrollLeft || canScrollRight" class="flex items-center justify-between px-4 py-2 bg-cream/80 border-b border-beige text-xs text-gray-500">
+                        <span>ตารางกว้างกว่าหน้าจอ เลื่อนดูปุ่มด้านขวาได้:</span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="$refs.docTableScroll.scrollBy({ left: -240, behavior: 'smooth' })" :disabled="!canScrollLeft" class="px-2.5 py-1 rounded-lg border border-beige bg-white hover:bg-beige disabled:opacity-40 font-semibold text-charcoal cursor-pointer">◀ เลื่อนซ้าย</button>
+                            <button type="button" @click="$refs.docTableScroll.scrollBy({ left: 240, behavior: 'smooth' })" :disabled="!canScrollRight" class="px-2.5 py-1 rounded-lg border border-beige bg-white hover:bg-beige disabled:opacity-40 font-semibold text-charcoal cursor-pointer">เลื่อนขวา ▶</button>
+                        </div>
+                    </div>
+                    <div x-ref="docTableScroll" @scroll="updateScroll()" class="overflow-x-auto">
+                        <table class="w-full text-left text-xs sm:text-sm">
                             <thead>
-                                <tr class="bg-cream border-b border-beige text-xs text-gray-500 uppercase font-semibold">
-                                    <th class="px-4 py-4 w-12 text-center">
+                                <tr class="bg-cream border-b border-beige text-[11px] text-gray-500 uppercase font-semibold">
+                                    <th class="px-3 py-3.5 w-10 text-center">
                                         <input type="checkbox" :checked="isAllDocsSelected()" @change="toggleSelectAllDocs($event)" class="rounded border-gray-300 text-gold focus:ring-gold cursor-pointer w-4 h-4">
                                     </th>
-                                    <th class="px-6 py-4">เลขที่ / No.</th>
-                                    <th class="px-6 py-4">วันที่ / Date</th>
-                                    <th class="px-6 py-4">ลูกค้า / Customer</th>
-                                    <th class="px-6 py-4">สินค้า / Items</th>
-                                    <th class="px-6 py-4 text-right">จำนวนเงิน / Total</th>
-                                    <th class="px-6 py-4">วิธีชำระเงิน / Payment</th>
-                                    <th class="px-6 py-4">ผู้จัดทำ / Created By</th>
-                                    <th class="px-6 py-4 text-right">การจัดการ / Actions</th>
+                                    <th class="px-3 py-3.5 whitespace-nowrap">เลขที่ / No.</th>
+                                    <th class="px-3 py-3.5 whitespace-nowrap">วันที่ / Date</th>
+                                    <th class="px-3 py-3.5">ลูกค้า / Customer</th>
+                                    <th class="px-3 py-3.5">สินค้า / Items</th>
+                                    <th class="px-3 py-3.5 text-right whitespace-nowrap">จำนวนเงิน / Total</th>
+                                    <th class="px-3 py-3.5 whitespace-nowrap text-center">ชำระเงิน</th>
+                                    <th class="px-3 py-3.5 whitespace-nowrap">ผู้จัดทำ</th>
+                                    <th class="px-3 py-3.5 text-right whitespace-nowrap">การจัดการ / Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="doc in documents" :key="doc.id">
                                     <tr class="border-b border-beige hover:bg-cream/50 transition">
-                                        <td class="px-4 py-4 text-center">
+                                        <td class="px-3 py-3.5 text-center">
                                             <input type="checkbox" :value="doc.id" x-model="selectedDocIds" class="rounded border-gray-300 text-gold focus:ring-gold cursor-pointer w-4 h-4">
                                         </td>
-                                        <td class="px-6 py-4 font-semibold text-charcoal" x-text="doc.document_number"></td>
-                                        <td class="px-6 py-4 text-gray-600" x-text="formatThaiDate(doc.date)"></td>
-                                        <td class="px-6 py-4 font-medium text-gray-800" x-text="doc.customer_name"></td>
-                                        <td class="px-6 py-4 text-xs text-gray-600 max-w-[240px]">
+                                        <td class="px-3 py-3.5 font-semibold text-charcoal whitespace-nowrap text-xs" x-text="doc.document_number"></td>
+                                        <td class="px-3 py-3.5 text-gray-600 whitespace-nowrap text-xs" x-text="formatThaiDate(doc.date)"></td>
+                                        <td class="px-3 py-3.5 font-medium text-gray-800 max-w-[150px] text-xs leading-snug" x-text="doc.customer_name"></td>
+                                        <td class="px-3 py-3.5 text-xs text-gray-600 max-w-[190px]">
                                             <template x-if="doc.items && doc.items.length > 0">
                                                 <div class="space-y-0.5">
                                                     <template x-for="(it, i) in doc.items" :key="it.id || i">
@@ -1350,22 +1357,22 @@
                                                 <span class="text-gray-400">-</span>
                                             </template>
                                         </td>
-                                        <td class="px-6 py-4 text-right font-bold text-charcoal" x-text="formatCurrency(doc.total_amount_after_vat)"></td>
-                                        <td class="px-6 py-4">
-                                            <span class="text-xs px-2.5 py-1 rounded-full font-medium"
+                                        <td class="px-3 py-3.5 text-right font-bold text-charcoal whitespace-nowrap text-xs" x-text="formatCurrency(doc.total_amount_after_vat)"></td>
+                                        <td class="px-3 py-3.5 text-center whitespace-nowrap">
+                                            <span class="text-[11px] px-2 py-0.5 rounded-full font-medium"
                                                   :class="doc.payment_method === 'CASH' ? 'bg-green-50 text-green-700 border border-green-200' : (doc.payment_method === 'TRANSFER' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-blue-50 text-blue-700 border border-blue-200')"
                                                   x-text="doc.payment_method === 'CASH' ? 'เงินสด' : (doc.payment_method === 'TRANSFER' ? 'โอนเงิน' : 'เช็ค')"></span>
                                         </td>
-                                        <td class="px-6 py-4 text-xs text-gray-500" x-text="doc.created_by_username"></td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="inline-flex gap-1.5">
-                                                <button @click="viewInvoice(doc.id)" class="text-xs bg-cream hover:bg-beige text-charcoal px-2.5 py-1.5 rounded-lg border border-beige transition font-medium">ดู</button>
-                                                <button @click="loadInvoiceForEdit(doc.id)" class="text-xs bg-cream hover:bg-beige text-blue-600 px-2.5 py-1.5 rounded-lg border border-beige transition font-medium">แก้ไข</button>
-                                                <button @click="printInvoice(doc.id)" class="text-xs bg-charcoal hover:bg-gold-dark text-white px-2.5 py-1.5 rounded-lg transition font-medium">พิมพ์ / PDF</button>
-                                                <a :href="'/api/documents/' + doc.id + '/export-excel'" title="ดาวน์โหลด Excel (.xlsx)" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-1.5 rounded-lg transition font-medium flex items-center gap-0.5">
+                                        <td class="px-3 py-3.5 text-xs text-gray-500 whitespace-nowrap" x-text="doc.created_by_username"></td>
+                                        <td class="px-3 py-3.5 text-right whitespace-nowrap">
+                                            <div class="inline-flex gap-1">
+                                                <button @click="viewInvoice(doc.id)" class="text-[11px] bg-cream hover:bg-beige text-charcoal px-2 py-1 rounded-lg border border-beige transition font-medium">ดู</button>
+                                                <button @click="loadInvoiceForEdit(doc.id)" class="text-[11px] bg-cream hover:bg-beige text-blue-600 px-2 py-1 rounded-lg border border-beige transition font-medium">แก้ไข</button>
+                                                <button @click="printInvoice(doc.id)" class="text-[11px] bg-charcoal hover:bg-gold-dark text-white px-2 py-1 rounded-lg transition font-medium">พิมพ์/PDF</button>
+                                                <a :href="'/api/documents/' + doc.id + '/export-excel'" title="ดาวน์โหลด Excel (.xlsx)" class="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg transition font-medium flex items-center">
                                                     <span>Excel</span>
                                                 </a>
-                                                <button @click="confirmDeleteInvoice(doc.id)" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg border border-red-100 transition font-medium">ลบ</button>
+                                                <button @click="confirmDeleteInvoice(doc.id)" class="text-[11px] bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded-lg border border-red-100 transition font-medium">ลบ</button>
                                             </div>
                                         </td>
                                     </tr>
