@@ -299,7 +299,7 @@ def init_db():
             default_settings = {
                 "contact_phone": "061-496-6361",
                 "contact_address": "บริษัท กัวซา เฮ้าส์ จำกัด\n199/4 ถนนกรุงเทพกรีฑา แขวงหัวหมาก เขตบางกะปิ กรุงเทพฯ 10240",
-                "contact_line_url": "https://line.me",
+                "contact_line_url": "https://line.me/R/ti/p/@guashahouse",
                 "contact_line_id": "@guashahouse",
                 "contact_facebook_url": "https://www.facebook.com/share/19USgHRf1X/?mibextid=wwXIfr",
                 "contact_tiktok_url": "https://www.tiktok.com/@guashahouse_bykrunoon",

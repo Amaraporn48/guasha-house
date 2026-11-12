@@ -15,6 +15,7 @@ except ImportError:
     ImageOps = None
 from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, Cookie, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from urllib.parse import quote
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -91,6 +92,89 @@ for path in [
 # Mount static files and templates using absolute paths
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+PUBLIC_CACHE_API_PATHS = {"/api/banners", "/api/products", "/api/branches", "/api/regions", "/api/videos", "/api/settings"}
+
+@app.middleware("http")
+async def add_security_and_cache_headers(request: Request, call_next):
+    """Add baseline security headers and Cache-Control for static/public assets."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'self'")
+    response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+
+    path = request.url.path
+    if "Cache-Control" not in response.headers:
+        if path.startswith("/static/"):
+            response.headers["Cache-Control"] = "public, max-age=86400"
+        elif request.method == "GET" and path in PUBLIC_CACHE_API_PATHS:
+            response.headers["Cache-Control"] = "public, max-age=60"
+    return response
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Return JSON for API errors and a user-friendly Thai 404 page for browser routes."""
+    if exc.status_code == 404 and not request.url.path.startswith("/api/"):
+        html_404 = """<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ไม่พบหน้าที่ต้องการ (404) - Guasha House</title>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background: #fbfaf7; color: #1a1a1a; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .card { background: #fff; border: 1px solid #f5f2eb; border-radius: 24px; padding: 40px 32px; max-width: 460px; width: 100%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
+        .code { font-size: 56px; font-weight: 800; color: #c5a880; line-height: 1; margin-bottom: 12px; }
+        h1 { font-size: 22px; margin: 0 0 10px; }
+        p { font-size: 14px; color: #666; line-height: 1.6; margin: 0 0 24px; }
+        a { display: inline-block; background: #1a1a1a; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 9999px; font-weight: 600; font-size: 14px; }
+        a:hover { background: #b39268; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="code">404</div>
+        <h1>ไม่พบหน้าที่คุณต้องการ</h1>
+        <p>ขออภัย ลิงก์หรือหน้าเว็บที่คุณเปิดอาจถูกย้ายหรือไม่มีอยู่ในระบบ</p>
+        <a href="/">กลับหน้าหลัก (Guasha House)</a>
+    </div>
+</body>
+</html>"""
+        return HTMLResponse(content=html_404, status_code=404)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+def _serve_data_uri_image(data_uri: str, max_width: int = 1440) -> Optional[Response]:
+    """Decode a data:image/... URI, compress/resize if oversized, and return a cacheable Response."""
+    if not data_uri or not data_uri.startswith("data:image/") or "," not in data_uri:
+        return None
+    header, b64_data = data_uri.split(",", 1)
+    mime = header.split(";")[0].replace("data:", "") or "image/jpeg"
+    try:
+        raw = base64.b64decode(b64_data)
+    except Exception:
+        return None
+
+    if Image is not None and len(raw) > 250 * 1024 and "svg" not in mime:
+        try:
+            img = Image.open(io.BytesIO(raw))
+            img = ImageOps.exif_transpose(img)
+            if img.width > max_width:
+                new_h = int(img.height * max_width / img.width)
+                img = img.resize((max_width, new_h), Image.Resampling.LANCZOS)
+            out = io.BytesIO()
+            if img.mode in ("RGBA", "LA", "P"):
+                img.save(out, format="WEBP", quality=82, method=4)
+                mime = "image/webp"
+            else:
+                img.convert("RGB").save(out, format="JPEG", quality=82, optimize=True)
+                mime = "image/jpeg"
+            raw = out.getvalue()
+        except Exception:
+            pass
+
+    return Response(content=raw, media_type=mime, headers={"Cache-Control": "public, max-age=86400"})
 
 def cleanup_missing_upload_urls():
     """
@@ -651,7 +735,7 @@ def get_current_user_from_cookie(access_token: Optional[str] = Cookie(None), db:
         return None
 
 # UI Routing endpoints
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def get_home_page(request: Request):
     return templates.TemplateResponse(request=request, name="home.html")
 
@@ -2837,7 +2921,34 @@ def delete_region(region_id: int, db: Session = Depends(get_db), current_user: U
 @app.get("/api/branches")
 def get_branches(db: Session = Depends(get_db)):
     from database import Branch
-    return db.query(Branch).order_by(Branch.region, Branch.name).all()
+    branches = db.query(Branch).order_by(Branch.region, Branch.name).all()
+    result = []
+    for b in branches:
+        img_url = b.image_url or ""
+        if img_url.startswith("data:image/"):
+            img_url = f"/api/branches/{b.id}/image"
+        result.append({
+            "id": b.id,
+            "name": b.name,
+            "region": b.region,
+            "address": b.address,
+            "phone": b.phone,
+            "map_pin": b.map_pin,
+            "image_url": img_url,
+            "created_at": b.created_at
+        })
+    return result
+
+@app.get("/api/branches/{branch_id}/image")
+def get_branch_image(branch_id: int, db: Session = Depends(get_db)):
+    from database import Branch
+    b = db.query(Branch).filter(Branch.id == branch_id).first()
+    if not b or not b.image_url:
+        raise HTTPException(status_code=404, detail="Image not found")
+    resp = _serve_data_uri_image(b.image_url, max_width=800)
+    if resp is not None:
+        return resp
+    return RedirectResponse(url=b.image_url)
 
 @app.post("/api/branches")
 def create_branch(branch_data: BranchCreateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -4180,7 +4291,33 @@ class BannerUpdate(BaseModel):
 @app.get("/api/banners")
 def get_public_banners(db: Session = Depends(get_db)):
     """Public endpoint: returns all active banners ordered by order_index and id."""
-    return db.query(SlideBanner).filter(SlideBanner.is_active == True).order_by(SlideBanner.order_index.asc(), SlideBanner.id.asc()).all()
+    banners = db.query(SlideBanner).filter(SlideBanner.is_active == True).order_by(SlideBanner.order_index.asc(), SlideBanner.id.asc()).all()
+    result = []
+    for b in banners:
+        img_url = b.image_url or ""
+        if img_url.startswith("data:image/"):
+            img_url = f"/api/banners/{b.id}/image"
+        result.append({
+            "id": b.id,
+            "title": b.title,
+            "subtitle": b.subtitle,
+            "description": b.description,
+            "image_url": img_url,
+            "link_url": b.link_url,
+            "order_index": b.order_index,
+            "is_active": b.is_active
+        })
+    return result
+
+@app.get("/api/banners/{banner_id}/image")
+def get_banner_image(banner_id: int, db: Session = Depends(get_db)):
+    b = db.query(SlideBanner).filter(SlideBanner.id == banner_id).first()
+    if not b or not b.image_url:
+        raise HTTPException(status_code=404, detail="Image not found")
+    resp = _serve_data_uri_image(b.image_url, max_width=1440)
+    if resp is not None:
+        return resp
+    return RedirectResponse(url=b.image_url)
 
 @app.get("/api/admin/banners")
 def get_admin_banners(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -4296,10 +4433,27 @@ def delete_banner(banner_id: int, request: Request, db: Session = Depends(get_db
 class SiteSettingsUpdate(BaseModel):
     settings: Dict[str, Optional[str]]
 
+PUBLIC_SETTING_KEYS = {
+    "contact_phone",
+    "contact_address",
+    "contact_line_url",
+    "contact_line_id",
+    "contact_facebook_url",
+    "contact_tiktok_url",
+    "contact_instagram_url",
+    "contact_youtube_url",
+    "contact_email",
+    "company_name",
+    "company_name_en",
+    "hero_title",
+    "hero_subtitle",
+    "footer_text"
+}
+
 @app.get("/api/settings")
 def get_public_settings(db: Session = Depends(get_db)):
-    """Public endpoint: returns all site settings as a key-value map."""
-    rows = db.query(SiteSetting).all()
+    """Public endpoint: returns only public contact and branding settings."""
+    rows = db.query(SiteSetting).filter(SiteSetting.key.in_(PUBLIC_SETTING_KEYS)).all()
     return {row.key: row.value for row in rows}
 
 @app.post("/api/admin/settings")

@@ -307,7 +307,7 @@
                     <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm flex items-center justify-between hover:shadow-md transition">
                         <div>
                             <span class="text-xs text-gray-400 font-semibold tracking-wider uppercase block">ยอดขายสะสมรวม / Total Revenue</span>
-                            <span class="text-2xl font-bold text-charcoal font-mono mt-1 block" x-text="formatCurrency(stats.total_sales || 0)">฿0.00</span>
+                            <span class="text-2xl font-bold text-charcoal font-mono mt-1 block" :class="statsLoading ? 'text-gray-400 animate-pulse text-lg' : ''" x-text="statsLoading ? 'กำลังโหลด...' : formatCurrency(stats.total_sales || 0)">กำลังโหลด...</span>
                         </div>
                         <div class="p-3 bg-beige rounded-xl text-charcoal">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
@@ -318,7 +318,7 @@
                     <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm flex items-center justify-between hover:shadow-md transition">
                         <div>
                             <span class="text-xs text-gray-400 font-semibold tracking-wider uppercase block" x-text="dashMonth === 'ALL' ? 'จำนวนเอกสารออกในปีนี้ / Invoices Issued' : 'จำนวนเอกสารออกเดือนนี้ / Monthly Invoices'"></span>
-                            <span class="text-2xl font-bold text-charcoal mt-1 block" x-text="stats.monthly_documents || 0">0</span>
+                            <span class="text-2xl font-bold text-charcoal mt-1 block" :class="statsLoading ? 'text-gray-400 animate-pulse text-lg' : ''" x-text="statsLoading ? 'กำลังโหลด...' : (stats.monthly_documents || 0)">กำลังโหลด...</span>
                         </div>
                         <div class="p-3 bg-beige rounded-xl text-gold-dark">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -329,7 +329,7 @@
                     <div class="bg-white border border-beige rounded-2xl p-6 shadow-sm flex items-center justify-between hover:shadow-md transition">
                         <div>
                             <span class="text-xs text-gray-400 font-semibold tracking-wider uppercase block">จำนวนลูกค้าทั้งหมด / Customers</span>
-                            <span class="text-2xl font-bold text-charcoal mt-1 block" x-text="stats.total_customers || 0">0</span>
+                            <span class="text-2xl font-bold text-charcoal mt-1 block" :class="statsLoading ? 'text-gray-400 animate-pulse text-lg' : ''" x-text="statsLoading ? 'กำลังโหลด...' : (stats.total_customers || 0)">กำลังโหลด...</span>
                         </div>
                         <div class="p-3 bg-beige rounded-xl text-gold-dark">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
@@ -356,15 +356,15 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-xl space-y-1">
                             <span class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">รายรับรวมทั้งหมด / Total Revenue</span>
-                            <span class="text-xl font-bold text-emerald-800 font-mono" x-text="formatCurrency(stats.total_sales || 0)">฿0.00</span>
+                            <span class="text-xl font-bold text-emerald-800 font-mono" :class="statsLoading ? 'animate-pulse text-base opacity-60' : ''" x-text="statsLoading ? 'กำลังโหลด...' : formatCurrency(stats.total_sales || 0)">กำลังโหลด...</span>
                         </div>
                         <div class="p-4 bg-red-50/60 border border-red-200/80 rounded-xl space-y-1">
                             <span class="text-[11px] font-bold text-red-700 uppercase tracking-wider block">รายจ่ายรวมทั้งหมด / Total Expenses</span>
-                            <span class="text-xl font-bold text-red-800 font-mono" x-text="formatCurrency(stats.total_expenses || 0)">฿0.00</span>
+                            <span class="text-xl font-bold text-red-800 font-mono" :class="statsLoading ? 'animate-pulse text-base opacity-60' : ''" x-text="statsLoading ? 'กำลังโหลด...' : formatCurrency(stats.total_expenses || 0)">กำลังโหลด...</span>
                         </div>
                         <div class="p-4 bg-cream border border-gold/40 rounded-xl space-y-1">
                             <span class="text-[11px] font-bold text-gold-dark uppercase tracking-wider block">กำไรสุทธิสะสม / Net Profit</span>
-                            <span class="text-xl font-bold text-charcoal font-mono" x-text="formatCurrency((stats.total_sales || 0) - (stats.total_expenses || 0))">฿0.00</span>
+                            <span class="text-xl font-bold text-charcoal font-mono" :class="statsLoading ? 'animate-pulse text-base opacity-60' : ''" x-text="statsLoading ? 'กำลังโหลด...' : formatCurrency((stats.total_sales || 0) - (stats.total_expenses || 0))">กำลังโหลด...</span>
                         </div>
                     </div>
                 </div>
@@ -983,10 +983,10 @@
                             <div class="flex items-center justify-between gap-3 text-left" x-show="docForm.payment_slip && !uploadingSlip">
                                 <div class="flex items-center gap-2">
                                     <div class="w-10 h-10 border border-beige rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                        <template x-if="docForm.payment_slip.toLowerCase().endsWith('.pdf')">
+                                        <template x-if="docForm.payment_slip && docForm.payment_slip.toLowerCase().endsWith('.pdf')">
                                             <span class="text-red-500 font-bold text-[10px]">PDF</span>
                                         </template>
-                                        <template x-if="!docForm.payment_slip.toLowerCase().endsWith('.pdf')">
+                                        <template x-if="docForm.payment_slip && !docForm.payment_slip.toLowerCase().endsWith('.pdf')">
                                             <img :src="docForm.payment_slip.startsWith('data:') ? docForm.payment_slip : '/static/uploads/slips/' + docForm.payment_slip" class="w-full h-full object-cover">
                                         </template>
                                     </div>
@@ -2958,17 +2958,19 @@
                         </div>
 
                         <!-- Payment Slip Attachment (If exists) -->
-                        <div x-show="viewModal.doc.payment_slip" class="border border-gray-200 p-3 rounded-lg text-[10px] mt-3">
+                        <div x-show="viewModal.doc && viewModal.doc.payment_slip" class="border border-gray-200 p-3 rounded-lg text-[10px] mt-3">
                             <span class="font-bold text-gray-500 block uppercase tracking-wider mb-2">หลักฐานการโอนเงินแนบ / ATTACHED SLIP</span>
-                            <div class="flex items-center justify-start gap-4">
-                                <a :href="viewModal.doc.payment_slip.startsWith('data:') ? viewModal.doc.payment_slip : '/static/uploads/slips/' + viewModal.doc.payment_slip" target="_blank" class="block border border-gray-300 rounded overflow-hidden max-w-[120px] max-h-[120px]">
-                                    <img :src="viewModal.doc.payment_slip.startsWith('data:') ? viewModal.doc.payment_slip : '/static/uploads/slips/' + viewModal.doc.payment_slip" class="w-full h-full object-cover">
-                                </a>
-                                <div>
-                                    <p class="text-[9px] text-gray-500 font-mono" x-text="viewModal.doc.payment_slip.startsWith('data:') ? 'สลิปโอนเงิน (Attached Slip)' : viewModal.doc.payment_slip"></p>
-                                    <a :href="viewModal.doc.payment_slip.startsWith('data:') ? viewModal.doc.payment_slip : '/static/uploads/slips/' + viewModal.doc.payment_slip" target="_blank" class="text-xs text-gold-dark hover:underline font-bold mt-1 inline-block">เปิดดูไฟล์ขนาดใหญ่ ↗</a>
+                            <template x-if="viewModal.doc && viewModal.doc.payment_slip">
+                                <div class="flex items-center justify-start gap-4">
+                                    <a :href="(viewModal.doc.payment_slip || '').startsWith('data:') ? viewModal.doc.payment_slip : '/static/uploads/slips/' + viewModal.doc.payment_slip" target="_blank" class="block border border-gray-300 rounded overflow-hidden max-w-[120px] max-h-[120px]">
+                                        <img :src="(viewModal.doc.payment_slip || '').startsWith('data:') ? viewModal.doc.payment_slip : '/static/uploads/slips/' + viewModal.doc.payment_slip" class="w-full h-full object-cover">
+                                    </a>
+                                    <div>
+                                        <p class="text-[9px] text-gray-500 font-mono" x-text="(viewModal.doc.payment_slip || '').startsWith('data:') ? 'สลิปโอนเงิน (Attached Slip)' : viewModal.doc.payment_slip"></p>
+                                        <a :href="(viewModal.doc.payment_slip || '').startsWith('data:') ? viewModal.doc.payment_slip : '/static/uploads/slips/' + viewModal.doc.payment_slip" target="_blank" class="text-xs text-gold-dark hover:underline font-bold mt-1 inline-block">เปิดดูไฟล์ขนาดใหญ่ ↗</a>
+                                    </div>
                                 </div>
-                            </div>
+                            </template>
                         </div>
 
                         <!-- Signature -->
@@ -3995,6 +3997,7 @@
                 sidebarCollapsed: false,
                 mobileMenuOpen: false,
                 user: {},
+                statsLoading: true,
                 stats: {
                     total_documents: 0,
                     monthly_documents: 0,
@@ -4284,6 +4287,7 @@
 
                 // --- FETCH UTILITIES ---
                 fetchDashboardStats() {
+                    this.statsLoading = true;
                     this.reportYear = this.dashYear;
                     this.reportMonth = this.dashMonth;
                     const params = [];
@@ -4294,9 +4298,13 @@
                         .then(res => res.json())
                         .then(data => {
                             this.stats = data;
+                            this.statsLoading = false;
                             this.$nextTick(() => {
                                 this.renderDashboardCharts(data.months_chart_data, data.total_sales, data.total_expenses);
                             });
+                        })
+                        .catch(() => {
+                            this.statsLoading = false;
                         });
                     this.fetchReportsData();
                 },
