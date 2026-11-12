@@ -1308,15 +1308,58 @@
                 </div>
 
                 <!-- Invoice Listing Table -->
-                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden documents-table-box" x-data="{ canScrollLeft: false, canScrollRight: false, updateScroll() { const el = this.$refs.docTableScroll; if (!el) return; this.canScrollLeft = el.scrollLeft > 4; this.canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 4; } }" x-init="$nextTick(() => updateScroll()); window.addEventListener('resize', () => updateScroll())">
+                <div class="bg-white border border-beige rounded-2xl shadow-sm overflow-hidden documents-table-box"
+                     x-data="{
+                         canScrollLeft: false,
+                         canScrollRight: false,
+                         isDragging: false,
+                         startX: 0,
+                         scrollStart: 0,
+                         updateScroll() {
+                             const el = this.$refs.docTableScroll;
+                             if (!el) return;
+                             this.canScrollLeft = el.scrollLeft > 4;
+                             this.canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+                         },
+                         startDrag(e) {
+                             if (e.target.closest('button, a, input, select, textarea, label')) return;
+                             const el = this.$refs.docTableScroll;
+                             if (!el || el.scrollWidth <= el.clientWidth) return;
+                             this.isDragging = true;
+                             this.startX = e.pageX - el.offsetLeft;
+                             this.scrollStart = el.scrollLeft;
+                         },
+                         onDrag(e) {
+                             if (!this.isDragging) return;
+                             e.preventDefault();
+                             const el = this.$refs.docTableScroll;
+                             const x = e.pageX - el.offsetLeft;
+                             el.scrollLeft = this.scrollStart - (x - this.startX);
+                         },
+                         stopDrag() {
+                             this.isDragging = false;
+                         }
+                     }"
+                     x-init="
+                         $nextTick(() => updateScroll());
+                         $watch('documents', () => $nextTick(() => updateScroll()));
+                         window.addEventListener('resize', () => updateScroll());
+                     ">
                     <div x-show="canScrollLeft || canScrollRight" class="flex items-center justify-between px-4 py-2 bg-cream/80 border-b border-beige text-xs text-gray-500">
-                        <span>ตารางกว้างกว่าหน้าจอ เลื่อนดูปุ่มด้านขวาได้:</span>
+                        <span>คลิกค้างบนตารางแล้วลาก หรือกดปุ่มเพื่อเลื่อนซ้าย-ขวา:</span>
                         <div class="flex items-center gap-2">
                             <button type="button" @click="$refs.docTableScroll.scrollBy({ left: -240, behavior: 'smooth' })" :disabled="!canScrollLeft" class="px-2.5 py-1 rounded-lg border border-beige bg-white hover:bg-beige disabled:opacity-40 font-semibold text-charcoal cursor-pointer">◀ เลื่อนซ้าย</button>
                             <button type="button" @click="$refs.docTableScroll.scrollBy({ left: 240, behavior: 'smooth' })" :disabled="!canScrollRight" class="px-2.5 py-1 rounded-lg border border-beige bg-white hover:bg-beige disabled:opacity-40 font-semibold text-charcoal cursor-pointer">เลื่อนขวา ▶</button>
                         </div>
                     </div>
-                    <div x-ref="docTableScroll" @scroll="updateScroll()" class="overflow-x-auto">
+                    <div x-ref="docTableScroll"
+                         @scroll="updateScroll()"
+                         @mousedown="startDrag($event)"
+                         @mousemove.window="onDrag($event)"
+                         @mouseup.window="stopDrag()"
+                         @mouseleave="stopDrag()"
+                         :class="{ 'cursor-grab': (canScrollLeft || canScrollRight) && !isDragging, 'cursor-grabbing select-none': isDragging }"
+                         class="overflow-x-auto">
                         <table class="w-full text-left text-xs sm:text-sm">
                             <thead>
                                 <tr class="bg-cream border-b border-beige text-[11px] text-gray-500 uppercase font-semibold">
