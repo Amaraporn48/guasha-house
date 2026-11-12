@@ -1347,7 +1347,7 @@ class DocumentCreateSchema(BaseModel):
 def resequence_documents(db: Session, year: Optional[str] = None):
     """
     Resequence invoice numbers strictly chronologically by date in monthly format:
-    INV-YYYY-MMSS (e.g. Month 08: INV-2026-0801, INV-2026-0802... Month 11: INV-2026-1101...).
+    HS-YYYY-MMSS (e.g. Month 08: HS-2026-0801, HS-2026-0802... Month 11: HS-2026-1101...).
     Sort order within month: date ASC, created_at ASC, id ASC.
     - If a document is entered with a past/retroactive date, it automatically slots in,
       and subsequent documents in that month shift up.
@@ -1368,6 +1368,7 @@ def resequence_documents(db: Session, year: Optional[str] = None):
         docs = db.query(Document).filter(
             or_(
                 Document.date.like(f"{yr}-%"),
+                Document.document_number.like(f"HS-{yr}-%"),
                 Document.document_number.like(f"INV-{yr}-%"),
                 Document.document_number.like(f"TEMP-{yr}-%")
             )
@@ -1388,7 +1389,7 @@ def resequence_documents(db: Session, year: Optional[str] = None):
             d.document_number = f"TEMP-{yr}-{d.id}-{uuid.uuid4().hex[:6]}"
         db.flush()
 
-        # Pass 2: Assign continuous chronological sequence per month: INV-YYYY-MM01, INV-YYYY-MM02, ...
+        # Pass 2: Assign continuous chronological sequence per month: HS-YYYY-MM01, HS-YYYY-MM02, ...
         for m_str in sorted(month_groups.keys()):
             m_docs = month_groups[m_str]
             def sort_key(d):
@@ -1398,7 +1399,7 @@ def resequence_documents(db: Session, year: Optional[str] = None):
 
             sorted_m_docs = sorted(m_docs, key=sort_key)
             for seq, d in enumerate(sorted_m_docs, start=1):
-                d.document_number = f"INV-{yr}-{m_str}{seq:02d}"
+                d.document_number = f"HS-{yr}-{m_str}{seq:02d}"
             db.flush()
 
 def resequence_expenses(db: Session, year: Optional[str] = None):
@@ -1461,7 +1462,7 @@ def resequence_expenses(db: Session, year: Optional[str] = None):
 
 def generate_invoice_number(db: Session, year: str, month: str = "01") -> str:
     m_str = f"{int(month):02d}" if month and month.isdigit() else "01"
-    prefix = f"INV-{year}-{m_str}"
+    prefix = f"HS-{year}-{m_str}"
     result = db.execute(
         text("SELECT document_number FROM documents WHERE document_number LIKE :prefix ORDER BY document_number DESC LIMIT 1"),
         {"prefix": f"{prefix}%"}
@@ -1477,7 +1478,7 @@ def generate_invoice_number(db: Session, year: str, month: str = "01") -> str:
     else:
         next_serial = 1
         
-    return f"INV-{year}-{m_str}{next_serial:02d}"
+    return f"HS-{year}-{m_str}{next_serial:02d}"
 
 @app.post("/api/documents")
 def create_document(doc_data: DocumentCreateSchema, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -2221,7 +2222,7 @@ def export_invoice_excel(
     doc.total_amount_text = bahttext(doc.total_amount_before_vat)
 
     excel_bytes = generate_single_invoice_excel(doc)
-    doc_num = doc.document_number or f"INV_{doc.id}"
+    doc_num = doc.document_number or f"HS_{doc.id}"
     filename = f"ใบเสร็จรับเงิน_{doc_num}.xlsx"
     encoded_filename = quote(filename)
 

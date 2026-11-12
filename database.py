@@ -87,7 +87,7 @@ class Product(Base):
 class Document(Base):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True, index=True)
-    document_number = Column(String, unique=True, index=True, nullable=False) # e.g. INV-2026-0001
+    document_number = Column(String, unique=True, index=True, nullable=False) # e.g. HS-2026-0001
     date = Column(String, index=True, nullable=False) # YYYY-MM-DD
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     customer_name = Column(String, nullable=False)
