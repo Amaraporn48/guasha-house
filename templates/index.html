@@ -277,9 +277,9 @@
                     <div class="flex items-center gap-3">
                         <select x-model="dashYear" @change="fetchDashboardStats()"
                                 class="bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
-                            <option value="2025">ปี 2025</option>
-                            <option value="2026">ปี 2026</option>
-                            <option value="2027">ปี 2027</option>
+                            <template x-for="yr in availableYears" :key="yr">
+                                <option :value="yr" x-text="`ปี ${yr}`"></option>
+                            </template>
                         </select>
                         <select x-model="dashMonth" @change="fetchDashboardStats()"
                                 class="bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
@@ -534,9 +534,9 @@
                             <div class="flex items-center gap-2">
                                 <select x-model="dashYear" @change="fetchDashboardStats()"
                                         class="bg-cream border border-beige rounded-xl px-2.5 py-1.5 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
-                                    <option value="2025">ปี 2025</option>
-                                    <option value="2026">ปี 2026</option>
-                                    <option value="2027">ปี 2027</option>
+                                    <template x-for="yr in availableYears" :key="yr">
+                                        <option :value="yr" x-text="`ปี ${yr}`"></option>
+                                    </template>
                                 </select>
                                 <select x-model="dashMonth" @change="fetchDashboardStats()"
                                         class="bg-cream border border-beige rounded-xl px-2.5 py-1.5 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
@@ -1262,8 +1262,9 @@
                             <select x-model="docFilter.year" @change="filterDocuments()"
                                     class="w-full bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold">
                                 <option value="">ทั้งหมด / All</option>
-                                <option value="2026">2026</option>
-                                <option value="2027">2027</option>
+                                <template x-for="yr in availableYears" :key="yr">
+                                    <option :value="yr" x-text="yr"></option>
+                                </template>
                             </select>
                         </div>
 
@@ -1585,9 +1586,9 @@
                     <div class="flex items-center gap-3">
                         <select x-model="reportYear" @change="fetchReportsData()"
                                 class="bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold font-medium">
-                            <option value="2025">ปี 2025</option>
-                            <option value="2026">ปี 2026</option>
-                            <option value="2027">ปี 2027</option>
+                            <template x-for="yr in availableYears" :key="yr">
+                                <option :value="yr" x-text="`ปี ${yr}`"></option>
+                            </template>
                         </select>
                         <select x-model="reportMonth" @change="fetchReportsData()"
                                 class="bg-cream border border-beige rounded-xl px-4 py-2.5 text-xs focus-gold font-medium">
@@ -1756,9 +1757,9 @@
                             <div class="flex items-center gap-2">
                                 <select x-model="reportYear" @change="fetchReportsData()"
                                         class="bg-cream border border-beige rounded-xl px-2.5 py-1.5 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
-                                    <option value="2025">ปี 2025</option>
-                                    <option value="2026">ปี 2026</option>
-                                    <option value="2027">ปี 2027</option>
+                                    <template x-for="yr in availableYears" :key="yr">
+                                        <option :value="yr" x-text="`ปี ${yr}`"></option>
+                                    </template>
                                 </select>
                                 <select x-model="reportMonth" @change="fetchReportsData()"
                                         class="bg-cream border border-beige rounded-xl px-2.5 py-1.5 text-xs focus-gold font-bold text-charcoal cursor-pointer shadow-sm">
@@ -2215,10 +2216,9 @@
                             <select x-model="expenseFilterYear"
                                     class="bg-transparent border-none text-xs font-bold text-charcoal focus:ring-0 cursor-pointer py-1 pr-6 pl-1">
                                 <option value="ALL">ทุกปี (ALL)</option>
-                                <option value="2027">2570 (2027)</option>
-                                <option value="2026">2569 (2026)</option>
-                                <option value="2025">2568 (2025)</option>
-                                <option value="2024">2567 (2024)</option>
+                                <template x-for="yr in [...availableYears].reverse()" :key="yr">
+                                    <option :value="yr" x-text="`${parseInt(yr) + 543} (${yr})`"></option>
+                                </template>
                             </select>
                         </div>
 
@@ -4241,6 +4241,9 @@
                 // Feedback UI
                 toast: { message: '', type: 'success' },
 
+                // Available Years (Dynamic)
+                availableYears: ['2024', '2025', '2026', '2027'],
+
                 // Dashboard States
                 dashYear: new Date().getFullYear().toString(),
                 dashMonth: 'ALL',
@@ -4303,6 +4306,7 @@
                         });
 
                     // Fetch base data
+                    this.fetchAvailableYears();
                     this.fetchDashboardStats();
                     this.fetchCustomers();
                     this.fetchProducts();
@@ -4313,6 +4317,43 @@
                     this.fetchSiteSettings();
                     this.fetchExpenses();
                     this.fetchExpenseCategories();
+
+                    // Watch date inputs to automatically add year to dropdowns on the fly
+                    this.$watch('docForm.date', (val) => {
+                        if (val && val.length >= 4) {
+                            const yr = val.substring(0, 4);
+                            if (/^\d{4}$/.test(yr)) this.addAvailableYear(yr);
+                        }
+                    });
+
+                    this.$watch('expenseModal.date', (val) => {
+                        if (val && val.length >= 4) {
+                            const yr = val.substring(0, 4);
+                            if (/^\d{4}$/.test(yr)) this.addAvailableYear(yr);
+                        }
+                    });
+                },
+
+                addAvailableYear(year) {
+                    if (!year) return;
+                    const yStr = String(year).trim();
+                    if (yStr.length === 4 && /^\d{4}$/.test(yStr)) {
+                        if (!this.availableYears.includes(yStr)) {
+                            this.availableYears.push(yStr);
+                            this.availableYears.sort((a, b) => parseInt(a) - parseInt(b));
+                        }
+                    }
+                },
+
+                fetchAvailableYears() {
+                    fetch('/api/years')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.years && Array.isArray(data.years)) {
+                                data.years.forEach(y => this.addAvailableYear(y));
+                            }
+                        })
+                        .catch(err => console.error('Error fetching available years:', err));
                 },
 
                 toggleSidebar() {
@@ -4565,6 +4606,13 @@
                         .then(res => res.json())
                         .then(data => {
                             this.documents = data;
+                            if (Array.isArray(data)) {
+                                data.forEach(d => {
+                                    if (d.date && d.date.length >= 4) {
+                                        this.addAvailableYear(d.date.substring(0, 4));
+                                    }
+                                });
+                            }
                             if (this.selectedDocIds && this.selectedDocIds.length > 0) {
                                 const validIds = new Set(data.map(d => d.id));
                                 this.selectedDocIds = this.selectedDocIds.filter(id => validIds.has(id));
@@ -5320,7 +5368,16 @@
                 fetchExpenses() {
                     fetch('/api/expenses')
                         .then(res => res.json())
-                        .then(data => this.expenses = data);
+                        .then(data => {
+                            this.expenses = data;
+                            if (Array.isArray(data)) {
+                                data.forEach(e => {
+                                    if (e.date && e.date.length >= 4) {
+                                        this.addAvailableYear(e.date.substring(0, 4));
+                                    }
+                                });
+                            }
+                        });
                 },
 
                 addExpenseItem() {
@@ -6424,6 +6481,9 @@
                     })
                     .then(resData => {
                         this.showToast(this.editingDocId ? 'แก้ไขเอกสารสำเร็จ' : `บันทึกเอกสารเลขที่ ${resData.document_number} สำเร็จ`);
+                        if (data.date && data.date.length >= 4) {
+                            this.addAvailableYear(data.date.substring(0, 4));
+                        }
                         this.editingDocId = null;
                         this.setView('documents');
                     })

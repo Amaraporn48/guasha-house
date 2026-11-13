@@ -2576,6 +2576,25 @@ def delete_document(doc_id: int, request: Request, db: Session = Depends(get_db)
         print(f"Error deleting document: {e}")
         raise HTTPException(status_code=500, detail="เกิดข้อผิดพลาดในการลบเอกสาร กรุณาลองใหม่อีกครั้ง")
 
+# ----------------- AVAILABLE YEARS API -----------------
+@app.get("/api/years")
+def get_available_years(db: Session = Depends(get_db)):
+    from database import Document, Expense
+    from sqlalchemy import func
+    import datetime
+    now_year = datetime.date.today().year
+    
+    # Query distinct 4-digit years from documents and expenses
+    doc_years = [str(y[0]) for y in db.query(func.substr(Document.date, 1, 4)).distinct().all() if y[0] and str(y[0]).isdigit() and len(str(y[0])) == 4]
+    exp_years = [str(y[0]) for y in db.query(func.substr(Expense.date, 1, 4)).distinct().all() if y[0] and str(y[0]).isdigit() and len(str(y[0])) == 4]
+    
+    # Base years to always provide a good range
+    base_years = ["2024", "2025", "2026", "2027", str(now_year), str(now_year + 1)]
+    all_years = set(doc_years + exp_years + base_years)
+    
+    sorted_years = sorted(list(all_years), key=lambda x: int(x))
+    return {"years": sorted_years}
+
 # ----------------- DASHBOARD API -----------------
 @app.get("/api/dashboard/stats")
 def get_dashboard_stats(
