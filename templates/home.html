@@ -107,7 +107,7 @@
     </header>
 
     <!-- 1. HERO SLIDER SECTION (SmartSlider simulation) -->
-    <section id="home" class="relative overflow-hidden bg-beige h-[500px]" x-data="heroSlider()" @mouseenter="pauseAutoPlay()" @mouseleave="resumeAutoPlay()">
+    <section id="home" class="relative overflow-hidden bg-beige w-full aspect-[1942/809] md:aspect-auto md:h-[500px]" x-data="heroSlider()" @mouseenter="pauseAutoPlay()" @mouseleave="resumeAutoPlay()">
         <div class="h-full relative">
             <template x-for="(slide, index) in slides" :key="index">
                 <div x-show="activeSlide === index"
@@ -123,7 +123,7 @@
                     <div class="absolute inset-0 bg-gradient-to-r from-charcoal/80 to-charcoal/40 z-10" x-show="slide.title"></div>
                     <img :src="slide.image" 
                          @error="$el.src='/static/banner1.png'"
-                         class="absolute inset-0 w-full h-full object-cover object-center" 
+                         class="absolute inset-0 w-full h-full object-contain md:object-cover object-center" 
                          :alt="slide.title || 'แบนเนอร์ Guasha House'">
                     
                     <!-- Linkable banner slide if no title overlay -->
@@ -132,12 +132,12 @@
                     </template>
 
                     <!-- Text Overlay Content -->
-                    <div class="relative z-20 max-w-4xl mx-auto px-6 text-center text-white space-y-6" x-show="slide.title">
-                        <span class="text-xs uppercase tracking-widest text-gold font-semibold" x-text="slide.subtitle"></span>
-                        <h2 class="text-3xl md:text-5xl font-bold font-serif leading-tight" x-text="slide.title"></h2>
-                        <p class="text-sm md:text-base text-gray-200 max-w-2xl mx-auto font-light leading-relaxed" x-text="slide.desc"></p>
-                        <div class="pt-4">
-                            <a :href="slide.link" class="inline-block bg-gold hover:bg-gold-dark text-white px-8 py-3 rounded-full text-xs tracking-widest uppercase transition duration-300 font-semibold shadow-lg">ดูข้อมูลเพิ่มเติม</a>
+                    <div class="relative z-20 max-w-4xl mx-auto px-4 sm:px-6 text-center text-white space-y-1 sm:space-y-3 md:space-y-6" x-show="slide.title">
+                        <span class="text-xs uppercase tracking-widest text-gold font-semibold block" x-text="slide.subtitle"></span>
+                        <h2 class="text-sm sm:text-2xl md:text-5xl font-bold font-serif leading-tight line-clamp-2 sm:line-clamp-none" x-text="slide.title"></h2>
+                        <p class="text-xs sm:text-sm md:text-base text-gray-200 max-w-2xl mx-auto font-light leading-relaxed hidden sm:block" x-text="slide.desc"></p>
+                        <div class="pt-0.5 sm:pt-4">
+                            <a :href="slide.link" class="inline-block bg-gold hover:bg-gold-dark text-white px-4 py-1 sm:px-8 sm:py-3 rounded-full text-xs tracking-widest uppercase transition duration-300 font-semibold shadow-lg">ดูข้อมูลเพิ่มเติม</a>
                         </div>
                     </div>
                 </div>
@@ -145,19 +145,19 @@
         </div>
 
         <!-- Slider controls -->
-        <button type="button" @click="prev()" aria-label="สไลด์ก่อนหน้า" class="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white/20 hover:bg-white/40 text-white rounded-full p-3 backdrop-blur-sm transition">
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button type="button" @click="prev()" aria-label="สไลด์ก่อนหน้า" class="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 bg-white/20 hover:bg-white/40 text-white rounded-full p-1.5 sm:p-3 backdrop-blur-sm transition">
+            <svg class="h-4 w-4 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
         </button>
-        <button type="button" @click="next()" aria-label="สไลด์ถัดไป" class="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white/20 hover:bg-white/40 text-white rounded-full p-3 backdrop-blur-sm transition">
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button type="button" @click="next()" aria-label="สไลด์ถัดไป" class="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 bg-white/20 hover:bg-white/40 text-white rounded-full p-1.5 sm:p-3 backdrop-blur-sm transition">
+            <svg class="h-4 w-4 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
         </button>
 
         <!-- Slider dots (min 24x24px touch target) -->
-        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5">
+        <div class="absolute bottom-1 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1 sm:gap-1.5">
             <template x-for="(slide, index) in slides" :key="index">
                 <button type="button"
                         @click="activeSlide = index"
