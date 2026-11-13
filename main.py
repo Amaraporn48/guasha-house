@@ -2266,7 +2266,7 @@ def export_documents_summary_excel_endpoint(
             pass
         return (0, d.id or 0)
 
-    docs.sort(key=doc_sort_key)
+    docs.sort(key=doc_sort_key, reverse=True)
 
     subtitle_str = " | ".join(subtitle_parts)
     if subtitle_str:
@@ -3549,7 +3549,7 @@ def print_documents_summary_list(
                 return (prefix, int(m.group(1)))
             return (doc_num, 0)
             
-        raw_documents = sorted(raw_documents, key=doc_sort_key)
+        raw_documents = sorted(raw_documents, key=doc_sort_key, reverse=True)
             
         # Format dates & build safe dictionary list
         months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
