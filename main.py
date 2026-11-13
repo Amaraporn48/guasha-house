@@ -3597,6 +3597,39 @@ def print_documents_summary_list(
                 "created_by_username": doc.created_by_username or "-"
             })
 
+        # Aggregate products / items / courses breakdown
+        product_summary = {}
+        total_units_sold = 0
+        for doc in raw_documents:
+            for it in (doc.items or []):
+                name = (it.description or "").strip()
+                if not name:
+                    continue
+                qty = it.quantity if it.quantity is not None else 1
+                try:
+                    qty = float(qty)
+                except (ValueError, TypeError):
+                    qty = 1.0
+                price = float(it.unit_price or 0.0)
+                amount = float(getattr(it, 'total_amount', None) or (qty * price))
+                
+                if name not in product_summary:
+                    product_summary[name] = {
+                        "name": name,
+                        "quantity": 0,
+                        "amount": 0.0
+                    }
+                product_summary[name]["quantity"] += qty
+                product_summary[name]["amount"] += amount
+                total_units_sold += qty
+
+        product_summary_list = sorted(list(product_summary.values()), key=lambda x: x["quantity"], reverse=True)
+        for p in product_summary_list:
+            if p["quantity"] == int(p["quantity"]):
+                p["quantity"] = int(p["quantity"])
+        if total_units_sold == int(total_units_sold):
+            total_units_sold = int(total_units_sold)
+
         # Thai Date Today
         today = datetime.date.today()
         print_date = f"{today.day} {months_th[today.month - 1]} {today.year + 543}"
@@ -3610,7 +3643,9 @@ def print_documents_summary_list(
                 "documents": doc_list,
                 "total_amount_sum": total_sum,
                 "print_date": print_date,
-                "filter_desc": filter_desc
+                "filter_desc": filter_desc,
+                "product_summary_list": product_summary_list,
+                "total_units_sold": total_units_sold
             }
         )
     except Exception as e:

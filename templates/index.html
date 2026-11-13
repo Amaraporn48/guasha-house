@@ -1321,6 +1321,61 @@
                     </div>
                 </div>
 
+                <!-- 📦 Product & Course Units Summary Card (Position 1: Under Search & Filters) -->
+                <div x-data="{ expanded: true }"
+                     x-show="documents && documents.length > 0"
+                     class="bg-white border border-beige rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 transition-all">
+                    
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-beige">
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <span class="text-xl">📦</span>
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="text-xs font-bold tracking-wider text-charcoal uppercase">สรุปจำนวนสินค้าและคอร์สเรียนที่ขายได้ / Product & Course Units Sold</h4>
+                                    <span class="bg-gold/20 text-gold-dark text-[10px] font-bold px-2.5 py-0.5 rounded-full"
+                                          x-text="getProductSummaryFromDocuments().isSelection ? `จาก ${getProductSummaryFromDocuments().docCount} รายการที่เลือกเฉพาะ` : `จาก ${getProductSummaryFromDocuments().docCount} เอกสารในเงื่อนไขที่กรอง`"></span>
+                                </div>
+                                <p class="text-[11px] text-gray-400 mt-0.5">รวมจำนวนชิ้นและยอดขายของแต่ละรายการสินค้า/คอร์สตามเงื่อนไขที่เลือกหรือกรองไว้</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 self-start sm:self-auto">
+                            <div class="bg-cream border border-beige rounded-xl px-3.5 py-1.5 flex items-center gap-2">
+                                <span class="text-xs text-gray-500 font-semibold">ขายได้รวมทั้งหมด:</span>
+                                <span class="text-base font-bold text-gold-dark font-mono" x-text="getProductSummaryFromDocuments().totalUnits"></span>
+                                <span class="text-xs text-gray-500">ชิ้น/ครั้ง</span>
+                            </div>
+                            <button @click="expanded = !expanded" 
+                                    class="text-xs text-gray-600 hover:text-charcoal bg-cream border border-beige rounded-xl px-3 py-1.5 font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                                <span x-text="expanded ? 'ย่อสรุป ▲' : 'ดูรายละเอียด ▼'"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Items Breakdown Grid -->
+                    <div x-show="expanded" x-transition.opacity class="space-y-2">
+                        <template x-if="getProductSummaryFromDocuments().list.length === 0">
+                            <p class="text-xs text-gray-400 py-2 text-center">ไม่มีรายการสินค้าในเอกสารที่เลือก</p>
+                        </template>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                            <template x-for="(item, idx) in getProductSummaryFromDocuments().list" :key="idx">
+                                <div class="bg-cream/50 border border-beige/80 hover:border-gold/60 rounded-xl p-3 flex items-center justify-between gap-3 transition">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs font-semibold text-charcoal truncate" :title="item.name" x-text="item.name"></p>
+                                        <template x-if="item.revenue > 0">
+                                            <p class="text-[10px] text-gray-400 mt-0.5" x-text="'ยอดขายรวม ฿' + formatCurrency(item.revenue)"></p>
+                                        </template>
+                                    </div>
+                                    <div class="flex-shrink-0 bg-gold/15 text-gold-dark font-mono font-bold text-xs px-2.5 py-1 rounded-lg border border-gold/30 flex items-center gap-1">
+                                        <span x-text="item.quantity"></span>
+                                        <span class="text-[10px] font-normal text-gray-500">ชิ้น</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Printable Header on Documents Print -->
                 <div class="hidden print-documents-header p-4 mb-4 border-b-2 border-black">
                     <div class="flex justify-between items-center">
@@ -5986,6 +6041,43 @@
 
                 filterDocuments() {
                     this.fetchDocuments();
+                },
+
+                getProductSummaryFromDocuments() {
+                    const targetDocs = (this.selectedDocIds && this.selectedDocIds.length > 0)
+                        ? (this.documents || []).filter(d => this.selectedDocIds.includes(d.id))
+                        : (this.documents || []);
+
+                    const summary = {};
+                    let totalUnits = 0;
+                    let totalRevenue = 0;
+
+                    targetDocs.forEach(doc => {
+                        (doc.items || []).forEach(it => {
+                            const name = (it.description || '').trim();
+                            if (!name) return;
+                            const qty = parseFloat(it.quantity) || 1;
+                            const price = parseFloat(it.unit_price) || 0;
+                            const amt = (it.quantity && it.unit_price) ? (qty * price) : 0;
+
+                            if (!summary[name]) {
+                                summary[name] = { name, quantity: 0, revenue: 0 };
+                            }
+                            summary[name].quantity += qty;
+                            summary[name].revenue += amt;
+                            totalUnits += qty;
+                            totalRevenue += amt;
+                        });
+                    });
+
+                    const list = Object.values(summary).sort((a, b) => b.quantity - a.quantity);
+                    return {
+                        list,
+                        totalUnits: (totalUnits === parseInt(totalUnits)) ? parseInt(totalUnits) : totalUnits.toFixed(1),
+                        totalRevenue,
+                        docCount: targetDocs.length,
+                        isSelection: (this.selectedDocIds && this.selectedDocIds.length > 0)
+                    };
                 },
 
                 // --- CUSTOMER MODAL MANAGEMENT ---
