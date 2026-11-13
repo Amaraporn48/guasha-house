@@ -3459,7 +3459,7 @@ def print_documents_summary_list(
     if not current_user:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
     try:
-        stmt = db.query(Document)
+        stmt = db.query(Document).options(joinedload(Document.items))
         filter_parts = []
         months_th = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
@@ -3558,12 +3558,24 @@ def print_documents_summary_list(
                 except Exception:
                     formatted_date = str(doc.date)
 
+            items_list = []
+            for it in (doc.items or []):
+                qty = it.quantity if it.quantity is not None else 1
+                if isinstance(qty, float) and qty == int(qty):
+                    qty = int(qty)
+                items_list.append({
+                    "description": it.description or "-",
+                    "quantity": qty
+                })
+
             doc_list.append({
                 "document_number": doc.document_number or "-",
                 "formatted_date": formatted_date,
                 "customer_name": doc.customer_name or "-",
+                "items_list": items_list,
                 "total_amount_after_vat": amt,
-                "payment_method": doc.payment_method or "CASH"
+                "payment_method": doc.payment_method or "CASH",
+                "created_by_username": doc.created_by_username or "-"
             })
 
         # Thai Date Today
